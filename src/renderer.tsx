@@ -467,6 +467,7 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const composing = useRef(false);
   const todosRef = useRef(todos);
   const completionQueue = useRef<string[]>([]);
+  const completingTodoIds = useRef(new Set<string>());
   const processingCompletion = useRef(false);
 
   useEffect(() => {
@@ -570,11 +571,12 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
       return;
     }
     const todo = todosRef.current.find((item) => item.id === todoId);
-    if (!todo || todo.done) {
+    if (!todo || todo.done || completingTodoIds.current.has(todoId)) {
       processCompletionQueue();
       return;
     }
     processingCompletion.current = true;
+    completingTodoIds.current.add(todoId);
     setCompletingIds((current) => new Set(current).add(todoId));
     void window.pinApi.updateTodo(todoId, { done: true }).then((updated) => {
       window.setTimeout(() => {
@@ -586,6 +588,7 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
           next.delete(todoId);
           return next;
         });
+        completingTodoIds.current.delete(todoId);
         processingCompletion.current = false;
         processCompletionQueue();
       }, 300);
@@ -595,13 +598,18 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
         next.delete(todoId);
         return next;
       });
+      completingTodoIds.current.delete(todoId);
       processingCompletion.current = false;
       processCompletionQueue();
     });
   };
 
   const toggleTodo = (todo: PinTodo) => {
-    if (completingIds.has(todo.id)) {
+    if (
+      completingIds.has(todo.id) ||
+      completingTodoIds.current.has(todo.id) ||
+      completionQueue.current.includes(todo.id)
+    ) {
       return;
     }
     if (todo.done) {
