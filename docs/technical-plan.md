@@ -12,7 +12,7 @@
 - 设计原型只说明已经演示的部分，不代表没有演示的功能不需要实现。
 - 每个阶段完成后先验收，再进入下一阶段。
 
-当前状态：阶段 0、阶段 1、阶段 2.1 和阶段 2.2 已完成；数据库表结构、迁移、主进程连接和默认设置已落地，尚未实现 repository/service 和业务功能。
+当前状态：阶段 0、阶段 1、阶段 2.1、阶段 2.2 和阶段 2.3 已完成；数据库访问层和行为测试已落地，尚未实现 renderer 的业务界面和 IPC CRUD。
 
 ## 一、已确认的产品决定
 
@@ -85,6 +85,7 @@
 - Drizzle ORM
 - Zustand（按需使用）
 - SCSS / SCSS Modules
+- Node `node:test` + `tsx`（数据库测试，仅开发依赖）
 
 架构规则：
 
@@ -242,9 +243,9 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 - [x] 用 Drizzle 定义五张表和约束。
 - [x] 配置迁移脚本。
 - [x] 在主进程建立唯一数据库连接。
-- [ ] 实现 repository/service 层。
+- [x] 实现 repository/service 层。
 - [x] 实现数据库初始化和首次启动默认设置。
-- [ ] 为窗口、待办、CLIP、配色模板写基础单元测试。
+- [x] 为窗口、待办、CLIP、配色模板写基础单元测试。
 
 阶段 2.1 实际验证结果：
 
@@ -261,6 +262,14 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 - `pnpm package` 通过，生成 `out/Pin-win32-x64`。
 - 使用打包后的 `app.asar` 启动 Electron，确认 `AppData/Roaming/Pin/desk-widgets.sqlite` 创建成功。
 - 数据库包含 `settings`、`widgets`、`todos`、`clip_items`、`custom_kits` 五张业务表和 `__drizzle_migrations`；首次启动自动写入 `settings.id = 1`，WAL 和外键约束均已启用。
+
+阶段 2.3 实际验证结果：
+
+- 按表拆分 `repositories.ts`，提供窗口、TODO、CLIP、套装和设置的查询、创建、修改、删除及排序接口。
+- `app-service.ts` 提供事务入口，并校验 TODO / CLIP 只能归属兼容的窗口类型。
+- CLIP repository 处理同窗口精确去重、20 条上限和最旧条目淘汰；窗口删除由外键级联清理内容。
+- `test:db` 通过 7 个测试；测试使用临时数据库，真实执行 migration，并验证事务回滚和关闭后重新打开的数据持久化。
+- 测试由 Electron Node 24 运行时执行，避免 `better-sqlite3` 的 Node 20 ABI 不兼容。
 
 阶段验收：创建、读取、修改、删除和事务行为可通过测试；重启应用后数据仍存在。
 
@@ -349,4 +358,4 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 
 ## 五、当前下一步
 
-阶段 2.2 已完成。下一步是实现 repository/service 层和数据库行为测试；开始前先验收本阶段结果，再确认是否进入阶段 2.3。
+阶段 2.3 已完成。下一步是阶段 3：窗口外壳和 NOTE；开始前先验收数据库访问层，再确认窗口移动、边缘吸附和多显示器坐标策略。
