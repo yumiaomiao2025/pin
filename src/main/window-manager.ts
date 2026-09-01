@@ -32,7 +32,9 @@ export interface WindowManager {
   getTodosForEvent(event: IpcMainInvokeEvent): Todo[] | undefined;
   createTodo(event: IpcMainInvokeEvent, text: string): Todo | undefined;
   updateTodo(event: IpcMainInvokeEvent, todoId: string, patch: UpdateTodoInput): Todo | undefined;
-  deleteTodo(event: IpcMainInvokeEvent, todoId: string): boolean;
+  deleteTodo(event: IpcMainInvokeEvent, todoId: string): Todo | undefined;
+  restoreTodo(event: IpcMainInvokeEvent): Todo | undefined;
+  reorderTodos(event: IpcMainInvokeEvent, orderedIds: string[]): Todo[] | undefined;
   saveNote(event: IpcMainInvokeEvent, noteText: string): Widget | undefined;
   hide(event: IpcMainInvokeEvent): boolean;
   setSize(event: IpcMainInvokeEvent, width: number, height: number): Widget | undefined;
@@ -99,6 +101,7 @@ function isWidgetWindow(window: BrowserWindow): window is WidgetWindow {
 export function createWindowManager(service: AppDatabaseService): WindowManager {
   const windows = new Map<string, WidgetWindow>();
   const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let todoTrash: { widgetId: string; todo: Todo; timer: ReturnType<typeof setTimeout> } | undefined;
   let quitting = false;
 
   const widgetIdForEvent = (event: IpcMainInvokeEvent) => {
@@ -300,10 +303,51 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     },
 
     deleteTodo: (event, todoId) => {
-      if (!todoForEvent(event, todoId)) {
-        return false;
+      const widgetId = widgetIdForEvent(event);
+      const todo = todoForEvent(event, todoId);
+      if (!widgetId || !todo) {
+        return undefined;
       }
-      return service.todos.delete(todoId);
+      if (todoTrash) {
+        clearTimeout(todoTrash.timer);
+      }
+      if (!service.todos.delete(todoId)) {
+        return undefined;
+      }
+      const timer = setTimeout(() => {
+        if (todoTrash?.todo.id === todo.id) {
+          todoTrash = undefined;
+        }
+      }, 5_000);
+      todoTrash = { widgetId, todo, timer };
+      return todo;
+    },
+
+    restoreTodo: (event) => {
+      const widgetId = widgetIdForEvent(event);
+      if (!widgetId || !todoTrash || todoTrash.widgetId !== widgetId) {
+        return undefined;
+      }
+      const { todo, timer } = todoTrash;
+      clearTimeout(timer);
+      todoTrash = undefined;
+      return service.createTodo({
+        id: todo.id,
+        widgetId: todo.widgetId,
+        text: todo.text,
+        done: todo.done,
+        sortOrder: todo.sortOrder,
+        createdAt: todo.createdAt,
+        updatedAt: todo.updatedAt,
+      });
+    },
+
+    reorderTodos: (event, orderedIds) => {
+      const widgetId = widgetIdForEvent(event);
+      if (!widgetId) {
+        return undefined;
+      }
+      return service.todos.reorder(widgetId, orderedIds);
     },
 
     saveNote: (event, noteText) => {
@@ -389,6 +433,10 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
     prepareQuit: () => {
       quitting = true;
+      if (todoTrash) {
+        clearTimeout(todoTrash.timer);
+        todoTrash = undefined;
+      }
       persistTimers.forEach((timer, widgetId) => {
         clearTimeout(timer);
         const window = windows.get(widgetId);

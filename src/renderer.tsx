@@ -188,11 +188,23 @@ function TodoRow({
   onToggle,
   onDelete,
   onUpdate,
+  dragging,
+  dragOver,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   todo: PinTodo;
   onToggle: () => void;
   onDelete: () => void;
   onUpdate: (text: string) => void;
+  dragging: boolean;
+  dragOver: boolean;
+  onDragStart: () => void;
+  onDragOver: () => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(todo.text);
@@ -240,7 +252,18 @@ function TodoRow({
   };
 
   return (
-    <div className={todo.done ? 'todo-row todo-row--done' : 'todo-row'}>
+    <div
+      className={`${todo.done ? 'todo-row todo-row--done' : 'todo-row'}${dragging ? ' todo-row--dragging' : ''}${dragOver ? ' todo-row--drag-over' : ''}`}
+      onDragEnd={onDragEnd}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop();
+      }}
+    >
       <button
         aria-label={todo.done ? '取消完成' : '标记完成'}
         aria-pressed={todo.done}
@@ -278,7 +301,17 @@ function TodoRow({
           {todo.text}
         </button>
       )}
-      <span aria-hidden="true" className="todo-drag-handle">⠿</span>
+      <span
+        aria-hidden="true"
+        className="todo-drag-handle"
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = 'move';
+          onDragStart();
+        }}
+      >
+        ⠿
+      </span>
       <button
         aria-label="删除待办"
         className="todo-delete"
@@ -296,8 +329,19 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const [widget, setWidget] = useState(initialWidget);
   const [todos, setTodos] = useState<PinTodo[]>([]);
   const [draft, setDraft] = useState('');
+  const [deletedTodo, setDeletedTodo] = useState<PinTodo | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const composing = useRef(false);
+
+  useEffect(() => {
+    if (!deletedTodo) {
+      return;
+    }
+    const timer = window.setTimeout(() => setDeletedTodo(null), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [deletedTodo]);
 
   useEffect(() => {
     let active = true;
@@ -374,12 +418,55 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
     void window.pinApi.deleteTodo(todoId).then((deleted) => {
       if (deleted) {
         setTodos((current) => current.filter((todo) => todo.id !== todoId));
+        setDeletedTodo(deleted);
       }
+    });
+  };
+
+  const restoreTodo = () => {
+    void window.pinApi.restoreTodo().then((restored) => {
+      if (restored) {
+        setTodos((current) =>
+          [...current, restored].sort((left, right) => left.sortOrder - right.sortOrder),
+        );
+      }
+      setDeletedTodo(null);
     });
   };
 
   const openTodos = todos.filter((todo) => !todo.done);
   const completedTodos = todos.filter((todo) => todo.done);
+  const displayedTodos = [...openTodos, ...completedTodos];
+
+  const reorderTodos = (targetId: string) => {
+    if (!dragId || dragId === targetId) {
+      setDragId(null);
+      setDragOverId(null);
+      return;
+    }
+    const orderedIds = displayedTodos.map((todo) => todo.id);
+    const sourceIndex = orderedIds.indexOf(dragId);
+    const targetIndex = orderedIds.indexOf(targetId);
+    if (sourceIndex < 0 || targetIndex < 0) {
+      setDragId(null);
+      setDragOverId(null);
+      return;
+    }
+    orderedIds.splice(sourceIndex, 1);
+    orderedIds.splice(orderedIds.indexOf(targetId), 0, dragId);
+    setDragId(null);
+    setDragOverId(null);
+    void window.pinApi.reorderTodos(orderedIds).then((updated) => {
+      if (updated) {
+        setTodos(updated);
+      }
+    });
+  };
+
+  const clearDrag = () => {
+    setDragId(null);
+    setDragOverId(null);
+  };
 
   return (
     <main className="app">
@@ -390,7 +477,13 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
             {!loaded && <p className="app--loading">加载中…</p>}
             {loaded && openTodos.map((todo) => (
               <TodoRow
+                dragOver={dragOverId === todo.id}
+                dragging={dragId === todo.id}
                 key={todo.id}
+                onDragEnd={clearDrag}
+                onDragOver={() => setDragOverId(todo.id)}
+                onDragStart={() => setDragId(todo.id)}
+                onDrop={() => reorderTodos(todo.id)}
                 onDelete={() => deleteTodo(todo.id)}
                 onToggle={() => updateTodo(todo.id, { done: !todo.done })}
                 onUpdate={(text) => updateTodo(todo.id, { text })}
@@ -402,7 +495,13 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
                 <div className="todo-completed-heading">已完成 {completedTodos.length}</div>
                 {completedTodos.map((todo) => (
                   <TodoRow
+                    dragOver={dragOverId === todo.id}
+                    dragging={dragId === todo.id}
                     key={todo.id}
+                    onDragEnd={clearDrag}
+                    onDragOver={() => setDragOverId(todo.id)}
+                    onDragStart={() => setDragId(todo.id)}
+                    onDrop={() => reorderTodos(todo.id)}
                     onDelete={() => deleteTodo(todo.id)}
                     onToggle={() => updateTodo(todo.id, { done: !todo.done })}
                     onUpdate={(text) => updateTodo(todo.id, { text })}
@@ -410,6 +509,14 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
                   />
                 ))}
               </>
+            )}
+            {deletedTodo && (
+              <div className="todo-undo-row">
+                <span className="todo-undo-text">已删除「{deletedTodo.text}」</span>
+                <button className="todo-undo-button" onClick={restoreTodo} type="button">
+                  撤销
+                </button>
+              </div>
             )}
           </div>
           <footer className="todo-input-row">

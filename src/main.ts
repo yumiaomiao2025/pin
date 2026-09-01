@@ -110,7 +110,17 @@ ipcMain.handle('todo:delete', (event, todoId: unknown) => {
   if (typeof todoId !== 'string') {
     throw new TypeError('todo id must be a string');
   }
-  return getManager().deleteTodo(event, todoId);
+  return getManager().deleteTodo(event, todoId) ?? null;
+});
+ipcMain.handle('todo:restore', (event) => getManager().restoreTodo(event) ?? null);
+ipcMain.handle('todo:reorder', (event, orderedIds: unknown) => {
+  if (
+    !Array.isArray(orderedIds) ||
+    orderedIds.some((id) => typeof id !== 'string')
+  ) {
+    throw new TypeError('todo order must be an array of ids');
+  }
+  return getManager().reorderTodos(event, orderedIds) ?? null;
 });
 ipcMain.handle('widget:save-note', (event, noteText: unknown) => {
   if (typeof noteText !== 'string') {

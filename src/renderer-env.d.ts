@@ -32,7 +32,9 @@ interface Window {
     listTodos: () => Promise<PinTodo[] | null>;
     createTodo: (text: string) => Promise<PinTodo | null>;
     updateTodo: (id: string, patch: { text?: string; done?: boolean }) => Promise<PinTodo | null>;
-    deleteTodo: (id: string) => Promise<boolean>;
+    deleteTodo: (id: string) => Promise<PinTodo | null>;
+    restoreTodo: () => Promise<PinTodo | null>;
+    reorderTodos: (orderedIds: string[]) => Promise<PinTodo[] | null>;
     saveNote: (noteText: string) => Promise<PinWidget | null>;
     hideWindow: () => Promise<boolean>;
     setSize: (width: number, height: number) => Promise<PinWidget | null>;

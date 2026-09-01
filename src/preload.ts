@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('pinApi', {
   updateTodo: (id: string, patch: { text?: string; done?: boolean }) =>
     ipcRenderer.invoke('todo:update', { id, ...patch }),
   deleteTodo: (id: string) => ipcRenderer.invoke('todo:delete', id),
+  restoreTodo: () => ipcRenderer.invoke('todo:restore'),
+  reorderTodos: (orderedIds: string[]) => ipcRenderer.invoke('todo:reorder', orderedIds),
   saveNote: (noteText: string) => ipcRenderer.invoke('widget:save-note', noteText),
   hideWindow: () => ipcRenderer.invoke('window:hide'),
   setSize: (width: number, height: number) => ipcRenderer.invoke('window:set-size', { width, height }),
