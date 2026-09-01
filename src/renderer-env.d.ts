@@ -25,9 +25,16 @@ interface PinTodo {
   updatedAt: number;
 }
 
+interface PinSettings {
+  maxLines: number;
+  hoverFull: boolean;
+  scrollbar: 'always' | 'overlay' | 'hidden';
+}
+
 interface Window {
   pinApi: {
     ping: () => Promise<PinPingResult>;
+    getSettings: () => Promise<PinSettings>;
     getWidget: () => Promise<PinWidget | null>;
     listTodos: () => Promise<PinTodo[] | null>;
     createTodo: (text: string) => Promise<PinTodo | null>;

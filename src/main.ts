@@ -77,6 +77,7 @@ ipcMain.handle('app:ping', () => ({
 }));
 
 ipcMain.handle('widget:get', (event) => getManager().getWidgetForEvent(event) ?? null);
+ipcMain.handle('settings:get', () => getManager().getSettings());
 ipcMain.handle('todo:list', (event) => getManager().getTodosForEvent(event) ?? null);
 ipcMain.handle('todo:create', (event, text: unknown) => {
   if (typeof text !== 'string') {

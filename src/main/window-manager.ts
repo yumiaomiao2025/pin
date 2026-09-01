@@ -8,7 +8,7 @@ import path from 'node:path';
 
 import type { AppDatabaseService } from './database/app-service';
 import type { CreateWidgetInput, UpdateTodoInput } from './database/repositories';
-import type { Todo, Widget, WidgetType } from './database/schema';
+import type { Settings, Todo, Widget, WidgetType } from './database/schema';
 
 const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
@@ -28,6 +28,7 @@ export interface WindowManager {
   openVisibleWidgets(): void;
   openWidget(widgetId: string): BrowserWindow | undefined;
   createWidget(type: WidgetType): Widget;
+  getSettings(): Settings;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
   getTodosForEvent(event: IpcMainInvokeEvent): Todo[] | undefined;
   createTodo(event: IpcMainInvokeEvent, text: string): Todo | undefined;
@@ -279,6 +280,8 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       openWidget(widget.id);
       return widget;
     },
+
+    getSettings: () => service.settings.ensure(),
 
     getWidgetForEvent: (event) => {
       const widgetId = widgetIdForEvent(event);

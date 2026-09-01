@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import './styles/global.scss';
@@ -19,6 +20,16 @@ const WIDGET_OPTIONS: Array<{ type: WidgetType; label: string }> = [
   { type: 'clip', label: '新剪贴板' },
   { type: 'desk', label: '新三合一' },
 ];
+
+const DEFAULT_TODO_SETTINGS: PinSettings = {
+  maxLines: 0,
+  hoverFull: true,
+  scrollbar: 'overlay',
+};
+
+function compareTodos(left: PinTodo, right: PinTodo) {
+  return left.sortOrder - right.sortOrder || left.createdAt - right.createdAt || left.id.localeCompare(right.id);
+}
 
 function Onboarding() {
   const [creating, setCreating] = useState<WidgetType | null>(null);
@@ -183,6 +194,116 @@ function ResizeHandle() {
   );
 }
 
+function HoverText({
+  text,
+  className,
+  maxLines,
+  hoverFull,
+  onDoubleClick,
+  completing,
+}: {
+  text: string;
+  className: string;
+  maxLines: number;
+  hoverFull: boolean;
+  onDoubleClick: () => void;
+  completing: boolean;
+}) {
+  const textRef = useRef<HTMLButtonElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<number | undefined>(undefined);
+  const [tooltip, setTooltip] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    sourceTop: number;
+    sourceBottom: number;
+  } | null>(null);
+
+  const hideTooltip = () => {
+    if (timerRef.current !== undefined) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = undefined;
+    }
+    setTooltip(null);
+  };
+
+  const showTooltip = () => {
+    if (!hoverFull || !textRef.current) {
+      return;
+    }
+    const element = textRef.current;
+    if (element.scrollHeight - element.clientHeight < 2 && element.scrollWidth - element.clientWidth < 2) {
+      return;
+    }
+    timerRef.current = window.setTimeout(() => {
+      const rect = element.getBoundingClientRect();
+      setTooltip({
+        left: rect.left,
+        top: rect.bottom + 6,
+        width: Math.max(220, rect.width),
+        sourceTop: rect.top,
+        sourceBottom: rect.bottom,
+      });
+      timerRef.current = undefined;
+    }, 400);
+  };
+
+  useEffect(() => () => hideTooltip(), []);
+
+  useLayoutEffect(() => {
+    if (!tooltip || !tooltipRef.current) {
+      return;
+    }
+    const tipRect = tooltipRef.current.getBoundingClientRect();
+    const padding = 8;
+    const left = Math.min(
+      Math.max(padding, tooltip.left),
+      Math.max(padding, window.innerWidth - tipRect.width - padding),
+    );
+    let top = tooltip.sourceBottom + 6;
+    if (top + tipRect.height + padding > window.innerHeight) {
+      top = tooltip.sourceTop - tipRect.height - 6;
+    }
+    top = Math.min(
+      Math.max(padding, top),
+      Math.max(padding, window.innerHeight - tipRect.height - padding),
+    );
+    if (left !== tooltip.left || top !== tooltip.top) {
+      setTooltip((current) => (current ? { ...current, left, top } : current));
+    }
+  }, [tooltip]);
+
+  const textClass = maxLines > 0 ? `${className} todo-text--clamp` : `${className} todo-text--unlimited`;
+
+  return (
+    <>
+      <button
+        className={textClass}
+        onDoubleClick={onDoubleClick}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
+        ref={textRef}
+        style={maxLines > 0 ? { WebkitLineClamp: maxLines } : undefined}
+        type="button"
+      >
+        {text}
+        {completing && <span aria-hidden="true" className="todo-text-strike" />}
+      </button>
+      {tooltip && createPortal(
+        <div
+          className="overflow-tooltip"
+          ref={tooltipRef}
+          style={{ left: tooltip.left, top: tooltip.top, width: tooltip.width }}
+        >
+          {text}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 function TodoRow({
   todo,
   onToggle,
@@ -194,6 +315,9 @@ function TodoRow({
   onDragOver,
   onDrop,
   onDragEnd,
+  maxLines,
+  hoverFull,
+  completing,
 }: {
   todo: PinTodo;
   onToggle: () => void;
@@ -205,6 +329,9 @@ function TodoRow({
   onDragOver: () => void;
   onDrop: () => void;
   onDragEnd: () => void;
+  maxLines: number;
+  hoverFull: boolean;
+  completing: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(todo.text);
@@ -253,7 +380,7 @@ function TodoRow({
 
   return (
     <div
-      className={`${todo.done ? 'todo-row todo-row--done' : 'todo-row'}${dragging ? ' todo-row--dragging' : ''}${dragOver ? ' todo-row--drag-over' : ''}`}
+      className={`${todo.done ? 'todo-row todo-row--done' : 'todo-row'}${completing ? ' todo-row--completing' : ''}${dragging ? ' todo-row--dragging' : ''}${dragOver ? ' todo-row--drag-over' : ''}`}
       onDragEnd={onDragEnd}
       onDragOver={(event) => {
         event.preventDefault();
@@ -267,12 +394,12 @@ function TodoRow({
       <button
         aria-label={todo.done ? '取消完成' : '标记完成'}
         aria-pressed={todo.done}
-        className={todo.done ? 'todo-check todo-check--done' : 'todo-check'}
+        className={todo.done ? 'todo-check todo-check--done' : completing ? 'todo-check todo-check--completing' : 'todo-check'}
         onClick={onToggle}
         title={todo.done ? '取消完成' : '标记完成'}
         type="button"
       >
-        {todo.done ? '✓' : ''}
+        {(todo.done || completing) && <span className="todo-check-mark">✓</span>}
       </button>
       {editing ? (
         <textarea
@@ -292,14 +419,14 @@ function TodoRow({
           value={draft}
         />
       ) : (
-        <button
-          className="todo-text"
+        <HoverText
+          className={todo.done ? 'todo-text todo-text--done' : 'todo-text'}
+          completing={completing}
+          hoverFull={hoverFull}
+          maxLines={maxLines}
           onDoubleClick={beginEditing}
-          title="双击编辑"
-          type="button"
-        >
-          {todo.text}
-        </button>
+          text={todo.text}
+        />
       )}
       <span
         aria-hidden="true"
@@ -332,8 +459,19 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const [deletedTodo, setDeletedTodo] = useState<PinTodo | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [completingIds, setCompletingIds] = useState<Set<string>>(() => new Set());
+  const [viewSettings, setViewSettings] = useState(DEFAULT_TODO_SETTINGS);
+  const [listHovered, setListHovered] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.outerWidth);
   const [loaded, setLoaded] = useState(false);
   const composing = useRef(false);
+  const todosRef = useRef(todos);
+  const completionQueue = useRef<string[]>([]);
+  const processingCompletion = useRef(false);
+
+  useEffect(() => {
+    todosRef.current = todos;
+  }, [todos]);
 
   useEffect(() => {
     if (!deletedTodo) {
@@ -345,16 +483,25 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
 
   useEffect(() => {
     let active = true;
-    void window.pinApi.listTodos().then((nextTodos) => {
-      if (!active) {
-        return;
-      }
-      setTodos(nextTodos ?? []);
-      setLoaded(true);
-    });
+    void Promise.all([window.pinApi.listTodos(), window.pinApi.getSettings()]).then(
+      ([nextTodos, nextSettings]) => {
+        if (!active) {
+          return;
+        }
+        setTodos(nextTodos ?? []);
+        setViewSettings(nextSettings);
+        setLoaded(true);
+      },
+    );
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleWindowResize = () => setWindowWidth(window.outerWidth);
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
   }, []);
 
   const hide = () => {
@@ -414,6 +561,59 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
     });
   };
 
+  const processCompletionQueue = () => {
+    if (processingCompletion.current) {
+      return;
+    }
+    const todoId = completionQueue.current.shift();
+    if (!todoId) {
+      return;
+    }
+    const todo = todosRef.current.find((item) => item.id === todoId);
+    if (!todo || todo.done) {
+      processCompletionQueue();
+      return;
+    }
+    processingCompletion.current = true;
+    setCompletingIds((current) => new Set(current).add(todoId));
+    void window.pinApi.updateTodo(todoId, { done: true }).then((updated) => {
+      window.setTimeout(() => {
+        if (updated) {
+          setTodos((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+        }
+        setCompletingIds((current) => {
+          const next = new Set(current);
+          next.delete(todoId);
+          return next;
+        });
+        processingCompletion.current = false;
+        processCompletionQueue();
+      }, 300);
+    }).catch(() => {
+      setCompletingIds((current) => {
+        const next = new Set(current);
+        next.delete(todoId);
+        return next;
+      });
+      processingCompletion.current = false;
+      processCompletionQueue();
+    });
+  };
+
+  const toggleTodo = (todo: PinTodo) => {
+    if (completingIds.has(todo.id)) {
+      return;
+    }
+    if (todo.done) {
+      updateTodo(todo.id, { done: false });
+      return;
+    }
+    if (!completionQueue.current.includes(todo.id)) {
+      completionQueue.current.push(todo.id);
+      processCompletionQueue();
+    }
+  };
+
   const deleteTodo = (todoId: string) => {
     void window.pinApi.deleteTodo(todoId).then((deleted) => {
       if (deleted) {
@@ -427,7 +627,7 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
     void window.pinApi.restoreTodo().then((restored) => {
       if (restored) {
         setTodos((current) =>
-          [...current, restored].sort((left, right) => left.sortOrder - right.sortOrder),
+          [...current, restored].sort(compareTodos),
         );
       }
       setDeletedTodo(null);
@@ -437,6 +637,8 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const openTodos = todos.filter((todo) => !todo.done);
   const completedTodos = todos.filter((todo) => todo.done);
   const displayedTodos = [...openTodos, ...completedTodos];
+  const scrollbarMode = windowWidth < 300 ? 'overlay' : viewSettings.scrollbar;
+  const listClassName = `todo-list todo-list--${scrollbarMode}${listHovered ? ' todo-list--hovered' : ''}`;
 
   const reorderTodos = (targetId: string) => {
     if (!dragId || dragId === targetId) {
@@ -473,19 +675,26 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
       <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
       {!widget.collapsed && (
         <>
-          <div className="todo-list">
+          <div
+            className={listClassName}
+            onMouseEnter={() => setListHovered(true)}
+            onMouseLeave={() => setListHovered(false)}
+          >
             {!loaded && <p className="app--loading">加载中…</p>}
             {loaded && openTodos.map((todo) => (
               <TodoRow
                 dragOver={dragOverId === todo.id}
                 dragging={dragId === todo.id}
+                completing={completingIds.has(todo.id)}
+                hoverFull={viewSettings.hoverFull}
                 key={todo.id}
+                maxLines={viewSettings.maxLines}
                 onDragEnd={clearDrag}
                 onDragOver={() => setDragOverId(todo.id)}
                 onDragStart={() => setDragId(todo.id)}
                 onDrop={() => reorderTodos(todo.id)}
                 onDelete={() => deleteTodo(todo.id)}
-                onToggle={() => updateTodo(todo.id, { done: !todo.done })}
+                onToggle={() => toggleTodo(todo)}
                 onUpdate={(text) => updateTodo(todo.id, { text })}
                 todo={todo}
               />
@@ -497,13 +706,16 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
                   <TodoRow
                     dragOver={dragOverId === todo.id}
                     dragging={dragId === todo.id}
+                    completing={completingIds.has(todo.id)}
+                    hoverFull={viewSettings.hoverFull}
                     key={todo.id}
+                    maxLines={viewSettings.maxLines}
                     onDragEnd={clearDrag}
                     onDragOver={() => setDragOverId(todo.id)}
                     onDragStart={() => setDragId(todo.id)}
                     onDrop={() => reorderTodos(todo.id)}
                     onDelete={() => deleteTodo(todo.id)}
-                    onToggle={() => updateTodo(todo.id, { done: !todo.done })}
+                    onToggle={() => toggleTodo(todo)}
                     onUpdate={(text) => updateTodo(todo.id, { text })}
                     todo={todo}
                   />

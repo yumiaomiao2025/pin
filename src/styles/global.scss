@@ -164,6 +164,65 @@ button:disabled {
   box-shadow: inset 0 2px 0 #ffe566;
 }
 
+.todo-row--completing .todo-text {
+  position: relative;
+  color: #111111;
+  animation: todo-text-complete 120ms linear 180ms forwards;
+}
+
+.todo-check--completing {
+  color: #ffffff;
+  background: #111111;
+  transform: scale(1.18);
+  animation: todo-check-settle 120ms linear 60ms forwards;
+}
+
+.todo-check-mark {
+  display: inline-block;
+}
+
+.todo-check--completing .todo-check-mark {
+  clip-path: inset(0 100% 0 0);
+  animation: todo-check-reveal 60ms linear 60ms forwards;
+}
+
+.todo-text-strike {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1.5px;
+  background: #111111;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: todo-strike 120ms linear 60ms forwards;
+}
+
+@keyframes todo-check-reveal {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes todo-check-settle {
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes todo-strike {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes todo-text-complete {
+  to {
+    color: #6f6f6f;
+    transform: translateY(2px);
+  }
+}
+
 .todo-check {
   width: 16px;
   height: 16px;
@@ -183,6 +242,7 @@ button:disabled {
 }
 
 .todo-text {
+  display: block;
   min-width: 0;
   flex: 1;
   padding: 0;
@@ -196,6 +256,16 @@ button:disabled {
   word-break: normal;
   cursor: text;
   -webkit-app-region: no-drag;
+}
+
+.todo-text--clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.todo-text--unlimited {
+  overflow: visible;
 }
 
 .todo-row--done .todo-text {
@@ -271,6 +341,91 @@ button:disabled {
 
 .todo-input::placeholder {
   color: #8a8a8a;
+}
+
+.overflow-tooltip {
+  position: fixed;
+  z-index: 20;
+  max-width: calc(100vw - 16px);
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  color: #ffffff;
+  background: #111111;
+  border: 1.5px solid #111111;
+  box-shadow: 5px 5px 0 #ffe566;
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.todo-list--always {
+  overflow-y: scroll;
+}
+
+.todo-list--always::-webkit-scrollbar {
+  width: 10px;
+}
+
+.todo-list--always::-webkit-scrollbar-track {
+  border-left: 1.5px solid #111111;
+  background: repeating-linear-gradient(45deg, #ffffff 0 4px, #f4f4f4 4px 8px);
+}
+
+.todo-list--always::-webkit-scrollbar-thumb {
+  background: #111111;
+}
+
+.todo-list--overlay {
+  scrollbar-color: transparent transparent;
+}
+
+.todo-list--overlay::-webkit-scrollbar {
+  width: 6px;
+}
+
+.todo-list--overlay::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.todo-list--overlay::-webkit-scrollbar-thumb {
+  background: rgba(17, 17, 17, 0);
+  transition: background-color 120ms linear;
+}
+
+.todo-list--overlay.todo-list--hovered {
+  scrollbar-color: rgba(17, 17, 17, 0.85) transparent;
+}
+
+.todo-list--overlay.todo-list--hovered::-webkit-scrollbar-thumb {
+  background: rgba(17, 17, 17, 0.85);
+}
+
+.todo-list--hidden {
+  scrollbar-width: none;
+}
+
+.todo-list--hidden::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 300px) {
+  .todo-list--always {
+    scrollbar-width: auto;
+  }
+
+  .todo-list--always::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .todo-list--always::-webkit-scrollbar-track {
+    background: transparent;
+    border-left: 0;
+  }
+
+  .todo-list--always::-webkit-scrollbar-thumb {
+    background: rgba(17, 17, 17, 0.85);
+  }
 }
 
 .todo-undo-row {

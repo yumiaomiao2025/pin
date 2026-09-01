@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('pinApi', {
   ping: () => ipcRenderer.invoke('app:ping'),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
   getWidget: () => ipcRenderer.invoke('widget:get'),
   listTodos: () => ipcRenderer.invoke('todo:list'),
   createTodo: (text: string) => ipcRenderer.invoke('todo:create', text),
