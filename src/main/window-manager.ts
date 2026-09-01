@@ -31,6 +31,7 @@ export interface WindowManager {
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
   saveNote(event: IpcMainInvokeEvent, noteText: string): Widget | undefined;
   hide(event: IpcMainInvokeEvent): boolean;
+  setSize(event: IpcMainInvokeEvent, width: number, height: number): Widget | undefined;
   setOpacity(event: IpcMainInvokeEvent, opacity: number): Widget | undefined;
   setPin(event: IpcMainInvokeEvent, pin: boolean): Widget | undefined;
   setCollapsed(event: IpcMainInvokeEvent, collapsed: boolean): Widget | undefined;
@@ -93,6 +94,7 @@ function isWidgetWindow(window: BrowserWindow): window is WidgetWindow {
 
 export function createWindowManager(service: AppDatabaseService): WindowManager {
   const windows = new Map<string, WidgetWindow>();
+  const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let quitting = false;
 
   const widgetIdForEvent = (event: IpcMainInvokeEvent) => {
@@ -119,6 +121,20 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     if (window.isDestroyed()) {
       windows.delete(widgetId);
     }
+  };
+
+  const schedulePersistBounds = (widgetId: string, window: WidgetWindow, bounds: Rectangle) => {
+    const previousTimer = persistTimers.get(widgetId);
+    if (previousTimer) {
+      clearTimeout(previousTimer);
+    }
+    persistTimers.set(
+      widgetId,
+      setTimeout(() => {
+        persistTimers.delete(widgetId);
+        persistBounds(widgetId, window, bounds);
+      }, 100),
+    );
   };
 
   const loadWidget = (window: WidgetWindow, widgetId: string) => {
@@ -186,11 +202,11 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         window.setPosition(nextBounds.x, nextBounds.y);
         snapping = false;
       }
-      persistBounds(widgetId, window, nextBounds);
+      schedulePersistBounds(widgetId, window, nextBounds);
     });
     window.on('resize', () => {
       if (!window.isDestroyed()) {
-        persistBounds(widgetId, window, window.getBounds());
+        schedulePersistBounds(widgetId, window, window.getBounds());
       }
     });
     window.on('close', (event) => {
@@ -271,6 +287,27 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return true;
     },
 
+    setSize: (event, width, height) => {
+      const target = showWidgetForEvent(event);
+      if (!target?.window || target.window.isDestroyed()) {
+        return undefined;
+      }
+      const widget = service.widgets.getById(target.widgetId);
+      if (!widget || widget.collapsed) {
+        return widget;
+      }
+      const display = screen.getDisplayMatching(target.window.getBounds());
+      const bounds = target.window.getBounds();
+      const nextBounds = {
+        ...bounds,
+        width: clamp(Math.round(width), MIN_WIDTH, display.workArea.width),
+        height: clamp(Math.round(height), MIN_HEIGHT, display.workArea.height),
+      };
+      target.window.setBounds(nextBounds);
+      persistBounds(target.widgetId, target.window, nextBounds);
+      return service.widgets.getById(target.widgetId);
+    },
+
     setOpacity: (event, opacity) => {
       const target = showWidgetForEvent(event);
       if (!target?.window || target.window.isDestroyed()) {
@@ -315,6 +352,14 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
     prepareQuit: () => {
       quitting = true;
+      persistTimers.forEach((timer, widgetId) => {
+        clearTimeout(timer);
+        const window = windows.get(widgetId);
+        if (window && !window.isDestroyed()) {
+          persistBounds(widgetId, window, window.getBounds());
+        }
+      });
+      persistTimers.clear();
     },
   };
 }

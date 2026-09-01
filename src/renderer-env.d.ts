@@ -21,6 +21,7 @@ interface Window {
     getWidget: () => Promise<PinWidget | null>;
     saveNote: (noteText: string) => Promise<PinWidget | null>;
     hideWindow: () => Promise<boolean>;
+    setSize: (width: number, height: number) => Promise<PinWidget | null>;
     setOpacity: (opacity: number) => Promise<PinWidget | null>;
     setPin: (pin: boolean) => Promise<PinWidget | null>;
     setCollapsed: (collapsed: boolean) => Promise<PinWidget | null>;

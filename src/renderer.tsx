@@ -123,6 +123,66 @@ function OpacityBar({ widget, onChange }: { widget: PinWidget; onChange: (value:
   );
 }
 
+function ResizeHandle() {
+  const resizeState = useRef<{
+    pointerId: number;
+    startScreenX: number;
+    startScreenY: number;
+    startWidth: number;
+    startHeight: number;
+  } | null>(null);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    resizeState.current = {
+      pointerId: event.pointerId,
+      startScreenX: event.screenX,
+      startScreenY: event.screenY,
+      startWidth: window.outerWidth,
+      startHeight: window.outerHeight,
+    };
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const state = resizeState.current;
+    if (!state || state.pointerId !== event.pointerId) {
+      return;
+    }
+    void window.pinApi.setSize(
+      state.startWidth + event.screenX - state.startScreenX,
+      state.startHeight + event.screenY - state.startScreenY,
+    );
+  };
+
+  const stopResizing = (event: React.PointerEvent<HTMLDivElement>) => {
+    const state = resizeState.current;
+    if (!state || state.pointerId !== event.pointerId) {
+      return;
+    }
+    resizeState.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  return (
+    <div
+      aria-label="调整窗口大小"
+      className="resize-handle"
+      onPointerCancel={stopResizing}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={stopResizing}
+      role="separator"
+    />
+  );
+}
+
 function NoteWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const [widget, setWidget] = useState(initialWidget);
   const [draft, setDraft] = useState(initialWidget.noteText);
@@ -203,6 +263,7 @@ function NoteWidget({ initialWidget }: { initialWidget: PinWidget }) {
             value={draft}
           />
           <OpacityBar onChange={setOpacity} widget={widget} />
+          <ResizeHandle />
         </>
       )}
     </main>
@@ -210,15 +271,38 @@ function NoteWidget({ initialWidget }: { initialWidget: PinWidget }) {
 }
 
 function UnsupportedWidget({ widget }: { widget: PinWidget }) {
+  const [currentWidget, setCurrentWidget] = useState(widget);
+
+  const togglePin = () => {
+    void window.pinApi.setPin(!currentWidget.pin).then((updated) => {
+      if (updated) {
+        setCurrentWidget(updated);
+      }
+    });
+  };
+
+  const toggleCollapsed = () => {
+    void window.pinApi.setCollapsed(!currentWidget.collapsed).then((updated) => {
+      if (updated) {
+        setCurrentWidget(updated);
+      }
+    });
+  };
+
   return (
     <main className="app">
       <TitleBar
-        onCollapse={() => void window.pinApi.setCollapsed(!widget.collapsed)}
+        onCollapse={toggleCollapsed}
         onHide={() => void window.pinApi.hideWindow()}
-        onPin={() => void window.pinApi.setPin(!widget.pin)}
-        widget={widget}
+        onPin={togglePin}
+        widget={currentWidget}
       />
-      {!widget.collapsed && <p className="placeholder">{widget.type.toUpperCase()} 即将可用</p>}
+      {!currentWidget.collapsed && (
+        <>
+          <p className="placeholder">{currentWidget.type.toUpperCase()} 即将可用</p>
+          <ResizeHandle />
+        </>
+      )}
     </main>
   );
 }

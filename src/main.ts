@@ -84,6 +84,21 @@ ipcMain.handle('widget:save-note', (event, noteText: unknown) => {
   return getManager().saveNote(event, noteText) ?? null;
 });
 ipcMain.handle('window:hide', (event) => getManager().hide(event));
+ipcMain.handle('window:set-size', (event, size: unknown) => {
+  if (
+    !size ||
+    typeof size !== 'object' ||
+    !('width' in size) ||
+    !('height' in size) ||
+    typeof size.width !== 'number' ||
+    typeof size.height !== 'number' ||
+    !Number.isFinite(size.width) ||
+    !Number.isFinite(size.height)
+  ) {
+    throw new TypeError('size must contain finite width and height numbers');
+  }
+  return getManager().setSize(event, size.width, size.height) ?? null;
+});
 ipcMain.handle('window:set-opacity', (event, opacity: unknown) => {
   if (typeof opacity !== 'number' || !Number.isFinite(opacity)) {
     throw new TypeError('opacity must be a finite number');
