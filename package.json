@@ -19,7 +19,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
-      "electron-winstaller"
+      "electron-winstaller",
+      "better-sqlite3"
     ]
   },
   "devDependencies": {
@@ -32,11 +33,13 @@
     "@electron-forge/plugin-fuses": "^7.11.2",
     "@electron-forge/plugin-vite": "^7.11.2",
     "@electron/fuses": "^1.0.0",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
+    "drizzle-kit": "^0.31.10",
     "electron": "44.1.0",
     "eslint": "^8.0.1",
     "eslint-plugin-import": "^2.25.0",
@@ -46,6 +49,8 @@
     "vite": "^5.0.12"
   },
   "dependencies": {
+    "better-sqlite3": "^12.4.6",
+    "drizzle-orm": "^0.45.2",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
