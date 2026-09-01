@@ -280,7 +280,10 @@ function HoverText({
     <>
       <button
         className={textClass}
-        onDoubleClick={onDoubleClick}
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          onDoubleClick();
+        }}
         onMouseEnter={showTooltip}
         onMouseLeave={hideTooltip}
         ref={textRef}
@@ -301,6 +304,357 @@ function HoverText({
         document.body,
       )}
     </>
+  );
+}
+
+function ClipRow({
+  item,
+  index,
+  copied,
+  onCopy,
+  onDelete,
+  onUpdate,
+  dragging,
+  dragOver,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  hoverFull,
+}: {
+  item: PinClipItem;
+  index: number;
+  copied: boolean;
+  onCopy: () => void;
+  onDelete: () => void;
+  onUpdate: (text: string) => void;
+  dragging: boolean;
+  dragOver: boolean;
+  onDragStart: () => void;
+  onDragOver: () => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
+  hoverFull: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(item.text);
+  const composing = useRef(false);
+  const suppressBlur = useRef(false);
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(item.text);
+    }
+  }, [editing, item.text]);
+
+  const beginEditing = () => {
+    suppressBlur.current = false;
+    setDraft(item.text);
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    suppressBlur.current = true;
+    setDraft(item.text);
+    setEditing(false);
+  };
+
+  const saveEditing = () => {
+    if (suppressBlur.current) {
+      suppressBlur.current = false;
+      return;
+    }
+    setEditing(false);
+    if (draft !== item.text && draft.trim() !== '') {
+      onUpdate(draft);
+    }
+  };
+
+  const handleEditKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isComposing = composing.current || event.nativeEvent.isComposing;
+    if (event.key === 'Escape' && !isComposing) {
+      event.preventDefault();
+      cancelEditing();
+    } else if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+      event.preventDefault();
+      event.currentTarget.blur();
+    }
+  };
+
+  return (
+    <div
+      className={`${copied ? 'clip-row clip-row--copied' : 'clip-row'}${dragging ? ' clip-row--dragging' : ''}${dragOver ? ' clip-row--drag-over' : ''}`}
+      onClick={onCopy}
+      onDragEnd={onDragEnd}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop();
+      }}
+    >
+      <span className="clip-index">{String(index + 1).padStart(2, '0')}</span>
+      {editing ? (
+        <textarea
+          aria-label="编辑剪贴文本"
+          autoFocus
+          className="clip-text clip-text--editing"
+          onBlur={saveEditing}
+          onChange={(event) => setDraft(event.target.value)}
+          onClick={(event) => event.stopPropagation()}
+          onCompositionEnd={() => {
+            composing.current = false;
+          }}
+          onCompositionStart={() => {
+            composing.current = true;
+          }}
+          onKeyDown={handleEditKeyDown}
+          rows={1}
+          value={draft}
+        />
+      ) : (
+        <HoverText
+          className="clip-text"
+          completing={false}
+          hoverFull={hoverFull}
+          maxLines={1}
+          onDoubleClick={beginEditing}
+          text={item.text}
+        />
+      )}
+      <span aria-hidden="true" className="clip-copy-mark">⧉</span>
+      <span
+        aria-hidden="true"
+        className="clip-drag-handle"
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = 'move';
+          onDragStart();
+        }}
+      >
+        ⠿
+      </span>
+      <button
+        aria-label="删除剪贴文本"
+        className="clip-delete"
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete();
+        }}
+        title="删除剪贴文本"
+        type="button"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+function ClipWidget({ initialWidget }: { initialWidget: PinWidget }) {
+  const [widget, setWidget] = useState(initialWidget);
+  const [items, setItems] = useState<PinClipItem[]>([]);
+  const [draft, setDraft] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [viewSettings, setViewSettings] = useState(DEFAULT_TODO_SETTINGS);
+  const [loaded, setLoaded] = useState(false);
+  const [listHovered, setListHovered] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.outerWidth);
+  const composing = useRef(false);
+
+  useEffect(() => {
+    if (!copiedId) {
+      return;
+    }
+    const timer = window.setTimeout(() => setCopiedId(null), 1_200);
+    return () => window.clearTimeout(timer);
+  }, [copiedId]);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([window.pinApi.listClips(), window.pinApi.getSettings()]).then(
+      ([nextItems, nextSettings]) => {
+        if (!active) {
+          return;
+        }
+        setItems(nextItems ?? []);
+        setViewSettings(nextSettings);
+        setLoaded(true);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleWindowResize = () => setWindowWidth(window.outerWidth);
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, []);
+
+  const hide = () => {
+    void window.pinApi.hideWindow();
+  };
+
+  const togglePin = () => {
+    void window.pinApi.setPin(!widget.pin).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const toggleCollapsed = () => {
+    void window.pinApi.setCollapsed(!widget.collapsed).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const setOpacity = (opacity: number) => {
+    void window.pinApi.setOpacity(opacity).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const addClip = () => {
+    if (draft.trim() === '') {
+      return;
+    }
+    const text = draft;
+    setDraft('');
+    void window.pinApi.createClip(text).then((created) => {
+      if (created) {
+        setItems((current) => [...current, created]);
+      }
+    });
+  };
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isComposing = composing.current || event.nativeEvent.isComposing;
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+      event.preventDefault();
+      addClip();
+    }
+  };
+
+  const copyClip = (clipId: string) => {
+    void window.pinApi.copyClip(clipId).then((copied) => {
+      if (copied) {
+        setCopiedId(copied.id);
+      }
+    });
+  };
+
+  const updateClip = (clipId: string, text: string) => {
+    void window.pinApi.updateClip(clipId, text).then((updated) => {
+      if (updated) {
+        setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      }
+    });
+  };
+
+  const deleteClip = (clipId: string) => {
+    void window.pinApi.deleteClip(clipId).then((deleted) => {
+      if (deleted) {
+        setItems((current) => current.filter((item) => item.id !== clipId));
+      }
+    });
+  };
+
+  const reorderClips = (targetId: string) => {
+    if (!dragId || dragId === targetId) {
+      setDragId(null);
+      setDragOverId(null);
+      return;
+    }
+    const orderedIds = items.map((item) => item.id);
+    const sourceIndex = orderedIds.indexOf(dragId);
+    const targetIndex = orderedIds.indexOf(targetId);
+    if (sourceIndex < 0 || targetIndex < 0) {
+      setDragId(null);
+      setDragOverId(null);
+      return;
+    }
+    orderedIds.splice(sourceIndex, 1);
+    orderedIds.splice(orderedIds.indexOf(targetId), 0, dragId);
+    setDragId(null);
+    setDragOverId(null);
+    void window.pinApi.reorderClips(orderedIds).then((updated) => {
+      if (updated) {
+        setItems(updated);
+      }
+    });
+  };
+
+  const clearDrag = () => {
+    setDragId(null);
+    setDragOverId(null);
+  };
+
+  const scrollbarMode = windowWidth < 300 ? 'overlay' : viewSettings.scrollbar;
+  const listClassName = `clip-list clip-list--${scrollbarMode}${listHovered ? ' clip-list--hovered' : ''}`;
+
+  return (
+    <main className="app">
+      <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
+      {!widget.collapsed && (
+        <>
+          <div
+            className={listClassName}
+            onMouseEnter={() => setListHovered(true)}
+            onMouseLeave={() => setListHovered(false)}
+          >
+            {!loaded && <p className="app--loading">加载中…</p>}
+            {loaded && items.map((item, index) => (
+              <ClipRow
+                copied={copiedId === item.id}
+                dragOver={dragOverId === item.id}
+                dragging={dragId === item.id}
+                hoverFull={viewSettings.hoverFull}
+                index={index}
+                item={item}
+                key={item.id}
+                onCopy={() => copyClip(item.id)}
+                onDelete={() => deleteClip(item.id)}
+                onDragEnd={clearDrag}
+                onDragOver={() => setDragOverId(item.id)}
+                onDragStart={() => setDragId(item.id)}
+                onDrop={() => reorderClips(item.id)}
+                onUpdate={(text) => updateClip(item.id, text)}
+              />
+            ))}
+          </div>
+          <footer className="clip-input-row">
+            <span aria-hidden="true" className="clip-input-symbol">[+]</span>
+            <textarea
+              aria-label="新增剪贴文本"
+              className="clip-input"
+              onChange={(event) => setDraft(event.target.value)}
+              onCompositionEnd={() => {
+                composing.current = false;
+              }}
+              onCompositionStart={() => {
+                composing.current = true;
+              }}
+              onKeyDown={handleInputKeyDown}
+              placeholder="写点什么…"
+              rows={1}
+              value={draft}
+            />
+          </footer>
+          <OpacityBar onChange={setOpacity} widget={widget} />
+          <ResizeHandle />
+        </>
+      )}
+    </main>
   );
 }
 
@@ -904,6 +1258,9 @@ function WidgetApp() {
   }
   if (widget.type === 'todo') {
     return <TodoWidget initialWidget={widget} />;
+  }
+  if (widget.type === 'clip') {
+    return <ClipWidget initialWidget={widget} />;
   }
   return <UnsupportedWidget widget={widget} />;
 }

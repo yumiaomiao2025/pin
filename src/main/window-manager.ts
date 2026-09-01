@@ -1,5 +1,6 @@
 import {
   BrowserWindow,
+  clipboard,
   screen,
   type IpcMainInvokeEvent,
   type Rectangle,
@@ -7,8 +8,12 @@ import {
 import path from 'node:path';
 
 import type { AppDatabaseService } from './database/app-service';
-import type { CreateWidgetInput, UpdateTodoInput } from './database/repositories';
-import type { Settings, Todo, Widget, WidgetType } from './database/schema';
+import type {
+  CreateWidgetInput,
+  UpdateClipItemInput,
+  UpdateTodoInput,
+} from './database/repositories';
+import type { ClipItem, Settings, Todo, Widget, WidgetType } from './database/schema';
 
 const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
@@ -36,6 +41,12 @@ export interface WindowManager {
   deleteTodo(event: IpcMainInvokeEvent, todoId: string): Todo | undefined;
   restoreTodo(event: IpcMainInvokeEvent): Todo | undefined;
   reorderTodos(event: IpcMainInvokeEvent, orderedIds: string[]): Todo[] | undefined;
+  getClipsForEvent(event: IpcMainInvokeEvent): ClipItem[] | undefined;
+  createClip(event: IpcMainInvokeEvent, text: string): ClipItem | undefined;
+  updateClip(event: IpcMainInvokeEvent, clipId: string, patch: UpdateClipItemInput): ClipItem | undefined;
+  deleteClip(event: IpcMainInvokeEvent, clipId: string): ClipItem | undefined;
+  reorderClips(event: IpcMainInvokeEvent, orderedIds: string[]): ClipItem[] | undefined;
+  copyClip(event: IpcMainInvokeEvent, clipId: string): ClipItem | undefined;
   saveNote(event: IpcMainInvokeEvent, noteText: string): Widget | undefined;
   hide(event: IpcMainInvokeEvent): boolean;
   setSize(event: IpcMainInvokeEvent, width: number, height: number): Widget | undefined;
@@ -120,6 +131,15 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     }
     const todo = service.todos.getById(todoId);
     return todo?.widgetId === widgetId ? todo : undefined;
+  };
+
+  const clipForEvent = (event: IpcMainInvokeEvent, clipId: string) => {
+    const widgetId = widgetIdForEvent(event);
+    if (!widgetId) {
+      return undefined;
+    }
+    const clip = service.clipItems.getById(clipId);
+    return clip?.widgetId === widgetId ? clip : undefined;
   };
 
   const persistBounds = (widgetId: string, window: WidgetWindow, bounds: Rectangle) => {
@@ -351,6 +371,48 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         return undefined;
       }
       return service.todos.reorder(widgetId, orderedIds);
+    },
+
+    getClipsForEvent: (event) => {
+      const widgetId = widgetIdForEvent(event);
+      return widgetId ? service.clipItems.listByWidget(widgetId) : undefined;
+    },
+
+    createClip: (event, text) => {
+      const widgetId = widgetIdForEvent(event);
+      return widgetId ? service.createClipItem({ widgetId, text }) : undefined;
+    },
+
+    updateClip: (event, clipId, patch) => {
+      if (!clipForEvent(event, clipId)) {
+        return undefined;
+      }
+      return service.clipItems.update(clipId, patch);
+    },
+
+    deleteClip: (event, clipId) => {
+      const clip = clipForEvent(event, clipId);
+      if (!clip || !service.clipItems.delete(clipId)) {
+        return undefined;
+      }
+      return clip;
+    },
+
+    reorderClips: (event, orderedIds) => {
+      const widgetId = widgetIdForEvent(event);
+      if (!widgetId) {
+        return undefined;
+      }
+      return service.clipItems.reorder(widgetId, orderedIds);
+    },
+
+    copyClip: (event, clipId) => {
+      const clip = clipForEvent(event, clipId);
+      if (!clip) {
+        return undefined;
+      }
+      clipboard.writeText(clip.text);
+      return clip;
     },
 
     saveNote: (event, noteText) => {

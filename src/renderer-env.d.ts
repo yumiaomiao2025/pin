@@ -25,6 +25,15 @@ interface PinTodo {
   updatedAt: number;
 }
 
+interface PinClipItem {
+  id: string;
+  widgetId: string;
+  text: string;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 interface PinSettings {
   maxLines: number;
   hoverFull: boolean;
@@ -42,6 +51,12 @@ interface Window {
     deleteTodo: (id: string) => Promise<PinTodo | null>;
     restoreTodo: () => Promise<PinTodo | null>;
     reorderTodos: (orderedIds: string[]) => Promise<PinTodo[] | null>;
+    listClips: () => Promise<PinClipItem[] | null>;
+    createClip: (text: string) => Promise<PinClipItem | null>;
+    updateClip: (id: string, text: string) => Promise<PinClipItem | null>;
+    deleteClip: (id: string) => Promise<PinClipItem | null>;
+    reorderClips: (orderedIds: string[]) => Promise<PinClipItem[] | null>;
+    copyClip: (id: string) => Promise<PinClipItem | null>;
     saveNote: (noteText: string) => Promise<PinWidget | null>;
     hideWindow: () => Promise<boolean>;
     setSize: (width: number, height: number) => Promise<PinWidget | null>;
