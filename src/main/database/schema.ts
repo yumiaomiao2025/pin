@@ -13,6 +13,11 @@ export const DESK_TABS = ['note', 'todo', 'clip'] as const;
 export const THEMES = ['light', 'dark'] as const;
 export const SCROLLBAR_MODES = ['always', 'overlay', 'hidden'] as const;
 
+export type WidgetType = (typeof WIDGET_TYPES)[number];
+export type DeskTab = (typeof DESK_TABS)[number];
+export type Theme = (typeof THEMES)[number];
+export type ScrollbarMode = (typeof SCROLLBAR_MODES)[number];
+
 export const DEFAULT_COLORS: Readonly<{
   paper: string;
   ink: string;
