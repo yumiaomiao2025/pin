@@ -31,6 +31,10 @@ function compareTodos(left: PinTodo, right: PinTodo) {
   return left.sortOrder - right.sortOrder || left.createdAt - right.createdAt || left.id.localeCompare(right.id);
 }
 
+function compareClips(left: PinClipItem, right: PinClipItem) {
+  return left.sortOrder - right.sortOrder || left.createdAt - right.createdAt || left.id.localeCompare(right.id);
+}
+
 function Onboarding() {
   const [creating, setCreating] = useState<WidgetType | null>(null);
 
@@ -457,6 +461,7 @@ function ClipWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const [items, setItems] = useState<PinClipItem[]>([]);
   const [draft, setDraft] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deletedClip, setDeletedClip] = useState<PinClipItem | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [viewSettings, setViewSettings] = useState(DEFAULT_TODO_SETTINGS);
@@ -472,6 +477,14 @@ function ClipWidget({ initialWidget }: { initialWidget: PinWidget }) {
     const timer = window.setTimeout(() => setCopiedId(null), 1_200);
     return () => window.clearTimeout(timer);
   }, [copiedId]);
+
+  useEffect(() => {
+    if (!deletedClip) {
+      return;
+    }
+    const timer = window.setTimeout(() => setDeletedClip(null), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [deletedClip]);
 
   useEffect(() => {
     let active = true;
@@ -565,7 +578,17 @@ function ClipWidget({ initialWidget }: { initialWidget: PinWidget }) {
     void window.pinApi.deleteClip(clipId).then((deleted) => {
       if (deleted) {
         setItems((current) => current.filter((item) => item.id !== clipId));
+        setDeletedClip(deleted);
       }
+    });
+  };
+
+  const restoreClip = () => {
+    void window.pinApi.restoreClip().then((restored) => {
+      if (restored) {
+        setItems((current) => [...current, restored].sort(compareClips));
+      }
+      setDeletedClip(null);
     });
   };
 
@@ -631,6 +654,14 @@ function ClipWidget({ initialWidget }: { initialWidget: PinWidget }) {
                 onUpdate={(text) => updateClip(item.id, text)}
               />
             ))}
+            {deletedClip && (
+              <div className="clip-undo-row">
+                <span className="clip-undo-text">已删除「{deletedClip.text}」</span>
+                <button className="clip-undo-button" onClick={restoreClip} type="button">
+                  撤销
+                </button>
+              </div>
+            )}
           </div>
           <footer className="clip-input-row">
             <span aria-hidden="true" className="clip-input-symbol">[+]</span>

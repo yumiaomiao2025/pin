@@ -45,6 +45,7 @@ export interface WindowManager {
   createClip(event: IpcMainInvokeEvent, text: string): ClipItem | undefined;
   updateClip(event: IpcMainInvokeEvent, clipId: string, patch: UpdateClipItemInput): ClipItem | undefined;
   deleteClip(event: IpcMainInvokeEvent, clipId: string): ClipItem | undefined;
+  restoreClip(event: IpcMainInvokeEvent): ClipItem | undefined;
   reorderClips(event: IpcMainInvokeEvent, orderedIds: string[]): ClipItem[] | undefined;
   copyClip(event: IpcMainInvokeEvent, clipId: string): ClipItem | undefined;
   saveNote(event: IpcMainInvokeEvent, noteText: string): Widget | undefined;
@@ -113,7 +114,10 @@ function isWidgetWindow(window: BrowserWindow): window is WidgetWindow {
 export function createWindowManager(service: AppDatabaseService): WindowManager {
   const windows = new Map<string, WidgetWindow>();
   const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  let todoTrash: { widgetId: string; todo: Todo; timer: ReturnType<typeof setTimeout> } | undefined;
+  let contentTrash:
+    | { kind: 'todo'; widgetId: string; item: Todo; timer: ReturnType<typeof setTimeout> }
+    | { kind: 'clip'; widgetId: string; item: ClipItem; timer: ReturnType<typeof setTimeout> }
+    | undefined;
   let quitting = false;
 
   const widgetIdForEvent = (event: IpcMainInvokeEvent) => {
@@ -331,29 +335,34 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (!widgetId || !todo) {
         return undefined;
       }
-      if (todoTrash) {
-        clearTimeout(todoTrash.timer);
+      if (contentTrash) {
+        clearTimeout(contentTrash.timer);
       }
       if (!service.todos.delete(todoId)) {
         return undefined;
       }
       const timer = setTimeout(() => {
-        if (todoTrash?.todo.id === todo.id) {
-          todoTrash = undefined;
+        if (contentTrash?.kind === 'todo' && contentTrash.item.id === todo.id) {
+          contentTrash = undefined;
         }
       }, 5_000);
-      todoTrash = { widgetId, todo, timer };
+      contentTrash = { kind: 'todo', widgetId, item: todo, timer };
       return todo;
     },
 
     restoreTodo: (event) => {
       const widgetId = widgetIdForEvent(event);
-      if (!widgetId || !todoTrash || todoTrash.widgetId !== widgetId) {
+      if (
+        !widgetId ||
+        !contentTrash ||
+        contentTrash.kind !== 'todo' ||
+        contentTrash.widgetId !== widgetId
+      ) {
         return undefined;
       }
-      const { todo, timer } = todoTrash;
+      const { item: todo, timer } = contentTrash;
       clearTimeout(timer);
-      todoTrash = undefined;
+      contentTrash = undefined;
       return service.createTodo({
         id: todo.id,
         widgetId: todo.widgetId,
@@ -391,11 +400,44 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     },
 
     deleteClip: (event, clipId) => {
+      const widgetId = widgetIdForEvent(event);
       const clip = clipForEvent(event, clipId);
-      if (!clip || !service.clipItems.delete(clipId)) {
+      if (!widgetId || !clip || !service.clipItems.delete(clipId)) {
         return undefined;
       }
+      if (contentTrash) {
+        clearTimeout(contentTrash.timer);
+      }
+      const timer = setTimeout(() => {
+        if (contentTrash?.kind === 'clip' && contentTrash.item.id === clip.id) {
+          contentTrash = undefined;
+        }
+      }, 5_000);
+      contentTrash = { kind: 'clip', widgetId, item: clip, timer };
       return clip;
+    },
+
+    restoreClip: (event) => {
+      const widgetId = widgetIdForEvent(event);
+      if (
+        !widgetId ||
+        !contentTrash ||
+        contentTrash.kind !== 'clip' ||
+        contentTrash.widgetId !== widgetId
+      ) {
+        return undefined;
+      }
+      const { item: clip, timer } = contentTrash;
+      clearTimeout(timer);
+      contentTrash = undefined;
+      return service.createClipItem({
+        id: clip.id,
+        widgetId: clip.widgetId,
+        text: clip.text,
+        sortOrder: clip.sortOrder,
+        createdAt: clip.createdAt,
+        updatedAt: clip.updatedAt,
+      });
     },
 
     reorderClips: (event, orderedIds) => {
@@ -498,9 +540,9 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
     prepareQuit: () => {
       quitting = true;
-      if (todoTrash) {
-        clearTimeout(todoTrash.timer);
-        todoTrash = undefined;
+      if (contentTrash) {
+        clearTimeout(contentTrash.timer);
+        contentTrash = undefined;
       }
       persistTimers.forEach((timer, widgetId) => {
         clearTimeout(timer);

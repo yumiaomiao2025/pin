@@ -145,6 +145,7 @@ ipcMain.handle('clip:delete', (event, clipId: unknown) => {
   }
   return getManager().deleteClip(event, clipId) ?? null;
 });
+ipcMain.handle('clip:restore', (event) => getManager().restoreClip(event) ?? null);
 ipcMain.handle('clip:reorder', (event, orderedIds: unknown) => {
   if (!Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== 'string')) {
     throw new TypeError('clip order must be an array of ids');

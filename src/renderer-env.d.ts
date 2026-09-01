@@ -55,6 +55,7 @@ interface Window {
     createClip: (text: string) => Promise<PinClipItem | null>;
     updateClip: (id: string, text: string) => Promise<PinClipItem | null>;
     deleteClip: (id: string) => Promise<PinClipItem | null>;
+    restoreClip: () => Promise<PinClipItem | null>;
     reorderClips: (orderedIds: string[]) => Promise<PinClipItem[] | null>;
     copyClip: (id: string) => Promise<PinClipItem | null>;
     saveNote: (noteText: string) => Promise<PinWidget | null>;

@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('pinApi', {
   createClip: (text: string) => ipcRenderer.invoke('clip:create', text),
   updateClip: (id: string, text: string) => ipcRenderer.invoke('clip:update', { id, text }),
   deleteClip: (id: string) => ipcRenderer.invoke('clip:delete', id),
+  restoreClip: () => ipcRenderer.invoke('clip:restore'),
   reorderClips: (orderedIds: string[]) => ipcRenderer.invoke('clip:reorder', orderedIds),
   copyClip: (id: string) => ipcRenderer.invoke('clip:copy', id),
   saveNote: (noteText: string) => ipcRenderer.invoke('widget:save-note', noteText),
