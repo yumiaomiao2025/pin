@@ -15,10 +15,24 @@ interface PinWidget {
   height: number;
 }
 
+interface PinTodo {
+  id: string;
+  widgetId: string;
+  text: string;
+  done: boolean;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 interface Window {
   pinApi: {
     ping: () => Promise<PinPingResult>;
     getWidget: () => Promise<PinWidget | null>;
+    listTodos: () => Promise<PinTodo[] | null>;
+    createTodo: (text: string) => Promise<PinTodo | null>;
+    updateTodo: (id: string, patch: { text?: string; done?: boolean }) => Promise<PinTodo | null>;
+    deleteTodo: (id: string) => Promise<boolean>;
     saveNote: (noteText: string) => Promise<PinWidget | null>;
     hideWindow: () => Promise<boolean>;
     setSize: (width: number, height: number) => Promise<PinWidget | null>;

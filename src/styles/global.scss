@@ -139,6 +139,129 @@ button:disabled {
   color: #8a8a8a;
 }
 
+.todo-list {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.todo-row {
+  display: flex;
+  min-height: 40px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.todo-check {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 1px;
+  padding: 0;
+  border: 1.5px solid #111111;
+  font-size: 10px;
+  line-height: 13px;
+  text-align: center;
+  -webkit-app-region: no-drag;
+}
+
+.todo-check--done {
+  color: #ffffff;
+  background: #111111;
+}
+
+.todo-text {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  color: #111111;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: normal;
+  cursor: text;
+  -webkit-app-region: no-drag;
+}
+
+.todo-row--done .todo-text {
+  color: #6f6f6f;
+  text-decoration: line-through;
+}
+
+.todo-text--editing {
+  min-height: 20px;
+  resize: none;
+  outline: 1.5px solid #111111;
+  outline-offset: 2px;
+}
+
+.todo-drag-handle,
+.todo-delete {
+  flex: none;
+  color: #6f6f6f;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.todo-drag-handle {
+  cursor: grab;
+}
+
+.todo-delete {
+  padding: 0;
+  border: 0;
+  line-height: 16px;
+  -webkit-app-region: no-drag;
+}
+
+.todo-completed-heading {
+  padding: 7px 12px;
+  color: #6f6f6f;
+  background: #f4f4f4;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.todo-input-row {
+  display: flex;
+  min-height: 52px;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border-top: 1.5px solid #111111;
+  background: #f4f4f4;
+}
+
+.todo-input-symbol {
+  flex: none;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.todo-input {
+  min-width: 0;
+  min-height: 20px;
+  flex: 1;
+  resize: none;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #111111;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.todo-input::placeholder {
+  color: #8a8a8a;
+}
+
 .opacity-bar {
   display: flex;
   height: 44px;

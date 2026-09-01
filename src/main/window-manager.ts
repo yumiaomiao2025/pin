@@ -7,8 +7,8 @@ import {
 import path from 'node:path';
 
 import type { AppDatabaseService } from './database/app-service';
-import type { CreateWidgetInput } from './database/repositories';
-import type { Widget, WidgetType } from './database/schema';
+import type { CreateWidgetInput, UpdateTodoInput } from './database/repositories';
+import type { Todo, Widget, WidgetType } from './database/schema';
 
 const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
@@ -29,6 +29,10 @@ export interface WindowManager {
   openWidget(widgetId: string): BrowserWindow | undefined;
   createWidget(type: WidgetType): Widget;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
+  getTodosForEvent(event: IpcMainInvokeEvent): Todo[] | undefined;
+  createTodo(event: IpcMainInvokeEvent, text: string): Todo | undefined;
+  updateTodo(event: IpcMainInvokeEvent, todoId: string, patch: UpdateTodoInput): Todo | undefined;
+  deleteTodo(event: IpcMainInvokeEvent, todoId: string): boolean;
   saveNote(event: IpcMainInvokeEvent, noteText: string): Widget | undefined;
   hide(event: IpcMainInvokeEvent): boolean;
   setSize(event: IpcMainInvokeEvent, width: number, height: number): Widget | undefined;
@@ -103,6 +107,15 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return undefined;
     }
     return senderWindow.__pinWidgetId;
+  };
+
+  const todoForEvent = (event: IpcMainInvokeEvent, todoId: string) => {
+    const widgetId = widgetIdForEvent(event);
+    if (!widgetId) {
+      return undefined;
+    }
+    const todo = service.todos.getById(todoId);
+    return todo?.widgetId === widgetId ? todo : undefined;
   };
 
   const persistBounds = (widgetId: string, window: WidgetWindow, bounds: Rectangle) => {
@@ -267,6 +280,30 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     getWidgetForEvent: (event) => {
       const widgetId = widgetIdForEvent(event);
       return widgetId ? service.widgets.getById(widgetId) : undefined;
+    },
+
+    getTodosForEvent: (event) => {
+      const widgetId = widgetIdForEvent(event);
+      return widgetId ? service.todos.listByWidget(widgetId) : undefined;
+    },
+
+    createTodo: (event, text) => {
+      const widgetId = widgetIdForEvent(event);
+      return widgetId ? service.createTodo({ widgetId, text }) : undefined;
+    },
+
+    updateTodo: (event, todoId, patch) => {
+      if (!todoForEvent(event, todoId)) {
+        return undefined;
+      }
+      return service.todos.update(todoId, patch);
+    },
+
+    deleteTodo: (event, todoId) => {
+      if (!todoForEvent(event, todoId)) {
+        return false;
+      }
+      return service.todos.delete(todoId);
     },
 
     saveNote: (event, noteText) => {

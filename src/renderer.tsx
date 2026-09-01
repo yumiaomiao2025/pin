@@ -183,6 +183,261 @@ function ResizeHandle() {
   );
 }
 
+function TodoRow({
+  todo,
+  onToggle,
+  onDelete,
+  onUpdate,
+}: {
+  todo: PinTodo;
+  onToggle: () => void;
+  onDelete: () => void;
+  onUpdate: (text: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(todo.text);
+  const composing = useRef(false);
+  const suppressBlur = useRef(false);
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(todo.text);
+    }
+  }, [editing, todo.text]);
+
+  const beginEditing = () => {
+    suppressBlur.current = false;
+    setDraft(todo.text);
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    suppressBlur.current = true;
+    setDraft(todo.text);
+    setEditing(false);
+  };
+
+  const saveEditing = () => {
+    if (suppressBlur.current) {
+      suppressBlur.current = false;
+      return;
+    }
+    setEditing(false);
+    if (draft !== todo.text && draft.trim() !== '') {
+      onUpdate(draft);
+    }
+  };
+
+  const handleEditKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isComposing = composing.current || event.nativeEvent.isComposing;
+    if (event.key === 'Escape' && !isComposing) {
+      event.preventDefault();
+      cancelEditing();
+    } else if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+      event.preventDefault();
+      event.currentTarget.blur();
+    }
+  };
+
+  return (
+    <div className={todo.done ? 'todo-row todo-row--done' : 'todo-row'}>
+      <button
+        aria-label={todo.done ? '取消完成' : '标记完成'}
+        aria-pressed={todo.done}
+        className={todo.done ? 'todo-check todo-check--done' : 'todo-check'}
+        onClick={onToggle}
+        title={todo.done ? '取消完成' : '标记完成'}
+        type="button"
+      >
+        {todo.done ? '✓' : ''}
+      </button>
+      {editing ? (
+        <textarea
+          aria-label="编辑待办"
+          autoFocus
+          className="todo-text todo-text--editing"
+          onBlur={saveEditing}
+          onChange={(event) => setDraft(event.target.value)}
+          onCompositionEnd={() => {
+            composing.current = false;
+          }}
+          onCompositionStart={() => {
+            composing.current = true;
+          }}
+          onKeyDown={handleEditKeyDown}
+          rows={1}
+          value={draft}
+        />
+      ) : (
+        <button
+          className="todo-text"
+          onDoubleClick={beginEditing}
+          title="双击编辑"
+          type="button"
+        >
+          {todo.text}
+        </button>
+      )}
+      <span aria-hidden="true" className="todo-drag-handle">⠿</span>
+      <button
+        aria-label="删除待办"
+        className="todo-delete"
+        onClick={onDelete}
+        title="删除待办"
+        type="button"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
+  const [widget, setWidget] = useState(initialWidget);
+  const [todos, setTodos] = useState<PinTodo[]>([]);
+  const [draft, setDraft] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const composing = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    void window.pinApi.listTodos().then((nextTodos) => {
+      if (!active) {
+        return;
+      }
+      setTodos(nextTodos ?? []);
+      setLoaded(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const hide = () => {
+    void window.pinApi.hideWindow();
+  };
+
+  const togglePin = () => {
+    void window.pinApi.setPin(!widget.pin).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const toggleCollapsed = () => {
+    void window.pinApi.setCollapsed(!widget.collapsed).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const setOpacity = (opacity: number) => {
+    void window.pinApi.setOpacity(opacity).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const addTodo = () => {
+    if (draft.trim() === '') {
+      return;
+    }
+    const text = draft;
+    setDraft('');
+    void window.pinApi.createTodo(text).then((created) => {
+      if (created) {
+        setTodos((current) => [...current, created]);
+      }
+    });
+  };
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isComposing = composing.current || event.nativeEvent.isComposing;
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+      event.preventDefault();
+      addTodo();
+    }
+  };
+
+  const updateTodo = (todoId: string, patch: { text?: string; done?: boolean }) => {
+    void window.pinApi.updateTodo(todoId, patch).then((updated) => {
+      if (updated) {
+        setTodos((current) => current.map((todo) => (todo.id === updated.id ? updated : todo)));
+      }
+    });
+  };
+
+  const deleteTodo = (todoId: string) => {
+    void window.pinApi.deleteTodo(todoId).then((deleted) => {
+      if (deleted) {
+        setTodos((current) => current.filter((todo) => todo.id !== todoId));
+      }
+    });
+  };
+
+  const openTodos = todos.filter((todo) => !todo.done);
+  const completedTodos = todos.filter((todo) => todo.done);
+
+  return (
+    <main className="app">
+      <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
+      {!widget.collapsed && (
+        <>
+          <div className="todo-list">
+            {!loaded && <p className="app--loading">加载中…</p>}
+            {loaded && openTodos.map((todo) => (
+              <TodoRow
+                key={todo.id}
+                onDelete={() => deleteTodo(todo.id)}
+                onToggle={() => updateTodo(todo.id, { done: !todo.done })}
+                onUpdate={(text) => updateTodo(todo.id, { text })}
+                todo={todo}
+              />
+            ))}
+            {loaded && completedTodos.length > 0 && (
+              <>
+                <div className="todo-completed-heading">已完成 {completedTodos.length}</div>
+                {completedTodos.map((todo) => (
+                  <TodoRow
+                    key={todo.id}
+                    onDelete={() => deleteTodo(todo.id)}
+                    onToggle={() => updateTodo(todo.id, { done: !todo.done })}
+                    onUpdate={(text) => updateTodo(todo.id, { text })}
+                    todo={todo}
+                  />
+                ))}
+              </>
+            )}
+          </div>
+          <footer className="todo-input-row">
+            <span aria-hidden="true" className="todo-input-symbol">[+]</span>
+            <textarea
+              aria-label="新增待办"
+              className="todo-input"
+              onChange={(event) => setDraft(event.target.value)}
+              onCompositionEnd={() => {
+                composing.current = false;
+              }}
+              onCompositionStart={() => {
+                composing.current = true;
+              }}
+              onKeyDown={handleInputKeyDown}
+              placeholder="写点什么…"
+              rows={1}
+              value={draft}
+            />
+          </footer>
+          <OpacityBar onChange={setOpacity} widget={widget} />
+          <ResizeHandle />
+        </>
+      )}
+    </main>
+  );
+}
+
 function NoteWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const [widget, setWidget] = useState(initialWidget);
   const [draft, setDraft] = useState(initialWidget.noteText);
@@ -319,6 +574,9 @@ function WidgetApp() {
   }
   if (widget.type === 'note') {
     return <NoteWidget initialWidget={widget} />;
+  }
+  if (widget.type === 'todo') {
+    return <TodoWidget initialWidget={widget} />;
   }
   return <UnsupportedWidget widget={widget} />;
 }
