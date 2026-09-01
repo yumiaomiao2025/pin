@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #22262B; overflow: hidden; }
+  a { color: #FFE566; text-decoration: none; }
+  a:hover { color: #fff; }
+  * { box-sizing: border-box; }
+  textarea, input { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+</style>
+</helmet>
+
+<div style="position:relative; width:100%; height:100vh; overflow:hidden; font-family:'JetBrains Mono',ui-monospace,monospace; background:radial-gradient(circle at 30% 20%, #3A4048, #22262B 70%);" onMouseDown="{{ onBackdrop }}">
+
+  <sc-for list="{{ widgets }}" as="w" hint-placeholder-count="2">
+    <div style="position:absolute; display:flex; flex-direction:column; overflow:hidden; border:1.5px solid {{ w.line }}; box-shadow:{{ w.boxShadow }}; transition:height 180ms linear, opacity 120ms linear; left:{{ w.left }}; top:{{ w.top }}; width:{{ w.width }}; height:{{ w.height }}; opacity:{{ w.opa }}; z-index:{{ w.zi }}; padding-left:{{ w.spinePad }}; background:{{ w.paper }};" onMouseDown="{{ w.onRaise }}" onMouseEnter="{{ w.onEnter }}" onMouseLeave="{{ onLeaveWin }}" onContextMenu="{{ w.onCtx }}">
+
+      <div style="height:32px; flex:none; display:flex; align-items:center; gap:4px; padding:0 6px 0 12px; border-bottom:1.5px solid {{ w.line }}; cursor:move; user-select:none; background:{{ w.titleBg }};" onMouseDown="{{ w.onTitleDown }}" onDoubleClick="{{ w.onCollapse }}">
+        <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:{{ w.titleFg }};">{{ w.label }}</span>
+        <span style="font-size:10px; padding:1px 5px; border:1px solid {{ w.titleLine }}; cursor:pointer; user-select:none; background:{{ w.pinBg }}; color:{{ w.pinFg }};" onClick="{{ w.onPin }}">PIN</span>
+        <span style="width:22px; height:20px; display:grid; place-items:center; cursor:pointer; font-size:11px; user-select:none; color:{{ w.titleFg }};" onClick="{{ w.onClone }}">＋</span>
+        <span style="width:22px; height:20px; display:grid; place-items:center; cursor:pointer; font-size:11px; user-select:none; color:{{ w.titleFg }};" onClick="{{ w.onCollapse }}">{{ w.collapseMark }}</span>
+        <span style="width:22px; height:20px; display:grid; place-items:center; cursor:pointer; font-size:12px; user-select:none; color:{{ w.titleFg }};" onClick="{{ w.onHide }}">×</span>
+      </div>
+
+      <sc-if value="{{ w.showTabs }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:none; display:flex; border-bottom:1.5px solid {{ w.line }};">
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; cursor:pointer; user-select:none; border-right:1.5px solid {{ w.line }}; background:{{ w.tabNoteBg }}; color:{{ w.tabNoteFg }};" onClick="{{ w.onTabNote }}">NOTE</span>
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; cursor:pointer; user-select:none; border-right:1.5px solid {{ w.line }}; background:{{ w.tabTodoBg }}; color:{{ w.tabTodoFg }};" onClick="{{ w.onTabTodo }}">TODO</span>
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; cursor:pointer; user-select:none; background:{{ w.tabClipBg }}; color:{{ w.tabClipFg }};" onClick="{{ w.onTabClip }}">CLIP</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ w.showNote }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+          <textarea style="flex:1; width:100%; resize:none; border:none; outline:none; padding:14px; font-size:13px; line-height:1.85; background:transparent; color:{{ w.fg }};" value="{{ w.note }}" onChange="{{ w.onNote }}"></textarea>
+        </div>
+      </sc-if>
+
+
+      <sc-if value="{{ w.showTodo }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; min-height:0; display:flex; position:relative; overflow:hidden;">
+          <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none;">
+            <sc-for list="{{ w.openRows }}" as="t" hint-placeholder-count="4">
+              <div style="display:flex; align-items:flex-start; gap:10px; padding:11px 12px; border-bottom:1px solid {{ w.line }}; transition:background 120ms linear; background:{{ t.rowBg }}; box-shadow:{{ t.rowShadow }}; transform:{{ t.rowShift }}; border-top:{{ t.dropLine }};" onMouseEnter="{{ t.onOver }}" onMouseUp="{{ t.onDrop }}">
+                <span style="width:16px; height:16px; flex:none; margin-top:1px; cursor:pointer; display:grid; place-items:center; font-size:10px; transition:transform 120ms linear; border:1.5px solid {{ w.line }}; background:{{ t.boxBg }}; color:{{ w.inv }}; transform:{{ t.boxScale }};" onClick="{{ t.onToggle }}">{{ t.mark }}</span>
+                <span style="font-size:13px; flex:1; word-break:normal; line-height:1.5; overflow:hidden; display:{{ clampDisplay }}; -webkit-box-orient:vertical; -webkit-line-clamp:{{ clampLines }}; color:{{ t.textColor }}; text-decoration:{{ t.deco }};" onMouseEnter="{{ t.onTipIn }}" onMouseLeave="{{ onTipOut }}">{{ t.text }}</span>
+                <span style="font-size:12px; flex:none; cursor:grab; user-select:none; color:{{ w.sub }};" onMouseDown="{{ t.onGrab }}">⠿</span>
+                <span style="font-size:12px; flex:none; cursor:pointer; user-select:none; color:{{ w.sub }};" onClick="{{ t.onDel }}">×</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ w.hasDone }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:7px 12px; border-bottom:1px solid {{ w.line }}; font-size:10px; font-weight:700; letter-spacing:.14em; background:{{ w.soft }}; color:{{ w.sub }};">{{ w.doneLabel }}</div>
+              <sc-for list="{{ w.doneRows }}" as="t" hint-placeholder-count="1">
+                <div style="display:flex; align-items:flex-start; gap:10px; padding:11px 12px; border-bottom:1px solid {{ w.line }};">
+                  <span style="width:16px; height:16px; flex:none; margin-top:1px; cursor:pointer; display:grid; place-items:center; font-size:10px; border:1.5px solid {{ w.line }}; background:{{ w.line }}; color:{{ w.inv }};" onClick="{{ t.onToggle }}">✓</span>
+                  <span style="font-size:13px; flex:1; line-height:1.5; text-decoration:line-through; color:{{ w.sub }};">{{ t.text }}</span>
+                  <span style="font-size:12px; flex:none; cursor:pointer; user-select:none; color:{{ w.sub }};" onClick="{{ t.onDel }}">×</span>
+                </div>
+              </sc-for>
+            </sc-if>
+          </div>
+          <sc-if value="{{ barAlways }}" hint-placeholder-val="{{ false }}">
+            <div style="width:10px; flex:none; position:relative; border-left:1.5px solid {{ w.line }}; background:{{ barTrack }};">
+              <span style="position:absolute; left:0; right:0; top:6%; height:30%; background:{{ w.line }};"></span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ w.barOverlay }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute; right:3px; top:8px; width:6px; height:34%; pointer-events:none; transition:opacity 120ms linear; background:{{ w.line }}; opacity:{{ w.barOpacity }};"></span>
+          </sc-if>
+        </div>
+        <div style="flex:none; display:flex; align-items:center; gap:8px; padding:10px 12px; border-top:1.5px solid {{ w.line }}; background:{{ w.soft }};">
+          <span style="font-size:13px; color:{{ w.fg }};">[+]</span>
+          <input style="flex:1; border:none; outline:none; background:transparent; font-size:13px; color:{{ w.fg }};" placeholder="写点什么…" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ w.onDraftKey }}">
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ w.showClip }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none;">
+          <sc-for list="{{ w.clipRows }}" as="cl" hint-placeholder-count="3">
+            <div style="display:flex; gap:8px; padding:11px 12px; border-bottom:1px solid {{ w.line }}; font-size:12px; cursor:pointer; background:{{ cl.rowBg }}; color:{{ cl.rowFg }};" onClick="{{ cl.onCopy }}">
+              <span style="flex:none; color:{{ cl.numColor }};">{{ cl.num }}</span>
+              <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" onMouseEnter="{{ cl.onTipIn }}" onMouseLeave="{{ onTipOut }}">{{ cl.text }}</span>
+              <span style="flex:none; font-weight:700;">⧉</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ w.clipEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:28px 12px; display:grid; place-items:center; gap:6px; font-size:12px; color:{{ w.sub }}; background:{{ w.hatch }};">
+              <span style="letter-spacing:.14em;">EMPTY</span>
+              <span style="font-size:11px;">复制任意内容即出现</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="height:30px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1.5px solid {{ w.line }};">
+          <span style="font-size:10px; letter-spacing:.1em; color:{{ w.sub }};">KEEP 20</span>
+          <span style="font-size:10px; letter-spacing:.1em; padding:1px 5px; cursor:pointer; border:1px solid {{ w.line }}; color:{{ w.fg }};" onClick="{{ w.onClearClips }}">CLEAR</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ w.showOpacity }}" hint-placeholder-val="{{ true }}">
+        <div style="height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 12px; border-top:1.5px solid {{ w.line }};">
+          <span style="font-size:10px; letter-spacing:.1em; flex:none; color:{{ w.fg }};">OPACITY</span>
+          <span style="flex:1; height:10px; position:relative; display:block; cursor:pointer; border:1.5px solid {{ w.line }};" onMouseDown="{{ w.onOpDown }}">
+            <span style="position:absolute; left:0; top:0; bottom:0; width:{{ w.opFill }}; background:{{ w.line }};"></span>
+          </span>
+          <span style="font-size:10px; flex:none; width:22px; text-align:right; color:{{ w.fg }};">{{ w.opacity }}</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ w.showResize }}" hint-placeholder-val="{{ true }}">
+        <span style="position:absolute; right:0; bottom:0; width:18px; height:18px; cursor:nwse-resize; border-left:1.5px solid {{ w.line }}; border-top:1.5px solid {{ w.line }}; background:{{ resizeHatch }};" onMouseDown="{{ w.onResDown }}"></span>
+      </sc-if>
+    </div>
+  </sc-for>
+
+  <sc-if value="{{ managerOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; width:320px; height:480px; display:flex; flex-direction:column; overflow:hidden; z-index:900; border:1.5px solid {{ line }}; box-shadow:8px 8px 0 {{ shadow }}; background:{{ bg }}; left:{{ mgrLeft }}; top:{{ mgrTop }};">
+      <div style="height:32px; flex:none; display:flex; align-items:center; gap:6px; padding:0 6px 0 12px; border-bottom:1.5px solid {{ line }}; cursor:move; user-select:none;" onMouseDown="{{ onMgrDown }}">
+        <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:{{ fg }};">{{ mgrTitle }}</span>
+        <span style="font-size:11px; cursor:pointer; padding:0 4px; color:{{ fg }};" onClick="{{ onSetOpen }}">⚙</span>
+        <span style="font-size:12px; cursor:pointer; padding:0 4px; color:{{ fg }};" onClick="{{ onMgrClose }}">×</span>
+      </div>
+      <div style="flex:none; display:flex; border-bottom:1.5px solid {{ line }};">
+        <sc-for list="{{ mgrTabs }}" as="tb" hint-placeholder-count="4">
+          <span style="flex:1; padding:7px 0; text-align:center; font-size:10px; font-weight:700; letter-spacing:.08em; cursor:pointer; border-right:1.5px solid {{ line }}; background:{{ tb.bg }}; color:{{ tb.fg }};" onClick="{{ tb.onPick }}">{{ tb.label }}</span>
+        </sc-for>
+      </div>
+      <div style="flex:1; min-height:0; overflow-y:auto;">
+        <sc-for list="{{ mgrRows }}" as="r" hint-placeholder-count="3">
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 10px 10px 12px; border-bottom:1px solid {{ line }}; opacity:{{ r.opa }};">
+            <span style="font-size:9px; font-weight:700; letter-spacing:.08em; padding:2px 4px; flex:none; border:1px solid {{ line }}; background:{{ r.tagBg }}; color:{{ r.tagFg }};">{{ r.tag }}</span>
+            <sc-if value="{{ r.renaming }}" hint-placeholder-val="{{ false }}">
+              <input style="flex:1; min-width:0; border:1.5px solid {{ line }}; outline:none; padding:1px 4px; font-size:12px; background:{{ bg }}; color:{{ fg }};" value="{{ renameDraft }}" onChange="{{ onRenameChange }}" onKeyDown="{{ r.onRenameKey }}" onBlur="{{ r.onRenameCommit }}">
+            </sc-if>
+            <sc-if value="{{ r.notRenaming }}" hint-placeholder-val="{{ true }}">
+              <span style="font-size:12px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:text; color:{{ fg }};" onDoubleClick="{{ r.onRenameStart }}">{{ r.title }}</span>
+            </sc-if>
+            <span style="font-size:10px; padding:1px 4px; cursor:pointer; flex:none; border:1px solid {{ line }}; background:{{ r.pinBg }}; color:{{ r.pinFg }};" onClick="{{ r.onPin }}">PIN</span>
+            <span style="font-size:12px; cursor:pointer; flex:none; width:14px; text-align:center; color:{{ fg }};" onClick="{{ r.onEye }}">{{ r.eye }}</span>
+            <span style="font-size:12px; cursor:pointer; flex:none; width:12px; text-align:center; color:{{ r.delColor }};" onClick="{{ r.onDel }}">{{ r.delMark }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ hasTrash }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid {{ line }}; background:{{ soft }};">
+            <span style="font-size:11px; flex:1; color:{{ fg }};">{{ trashLabel }}</span>
+            <span style="font-size:10px; padding:1px 5px; cursor:pointer; border:1px solid {{ line }}; color:{{ fg }};" onClick="{{ onUndo }}">撤销</span>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none; border-top:1.5px solid {{ line }};">
+          <sc-for list="{{ newItems }}" as="ni" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid {{ line }}; font-size:12px; cursor:{{ ni.cursor }}; opacity:{{ ni.opa }}; color:{{ fg }};" onClick="{{ ni.onPick }}">
+              <span style="width:14px; height:14px; flex:none; border:1.5px solid {{ line }}; background:{{ ni.swatch }};"></span>
+              <span style="flex:1;">{{ ni.label }}</span>
+              <span style="font-size:10px; color:{{ sub }};">{{ ni.note }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="height:40px; flex:none; display:flex; align-items:center; gap:8px; padding:0 10px 0 12px; border-top:1.5px solid {{ line }};">
+        <span style="font-size:10px; letter-spacing:.08em; flex:1; color:{{ sub }};">◉ 显示 · × 删除可撤销</span>
+        <span style="font-size:10px; letter-spacing:.1em; padding:4px 8px; cursor:pointer; background:{{ fg }}; color:{{ inv }};" onClick="{{ onNewToggle }}">{{ newLabel }}</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; width:320px; height:480px; display:flex; flex-direction:column; overflow:hidden; z-index:950; border:1.5px solid {{ line }}; box-shadow:8px 8px 0 {{ shadow }}; background:{{ bg }}; left:{{ setLeft }}; top:{{ setTop }};">
+      <div style="height:32px; flex:none; display:flex; align-items:center; gap:6px; padding:0 6px 0 12px; border-bottom:1.5px solid {{ line }}; cursor:move; user-select:none;" onMouseDown="{{ onSetDown }}">
+        <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:{{ fg }};">SETTINGS</span>
+        <span style="font-size:12px; cursor:pointer; padding:0 4px; color:{{ fg }};" onClick="{{ onSetClose }}">×</span>
+      </div>
+      <div style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
+        <div style="padding:6px 12px; border-bottom:1px solid {{ line }}; font-size:10px; font-weight:700; letter-spacing:.16em; background:{{ soft }}; color:{{ fg }};">WINDOW</div>
+        <sc-for list="{{ setToggles }}" as="tg" hint-placeholder-count="4">
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid {{ line }};">
+            <span style="font-size:12px; flex:1; color:{{ fg }};">{{ tg.label }}</span>
+            <span style="width:38px; height:18px; border:1.5px solid {{ line }}; display:flex; align-items:center; padding:1.5px; cursor:pointer; background:{{ tg.trackBg }}; justify-content:{{ tg.align }};" onClick="{{ tg.onToggle }}">
+              <span style="width:14px; height:100%; background:{{ tg.knobBg }};"></span>
+            </span>
+          </div>
+        </sc-for>
+
+        <div style="padding:6px 12px; border-bottom:1px solid {{ line }}; font-size:10px; font-weight:700; letter-spacing:.16em; background:{{ soft }}; color:{{ fg }};">THEME</div>
+        <div style="display:flex; border-bottom:1px solid {{ line }};">
+          <sc-for list="{{ themePills }}" as="p" hint-placeholder-count="2">
+            <span style="flex:1; padding:8px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; cursor:pointer; border-right:1px solid {{ line }}; background:{{ p.bg }}; color:{{ p.fg }};" onClick="{{ p.onPick }}">{{ p.label }}</span>
+          </sc-for>
+        </div>
+
+        <div style="padding:6px 12px; border-bottom:1px solid {{ line }}; font-size:10px; font-weight:700; letter-spacing:.16em; background:{{ soft }}; color:{{ fg }};">DEFAULTS</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid {{ line }}; cursor:pointer;" onClick="{{ onColorsDefault }}">
+          <span style="font-size:12px; flex:1; color:{{ fg }};">配色套装</span>
+          <span style="display:flex; flex:none; border:1.5px solid {{ line }};">
+            <span style="width:16px; height:18px; background:{{ defKitPaper }};"></span>
+            <span style="width:10px; height:18px; border-left:1.5px solid {{ line }}; background:{{ defKitAccent }};"></span>
+            <span style="width:10px; height:18px; border-left:1.5px solid {{ line }}; background:{{ defKitInk }};"></span>
+          </span>
+          <span style="font-size:11px; color:{{ sub }};">{{ defKitName }} ›</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid {{ line }};">
+          <span style="font-size:12px; flex:none; color:{{ fg }};">新窗口透明度</span>
+          <span style="flex:1; height:10px; position:relative; display:block; cursor:pointer; border:1.5px solid {{ line }};" onMouseDown="{{ onDefOpDown }}">
+            <span style="position:absolute; left:0; top:0; bottom:0; width:{{ defOpFill }}; background:{{ line }};"></span>
+          </span>
+          <span style="font-size:10px; flex:none; width:22px; text-align:right; color:{{ fg }};">{{ defaultOpacity }}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid {{ line }};">
+          <span style="font-size:12px; flex:1; color:{{ fg }};">窗口内显示透明度条</span>
+          <span style="width:38px; height:18px; border:1.5px solid {{ line }}; display:flex; align-items:center; padding:1.5px; cursor:pointer; background:{{ opBarTrack }}; justify-content:{{ opBarAlign }};" onClick="{{ onToggleOpBar }}">
+            <span style="width:14px; height:100%; background:{{ opBarKnob }};"></span>
+          </span>
+        </div>
+        <div style="padding:7px 12px; border-bottom:1px solid {{ line }}; font-size:10px; line-height:1.6; color:{{ sub }};">关掉透明度条后，它会出现在窗口右键菜单里</div>
+
+        <div style="padding:6px 12px; border-bottom:1px solid {{ line }}; font-size:10px; font-weight:700; letter-spacing:.16em; background:{{ soft }}; color:{{ fg }};">TEXT</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid {{ line }};">
+          <span style="font-size:12px; flex:1; color:{{ fg }};">条目最多显示</span>
+          <span style="display:flex;">
+            <sc-for list="{{ linePills }}" as="p" hint-placeholder-count="4">
+              <span style="padding:2px 7px; font-size:11px; cursor:pointer; border:1.5px solid {{ line }}; border-left:{{ p.leftBorder }}; background:{{ p.bg }}; color:{{ p.fg }};" onClick="{{ p.onPick }}">{{ p.label }}</span>
+            </sc-for>
+          </span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid {{ line }};">
+          <span style="font-size:12px; flex:1; color:{{ fg }};">滚动条</span>
+          <span style="display:flex;">
+            <sc-for list="{{ barPills }}" as="p" hint-placeholder-count="3">
+              <span style="padding:2px 7px; font-size:11px; cursor:pointer; border:1.5px solid {{ line }}; border-left:{{ p.leftBorder }}; background:{{ p.bg }}; color:{{ p.fg }};" onClick="{{ p.onPick }}">{{ p.label }}</span>
+            </sc-for>
+          </span>
+        </div>
+      </div>
+      <div style="height:38px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1.5px solid {{ line }};">
+        <span style="font-size:10px; letter-spacing:.1em; color:{{ sub }};">v0.3</span>
+        <span style="font-size:10px; letter-spacing:.1em; padding:2px 7px; cursor:pointer; border:1px solid {{ line }}; color:{{ fg }};" onClick="{{ onReset }}">RESET</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ colorsOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; width:320px; display:flex; flex-direction:column; overflow:hidden; z-index:2500; border:1.5px solid {{ line }}; box-shadow:8px 8px 0 {{ shadow }}; background:{{ bg }}; left:{{ colLeft }}; top:{{ colTop }};">
+      <div style="height:32px; flex:none; display:flex; align-items:center; gap:6px; padding:0 6px 0 12px; border-bottom:1.5px solid {{ line }}; cursor:move; user-select:none;" onMouseDown="{{ onColDown }}">
+        <sc-if value="{{ colorsCustom }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:11px; cursor:pointer; padding:0 2px; color:{{ fg }};" onClick="{{ onColorsBack }}">‹</span>
+        </sc-if>
+        <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:{{ fg }};">{{ colorsTitle }}</span>
+        <sc-if value="{{ colorsIsDefault }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size:10px; border:1px solid {{ line }}; padding:1px 5px; cursor:pointer; color:{{ fg }};" onClick="{{ onApplyAll }}">应用到全部</span>
+        </sc-if>
+        <span style="font-size:12px; cursor:pointer; padding:0 4px; color:{{ fg }};" onClick="{{ onColorsClose }}">×</span>
+      </div>
+
+      <sc-if value="{{ colorsKits }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ kitRows }}" as="k" hint-placeholder-count="5">
+          <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid {{ line }}; cursor:pointer; background:{{ k.rowBg }}; box-shadow:{{ k.rowShadow }};" onClick="{{ k.onPick }}">
+            <span style="display:flex; flex:none; border:1.5px solid {{ line }};">
+              <span style="width:16px; height:22px; background:{{ k.paper }};"></span>
+              <span style="width:10px; height:22px; border-left:1.5px solid {{ line }}; background:{{ k.accent }};"></span>
+              <span style="width:10px; height:22px; border-left:1.5px solid {{ line }}; background:{{ k.ink }};"></span>
+            </span>
+            <span style="font-size:12px; flex:1; color:{{ k.labelColor }};">{{ k.name }}</span>
+            <span style="font-size:10px; color:{{ k.noteColor }};">{{ k.note }}</span>
+          </div>
+        </sc-for>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1.5px solid {{ line }}; cursor:pointer;" onClick="{{ onColorsCustom }}">
+          <span style="width:38px; height:22px; flex:none; border:1.5px dashed {{ line }}; display:grid; place-items:center; font-size:11px; color:{{ fg }};">＋</span>
+          <span style="font-size:12px; flex:1; color:{{ fg }};">自定义…</span>
+          <span style="font-size:11px; color:{{ fg }};">›</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 12px;">
+          <span style="font-size:12px; flex:1; color:{{ fg }};">跟随系统深浅</span>
+          <span style="width:38px; height:18px; border:1.5px solid {{ line }}; display:flex; align-items:center; padding:1.5px; cursor:pointer; background:{{ autoThemeTrack }}; justify-content:{{ autoThemeAlign }};" onClick="{{ onToggleAutoTheme }}">
+            <span style="width:14px; height:100%; background:{{ autoThemeKnob }};"></span>
+          </span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ colorsCustom }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:6px 12px; border-bottom:1px solid {{ line }}; font-size:10px; font-weight:700; letter-spacing:.16em; background:{{ soft }}; color:{{ fg }};">主色 · 一选五处同步</div>
+        <div style="display:flex; padding:12px; border-bottom:1px solid {{ line }};">
+          <sc-for list="{{ mainSwatches }}" as="m" hint-placeholder-count="4">
+            <span style="flex:1; height:34px; cursor:pointer; border:1.5px solid {{ line }}; border-left:{{ m.leftBorder }}; background:{{ m.bg }}; box-shadow:{{ m.ring }};" onClick="{{ m.onPick }}"></span>
+          </sc-for>
+        </div>
+        <div style="padding:6px 12px; border-bottom:1px solid {{ line }}; font-size:10px; font-weight:700; letter-spacing:.16em; background:{{ soft }}; color:{{ fg }};">五处 · 可各自改</div>
+        <sc-for list="{{ partRows }}" as="p" hint-placeholder-count="5">
+          <div style="display:flex; flex-direction:column; border-bottom:{{ p.bottomBorder }};">
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; background:{{ p.rowBg }};" onClick="{{ p.onExpand }}">
+              <span style="font-size:12px; flex:1; color:{{ fg }};">{{ p.label }}</span>
+              <span style="width:40px; height:16px; flex:none; border:1.5px solid {{ line }}; background:{{ p.value }};"></span>
+              <span style="font-size:11px; color:{{ fg }};">{{ p.caret }}</span>
+            </div>
+            <sc-if value="{{ p.expanded }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; padding:0 12px 10px;">
+                <sc-for list="{{ p.options }}" as="o" hint-placeholder-count="5">
+                  <span style="flex:1; height:20px; cursor:pointer; display:grid; place-items:center; font-size:9px; font-weight:700; border:1.5px solid {{ line }}; border-left:{{ o.leftBorder }}; background:{{ o.bg }}; color:{{ o.markColor }};" onClick="{{ o.onPick }}">{{ o.mark }}</span>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px;">
+          <span style="font-size:10px; letter-spacing:.1em; color:{{ sub }};">{{ customHint }}</span>
+          <span style="font-size:10px; letter-spacing:.1em; padding:2px 7px; cursor:pointer; border:1px solid {{ line }}; color:{{ fg }};" onClick="{{ onCustomReset }}">恢复默认</span>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; width:186px; z-index:2000; border:1.5px solid {{ line }}; box-shadow:5px 5px 0 {{ shadow }}; background:{{ bg }}; left:{{ menuLeft }}; top:{{ menuTop }};">
+      <sc-if value="{{ menuHasOpacity }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid {{ line }};">
+          <span style="font-size:11px; flex:none; color:{{ sub }};">透明度</span>
+          <span style="flex:1; height:10px; position:relative; display:block; cursor:pointer; border:1.5px solid {{ line }};" onMouseDown="{{ onMenuOpDown }}">
+            <span style="position:absolute; left:0; top:0; bottom:0; width:{{ menuOpFill }}; background:{{ line }};"></span>
+          </span>
+          <span style="font-size:10px; flex:none; width:22px; text-align:right; color:{{ fg }};">{{ menuOpacity }}</span>
+        </div>
+      </sc-if>
+      <sc-for list="{{ menuItems }}" as="mi" hint-placeholder-count="4">
+        <div style="padding:9px 12px; border-bottom:1px solid {{ line }}; font-size:12px; cursor:pointer; color:{{ fg }}; background:{{ mi.bg }};" onClick="{{ mi.onPick }}">{{ mi.label }}</div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tipOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; z-index:4000; padding:10px 12px; pointer-events:none; background:#111; border:1.5px solid #111; box-shadow:5px 5px 0 #FFE566; left:{{ tipLeft }}; top:{{ tipTop }}; width:{{ tipWidth }};">
+      <span style="display:block; font-size:12px; color:#fff; line-height:1.65;">{{ tipText }}</span>
+    </div>
+  </sc-if>
+
+  <div style="position:absolute; left:0; right:0; bottom:0; height:44px; z-index:3000; display:flex; align-items:center; gap:12px; padding:0 16px; border-top:1.5px solid {{ line }}; background:{{ bg }};">
+    <span style="font-size:10px; font-weight:700; letter-spacing:.16em; flex:none; color:{{ fg }};">TRAY</span>
+    <div style="display:flex; flex:none;">
+      <span style="font-size:11px; padding:6px 10px; border:1.5px solid {{ line }}; cursor:pointer; user-select:none; background:{{ mgrPillBg }}; color:{{ mgrPillFg }};" onClick="{{ onMgrToggle }}">管理器</span>
+      <span style="font-size:11px; padding:6px 10px; border:1.5px solid {{ line }}; border-left:none; cursor:pointer; user-select:none; background:{{ bg }}; color:{{ fg }};" onClick="{{ onHideAll }}">全部隐藏</span>
+      <span style="font-size:11px; padding:6px 10px; border:1.5px solid {{ line }}; border-left:none; cursor:pointer; user-select:none; background:{{ bg }}; color:{{ fg }};" onClick="{{ onShowAll }}">全部显示</span>
+    </div>
+    <span style="flex:1;"></span>
+    <span style="font-size:10px; letter-spacing:.08em; flex:none; color:{{ sub }};">滚动条</span>
+    <div style="display:flex; flex:none;">
+      <sc-for list="{{ barPills }}" as="p" hint-placeholder-count="3">
+        <span style="font-size:11px; padding:6px 10px; border:1.5px solid {{ line }}; border-left:{{ p.leftBorder }}; cursor:pointer; user-select:none; background:{{ p.bg }}; color:{{ p.fg }};" onClick="{{ p.onPick }}">{{ p.label }}</span>
+      </sc-for>
+    </div>
+    <span style="font-size:10px; letter-spacing:.08em; flex:none; color:{{ sub }};">行数</span>
+    <div style="display:flex; flex:none;">
+      <sc-for list="{{ linePills }}" as="p" hint-placeholder-count="4">
+        <span style="font-size:11px; padding:6px 10px; border:1.5px solid {{ line }}; border-left:{{ p.leftBorder }}; cursor:pointer; user-select:none; background:{{ p.bg }}; color:{{ p.fg }};" onClick="{{ p.onPick }}">{{ p.label }}</span>
+      </sc-for>
+    </div>
+    <span style="font-size:11px; padding:6px 10px; border:1.5px solid {{ line }}; cursor:pointer; user-select:none; flex:none; background:{{ fg }}; color:{{ inv }};" onClick="{{ onTheme }}">{{ themeLabel }}</span>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:760}}">
+const T = {
+  light: { bg:'#fff', fg:'#111', line:'#111', sub:'#8a8a8a', soft:'#F4F4F1', inv:'#fff', shadow:'#111' },
+  dark:  { bg:'#0D0D0D', fg:'#F2F2F2', line:'#F2F2F2', sub:'#6f6f6f', soft:'#1A1A18', inv:'#0D0D0D', shadow:'#F2F2F2' },
+};
+const KITS = {
+  plain:     { name:'黄标 · 白纸', paper:'#FFFFFF', accent:'#FFE566', ink:'#111111', title:'#FFE566', spine:null, shadow:'#111111' },
+  kraft:     { name:'牛皮纸',      paper:'#FFF9D6', accent:'#E5B64B', ink:'#3B3226', title:'#E5B64B', spine:null, shadow:'#3B3226' },
+  blueprint: { name:'蓝图',        paper:'#E8F1FB', accent:'#5E82AA', ink:'#1E2C38', title:'#5E82AA', spine:null, shadow:'#1E2C38' },
+  grass:     { name:'草绿',        paper:'#EDF6EF', accent:'#6E9C7B', ink:'#20321F', title:'#6E9C7B', spine:null, shadow:'#20321F' },
+  invert:    { name:'反相黑',      paper:'#0D0D0D', accent:'#FFE566', ink:'#F2F2F2', title:'#FFE566', spine:null, shadow:'#F2F2F2' },
+};
+const MAIN_COLORS = ['#FFE566','#B7E1C1','#B9D4F2','#F2C4D8'];
+const lum = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+};
+const resolveKit = (base, parts) => {
+  const k = Object.assign({}, base, parts || {});
+  const pl = lum(k.paper);
+  if (Math.abs(pl - lum(k.ink)) < 0.35) k.ink = pl > 0.5 ? '#111111' : '#F2F2F2';
+  return k;
+};
+const PAPER_OPTIONS = ['#FFFFFF','#FFF9D6','#EDF6EF','#E8F1FB','#0D0D0D'];
+const PART_DEFS = [
+  { key:'title',  label:'标题栏底' },
+  { key:'accent', label:'选中 / 拖拽行' },
+  { key:'spine',  label:'左色脊' },
+  { key:'paper',  label:'窗口底纸色' },
+  { key:'shadow', label:'硬阴影' },
+];
+const mix = (from, to, ratio) => {
+  const p = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const a = p(from), b = p(to);
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * ratio).toString(16).padStart(2, '0')).join('');
+};
+const clampPos = (x, y, w, h) => ({
+  x: Math.max(0, Math.min(x, (window.innerWidth || 1240) - w - 10)),
+  y: Math.max(0, Math.min(y, (window.innerHeight || 760) - h - 10)),
+});
+const ACCENT = '#FFE566';
+const NOTE_COLORS = ['#FFE566', '#B7E1C1', '#B9D4F2', '#F2C4D8', null];
+const TYPE_LABEL = { desk:'DESK', note:'NOTE', todo:'TODO', clip:'CLIP' };
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+class Component extends DCLogic {
+  state = {
+    theme:'light', scrollbar:'overlay', maxLines:2, hoverFull:true,
+    tip:null, dragId:null, overId:null, menu:null, trash:null, draft:'',
+    newOpen:false, hoverWin:null, z:10, copied:null,
+    accent:'#FFE566', renaming:null, renameDraft:'',
+    settings:{ open:false, x:790, y:70 },
+    pinAll:false, autostart:false, snap:true, fadeOut:false,
+    opBar:true, defaultOpacity:100,
+    defaultKit:'plain', defaultParts:{}, autoTheme:true,
+    colors:{ open:false, scope:'default', view:'kits', x:430, y:120, part:null },
+    widgets: [
+      { id:'w1', type:'desk', tab:'todo', title:'三合一 · 主窗', x:60, y:70, w:320, h:480, pin:true, hidden:false, collapsed:false, opacity:100, kit:'plain', parts:{}, follows:true,
+        note:'周四交付评审稿\n补一版深色截图\n问 Lin 要图标源文件',
+        todos:[
+          { id:'t1', text:'整理评审反馈', done:false },
+          { id:'t2', text:'导出深色版切图，另外把标注补齐再交给前端同学复核一遍', done:false },
+          { id:'t3', text:'同步周会纪要', done:true },
+          { id:'t4', text:'预约打印装帧', done:false },
+          { id:'t5', text:'核对供应商报价', done:false },
+          { id:'t6', text:'补写变更记录', done:false },
+          { id:'t7', text:'回邮件给 Lin', done:false },
+        ],
+        clips:[
+          { id:'c1', text:'https://intranet.example.com/design/review/2026-08-28/final' },
+          { id:'c2', text:'SHA-1c4f9e0' },
+          { id:'c3', text:'收货地址：朝阳区 …' },
+          { id:'c4', text:'design-review@corp' },
+        ] },
+      { id:'w2', type:'note', title:'采购清单', x:430, y:70, w:320, h:230, pin:false, hidden:false, collapsed:false, opacity:88, kit:'kraft', parts:{}, follows:false,
+        note:'马克笔 2 盒\nA3 描图纸\n装帧夹 ×4', todos:[], clips:[] },
+      { id:'w3', type:'clip', title:'剪贴板历史', x:430, y:330, w:320, h:220, pin:false, hidden:true, collapsed:false, opacity:100, kit:'blueprint', parts:{}, follows:false,
+        note:'', todos:[], clips:[{ id:'c1', text:'git rebase -i HEAD~4' }, { id:'c2', text:'邮编 100020' }] },
+    ],
+    manager: { open:true, x:790, y:70, filter:'all' },
+  };
+
+  componentDidMount() {
+    this._move = (e) => {
+      const d = this._drag;
+      if (!d) return;
+      if (d.kind === 'win') {
+        let x = e.clientX - d.dx, y = e.clientY - d.dy;
+        if (Math.abs(x) < 12) x = 0;
+        if (Math.abs(y) < 12) y = 0;
+        this.patch(d.id, { x: Math.max(0, x), y: Math.max(0, y) });
+      } else if (d.kind === 'defop') {
+        const r = d.el.getBoundingClientRect();
+        this.setState({ defaultOpacity: Math.round(35 + Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 65) });
+      } else if (d.kind === 'col') {
+        this.setState(s => ({ colors: { ...s.colors, x: Math.max(0, e.clientX - d.dx), y: Math.max(0, e.clientY - d.dy) } }));
+      } else if (d.kind === 'set') {
+        this.setState(s => ({ settings: { ...s.settings, x: Math.max(0, e.clientX - d.dx), y: Math.max(0, e.clientY - d.dy) } }));
+      } else if (d.kind === 'mgr') {
+        this.setState(s => ({ manager: { ...s.manager, x: Math.max(0, e.clientX - d.dx), y: Math.max(0, e.clientY - d.dy) } }));
+      } else if (d.kind === 'res') {
+        this.patch(d.id, { w: Math.max(240, d.w0 + e.clientX - d.sx), h: Math.max(160, d.h0 + e.clientY - d.sy) });
+      } else if (d.kind === 'op') {
+        const r = d.el.getBoundingClientRect();
+        this.patch(d.id, { opacity: Math.round(35 + Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 65) });
+      }
+    };
+    this._up = () => { this._drag = null; };
+    window.addEventListener('mousemove', this._move);
+    window.addEventListener('mouseup', this._up);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('mousemove', this._move);
+    window.removeEventListener('mouseup', this._up);
+  }
+
+  patch(id, p) { this.setState(s => ({ widgets: s.widgets.map(w => w.id === id ? { ...w, ...p } : w) })); }
+  raise(id) { this.setState(s => ({ z: s.z + 1, widgets: s.widgets.map(w => w.id === id ? { ...w, z: s.z + 1 } : w) })); }
+
+  add(type) {
+    if (type === 'clip' && this.state.widgets.some(w => w.type === 'clip')) { this.setState({ newOpen:false }); return; }
+    const n = this.state.widgets.length;
+    this.setState(s => ({
+      newOpen:false, z: s.z + 1,
+      widgets: [...s.widgets, {
+        id: uid(), type, tab:'todo',
+        title: type === 'note' ? '新便签' : type === 'todo' ? '新待办' : type === 'clip' ? '剪贴板历史' : '三合一',
+        x: 120 + n * 26, y: 110 + n * 22, w: 320, h: type === 'note' ? 230 : type === 'clip' ? 220 : 480,
+        pin:false, hidden:false, collapsed:false, opacity: s.defaultOpacity,
+        kit: s.defaultKit, parts: Object.assign({}, s.defaultParts), follows:true, note:'', todos:[], clips:[], z: s.z + 1,
+      }],
+    }));
+  }
+  remove(id) {
+    const idx = this.state.widgets.findIndex(x => x.id === id);
+    const w = this.state.widgets[idx];
+    if (!w) return;
+    clearTimeout(this._trashT);
+    this.setState(s => ({ widgets: s.widgets.filter(x => x.id !== id), trash: { w, idx }, menu:null }));
+    this._trashT = setTimeout(() => this.setState({ trash:null }), 5000);
+  }
+  undo() {
+    const t = this.state.trash;
+    if (!t) return;
+    clearTimeout(this._trashT);
+    this.setState(s => {
+      const list = [...s.widgets];
+      list.splice(Math.min(t.idx, list.length), 0, t.w);
+      return { widgets: list, trash:null };
+    });
+  }
+  toggle(wid, tid) {
+    this.setState(s => ({ widgets: s.widgets.map(w => w.id !== wid ? w : {
+      ...w, todos: w.todos.map(t => t.id === tid ? { ...t, done: !t.done, justDone: !t.done } : t),
+    }) }));
+    setTimeout(() => this.setState(s => ({ widgets: s.widgets.map(w => w.id !== wid ? w : { ...w, todos: w.todos.map(t => ({ ...t, justDone:false })) }) })), 320);
+  }
+  addTodo(wid) {
+    const text = (this.state.draft || '').trim();
+    if (!text) return;
+    this.setState(s => ({ draft:'', widgets: s.widgets.map(w => w.id !== wid ? w : { ...w, todos: [...w.todos, { id: uid(), text, done:false }] }) }));
+  }
+  delTodo(wid, tid) { this.setState(s => ({ widgets: s.widgets.map(w => w.id !== wid ? w : { ...w, todos: w.todos.filter(t => t.id !== tid) }) })); }
+  reorder(wid, from, to) {
+    this.setState(s => ({ widgets: s.widgets.map(w => {
+      if (w.id !== wid) return w;
+      const list = [...w.todos];
+      const i = list.findIndex(t => t.id === from), j = list.findIndex(t => t.id === to);
+      if (i < 0 || j < 0 || i === j) return w;
+      const [it] = list.splice(i, 1);
+      list.splice(j, 0, it);
+      return { ...w, todos: list };
+    }) }));
+  }
+
+  tipIn(text) {
+    return (e) => {
+      if (!this.state.hoverFull) return;
+      const el = e.currentTarget;
+      if (el.scrollHeight - el.clientHeight < 2 && el.scrollWidth - el.clientWidth < 2) return;
+      const r = el.getBoundingClientRect();
+      clearTimeout(this._tipT);
+      this._tipT = setTimeout(() => this.setState({ tip: { text, x: Math.min(r.left, 900), y: r.bottom + 6, w: Math.max(220, Math.round(r.width)) } }), 400);
+    };
+  }
+
+  kitOf(w) {
+    return resolveKit(KITS[w.kit] || KITS.plain, w.parts);
+  }
+
+  // scope === 'default' 时同时刷新所有「跟随默认」的窗口，改完即时可见
+  applyParts(scope, patch) {
+    if (scope === 'default') {
+      this.setState(s => ({
+        defaultParts: Object.assign({}, s.defaultParts, patch),
+        widgets: s.widgets.map(w => w.follows ? { ...w, kit: s.defaultKit, parts: Object.assign({}, s.defaultParts, patch) } : w),
+      }));
+    } else {
+      this.setState(s => ({ widgets: s.widgets.map(w => w.id !== scope ? w : { ...w, follows:false, parts: Object.assign({}, w.parts, patch) }) }));
+    }
+  }
+
+  setPart(scope, key, val) {
+    const patch = {};
+    patch[key] = val;
+    this.applyParts(scope, patch);
+  }
+
+  applyMain(scope, col) {
+    this.applyParts(scope, { title: col, accent: col, spine: col, shadow: col, paper: mix(col, '#FFFFFF', 0.88) });
+  }
+
+  renderVals() {
+    const s = this.state, c = T[s.theme];
+    const ACCENT = (s.defaultParts && s.defaultParts.accent) || (KITS[s.defaultKit] || KITS.plain).accent;
+    const hatch = 'repeating-linear-gradient(45deg,' + c.bg + ' 0 6px,' + c.soft + ' 6px 12px)';
+
+    const widgets = s.widgets.filter(w => !w.hidden).map(w => {
+      const isTodo = w.type === 'todo' || (w.type === 'desk' && w.tab === 'todo');
+      const isNote = w.type === 'note' || (w.type === 'desk' && w.tab === 'note');
+      const isClip = w.type === 'clip' || (w.type === 'desk' && w.tab === 'clip');
+      const openT = w.todos.filter(t => !t.done), doneT = w.todos.filter(t => t.done);
+      const k = this.kitOf(w);
+
+      const rowOf = (t, dragging) => ({
+        id: t.id, text: t.text,
+        mark: t.done ? '✓' : '',
+        boxBg: t.done ? k.ink : 'transparent',
+        boxScale: t.justDone ? 'scale(1.18)' : 'scale(1)',
+        textColor: t.done ? mix(k.ink, k.paper, 0.5) : (dragging ? '#111' : k.ink),
+        deco: t.done ? 'line-through' : 'none',
+        rowBg: dragging ? k.accent : 'transparent',
+        rowShadow: dragging ? 'inset 3px 0 0 ' + k.ink : 'none',
+        rowShift: dragging ? 'translateX(2px)' : 'none',
+        dropLine: (s.overId === t.id && s.dragId && s.dragId !== t.id) ? '2px solid ' + k.accent : 'none',
+        onToggle: () => this.toggle(w.id, t.id),
+        onDel: () => this.delTodo(w.id, t.id),
+        onGrab: () => this.setState({ dragId: t.id }),
+        onOver: () => { if (s.dragId) this.setState({ overId: t.id }); },
+        onDrop: () => {
+          if (s.dragId && s.dragId !== t.id) this.reorder(w.id, s.dragId, t.id);
+          this.setState({ dragId:null, overId:null });
+        },
+        onTipIn: this.tipIn(t.text),
+      });
+
+      return {
+        id: w.id,
+        left: w.x + 'px', top: w.y + 'px', width: w.w + 'px',
+        height: (w.collapsed ? 32 : w.h) + 'px',
+        opa: w.opacity / 100, zi: (w.pin ? 500 : 100) + (w.z || 0),
+        shadow: w.pin ? ACCENT : c.shadow,
+        label: TYPE_LABEL[w.type] + (w.type !== 'clip' && w.todos.length ? ' · ' + openT.length + ' OPEN' : ''),
+        paper: k.paper, line: k.ink, fg: k.ink, inv: k.paper,
+        sub: mix(k.ink, k.paper, 0.5), soft: mix(k.paper, k.ink, 0.06),
+        hatch: 'repeating-linear-gradient(45deg,' + k.paper + ' 0 6px,' + mix(k.paper, k.ink, 0.06) + ' 6px 12px)',
+        boxShadow: '8px 8px 0 ' + (w.pin ? k.accent : k.shadow) + (k.spine ? ', inset 8px 0 0 ' + k.spine : ''),
+        spinePad: k.spine ? '8px' : '0px',
+        titleBg: k.title || k.paper,
+        titleFg: k.title ? '#111' : k.ink,
+        titleLine: k.title ? '#111' : k.ink,
+        pinBg: w.pin ? (k.title ? '#111' : k.ink) : 'transparent',
+        pinFg: w.pin ? (k.title || k.paper) : (k.title ? '#111' : k.ink),
+        collapseMark: w.collapsed ? '▣' : '–',
+        showTabs: !w.collapsed && w.type === 'desk',
+        showNote: !w.collapsed && isNote,
+        showTodo: !w.collapsed && isTodo,
+        showClip: !w.collapsed && isClip,
+        showOpacity: !w.collapsed && s.opBar,
+        showResize: !w.collapsed,
+        tabNoteBg: w.tab === 'note' ? k.ink : 'transparent', tabNoteFg: w.tab === 'note' ? k.paper : k.ink,
+        tabTodoBg: w.tab === 'todo' ? k.ink : 'transparent', tabTodoFg: w.tab === 'todo' ? k.paper : k.ink,
+        tabClipBg: w.tab === 'clip' ? k.ink : 'transparent', tabClipFg: w.tab === 'clip' ? k.paper : k.ink,
+        note: w.note,
+        openRows: openT.map(t => rowOf(t, s.dragId === t.id)),
+        doneRows: doneT.map(t => rowOf(t, false)),
+        hasDone: doneT.length > 0,
+        doneLabel: '已完成 ' + doneT.length,
+        barOverlay: s.scrollbar === 'overlay',
+        barOpacity: s.hoverWin === w.id ? 0.85 : 0,
+        clipRows: w.clips.map((cl, i) => ({
+          num: String(i + 1).padStart(2, '0'), text: cl.text,
+          rowBg: s.copied === cl.id ? k.accent : 'transparent',
+          rowFg: s.copied === cl.id ? '#111' : k.ink,
+          numColor: s.copied === cl.id ? '#111' : mix(k.ink, k.paper, 0.5),
+          onCopy: () => this.setState({ copied: cl.id }),
+          onTipIn: this.tipIn(cl.text),
+        })),
+        clipEmpty: w.clips.length === 0,
+        onClearClips: () => this.patch(w.id, { clips: [] }),
+        opacity: w.opacity, opFill: ((w.opacity - 35) / 65 * 100) + '%',
+        onRaise: () => this.raise(w.id),
+        onEnter: () => this.setState({ hoverWin: w.id }),
+        onCtx: (e) => { e.preventDefault(); e.stopPropagation(); this.setState({ menu: { id: w.id, x: e.clientX, y: e.clientY }, colors: { ...this.state.colors, open:false } }); },
+        onTitleDown: (e) => { this.raise(w.id); this._drag = { kind:'win', id:w.id, dx: e.clientX - w.x, dy: e.clientY - w.y }; },
+        onCollapse: () => this.patch(w.id, { collapsed: !w.collapsed }),
+        onPin: (e) => { e.stopPropagation(); this.patch(w.id, { pin: !w.pin }); },
+        onClone: (e) => { e.stopPropagation(); this.add(w.type); },
+        onHide: (e) => { e.stopPropagation(); this.patch(w.id, { hidden:true }); },
+        onTabNote: () => this.patch(w.id, { tab:'note' }),
+        onTabTodo: () => this.patch(w.id, { tab:'todo' }),
+        onTabClip: () => this.patch(w.id, { tab:'clip' }),
+        onNote: (e) => this.patch(w.id, { note: e.target.value }),
+        onDraftKey: (e) => { if (e.key === 'Enter') this.addTodo(w.id); },
+        onOpDown: (e) => { this._drag = { kind:'op', id:w.id, el:e.currentTarget }; this._move(e); },
+        onResDown: (e) => { e.stopPropagation(); this._drag = { kind:'res', id:w.id, sx:e.clientX, sy:e.clientY, w0:w.w, h0:w.h }; },
+      };
+    });
+
+    const count = tp => s.widgets.filter(w => w.type === tp).length;
+    const mgrTabs = [['all','ALL'],['note','NOTE ' + count('note')],['todo','TODO ' + count('todo')],['desk','DESK ' + count('desk')]]
+      .map(([k, label]) => ({
+        label, bg: s.manager.filter === k ? c.fg : 'transparent', fg: s.manager.filter === k ? c.inv : c.fg,
+        onPick: () => this.setState({ manager: { ...s.manager, filter: k } }),
+      }));
+
+    const mgrRows = s.widgets.filter(w => s.manager.filter === 'all' || w.type === s.manager.filter).map(w => ({
+      tag: TYPE_LABEL[w.type], title: w.title, opa: w.hidden ? 0.5 : 1,
+      tagBg: w.type === 'desk' ? c.fg : (w.type === 'note' ? this.kitOf(w).accent : 'transparent'),
+      tagFg: w.type === 'desk' ? c.inv : (w.type === 'note' ? '#111' : c.fg),
+      pinBg: w.pin ? c.fg : 'transparent', pinFg: w.pin ? c.inv : c.fg,
+      eye: w.hidden ? '○' : '◉',
+      delMark: w.type === 'clip' ? '–' : '×',
+      delColor: w.type === 'clip' ? c.sub : c.fg,
+      renaming: s.renaming === w.id, notRenaming: s.renaming !== w.id,
+      onRenameStart: () => this.setState({ renaming: w.id, renameDraft: w.title }),
+      onRenameCommit: () => {
+        const t = (this.state.renameDraft || '').trim();
+        if (t) this.patch(w.id, { title: t });
+        this.setState({ renaming:null, renameDraft:'' });
+      },
+      onRenameKey: (e) => {
+        if (e.key === 'Enter') {
+          const t = (this.state.renameDraft || '').trim();
+          if (t) this.patch(w.id, { title: t });
+          this.setState({ renaming:null, renameDraft:'' });
+        } else if (e.key === 'Escape') this.setState({ renaming:null, renameDraft:'' });
+      },
+      onPin: () => this.patch(w.id, { pin: !w.pin }),
+      onEye: () => this.patch(w.id, { hidden: !w.hidden }),
+      onDel: () => { if (w.type === 'clip') this.patch(w.id, { hidden:true }); else this.remove(w.id); },
+    }));
+
+    const newItems = [['note','新便签'],['todo','新待办清单'],['clip','剪贴板'],['desk','新三合一']].map(([tp, label]) => {
+      const dis = tp === 'clip' && s.widgets.some(w => w.type === 'clip');
+      return {
+        label, note: dis ? '已存在' : '', cursor: dis ? 'default' : 'pointer', opa: dis ? 0.45 : 1,
+        swatch: tp === 'note' ? ACCENT : (tp === 'desk' ? c.fg : 'transparent'),
+        onPick: () => { if (!dis) this.add(tp); },
+      };
+    });
+
+    const menuW = s.menu ? s.widgets.find(w => w.id === s.menu.id) : null;
+    const menuItems = menuW ? [
+      { label:'再开一个同类', bg:'transparent', onPick: () => { this.add(menuW.type); this.setState({ menu:null }); } },
+      { label: menuW.pin ? '取消置顶' : '置顶显示', bg:'transparent', onPick: () => { this.patch(menuW.id, { pin: !menuW.pin }); this.setState({ menu:null }); } },
+      { label:'颜色…', bg:'transparent', onPick: () => {
+        const p = clampPos(s.menu.x, s.menu.y, 320, 470);
+        this.setState({ menu:null, colors: { ...s.colors, open:true, scope: menuW.id, view:'kits', part:null, x: p.x, y: p.y } });
+      } },
+      { label:'重命名…', bg:'transparent', onPick: () => this.setState({ menu:null, manager: { ...s.manager, open:true, filter:'all' }, renaming: menuW.id, renameDraft: menuW.title }) },
+      { label:'隐藏（保留内容）', bg:'transparent', onPick: () => { this.patch(menuW.id, { hidden:true }); this.setState({ menu:null }); } },
+      { label:'删除', bg: ACCENT, onPick: () => this.remove(menuW.id) },
+    ] : [];
+
+    const pill = (active) => ({ bg: active ? c.fg : c.bg, fg: active ? c.inv : c.fg });
+    const barPills = [['always','常驻'],['overlay','悬浮'],['hidden','隐藏']].map(([k, label], i) => Object.assign({
+      label, leftBorder: i === 0 ? '1.5px solid ' + c.line : 'none',
+      onPick: () => this.setState({ scrollbar: k }),
+    }, pill(s.scrollbar === k)));
+    const linePills = [1, 2, 3, 0].map((n, i) => Object.assign({
+      label: n === 0 ? '不限' : n + ' 行', leftBorder: i === 0 ? '1.5px solid ' + c.line : 'none',
+      onPick: () => this.setState({ maxLines: n }),
+    }, pill(s.maxLines === n)));
+
+      const col = s.colors;
+      const isDefault = col.scope === 'default';
+      const scopeW = isDefault ? null : s.widgets.find(w => w.id === col.scope);
+      const activeKitId = isDefault ? s.defaultKit : (scopeW ? scopeW.kit : 'plain');
+      const activeParts = isDefault ? (s.defaultParts || {}) : (scopeW ? (scopeW.parts || {}) : {});
+      const resolved = resolveKit(KITS[activeKitId] || KITS.plain, activeParts);
+      const defKit = resolveKit(KITS[s.defaultKit] || KITS.plain, s.defaultParts);
+      const setKit = (id) => {
+        if (isDefault) this.setState(st => ({
+          defaultKit: id, defaultParts: {},
+          widgets: st.widgets.map(w => w.follows ? { ...w, kit: id, parts: {} } : w),
+        }));
+        else this.setState(st => ({ widgets: st.widgets.map(w => w.id !== col.scope ? w : { ...w, kit: id, parts: {}, follows:false }) }));
+      };
+
+    return {
+      bg: c.bg, fg: c.fg, line: c.line, sub: c.sub, soft: c.soft, inv: c.inv, shadow: c.shadow,
+      hatch, resizeHatch: 'repeating-linear-gradient(-45deg,' + c.line + ' 0 1.5px,transparent 1.5px 5px)',
+      barTrack: 'repeating-linear-gradient(45deg,' + c.bg + ' 0 4px,' + c.soft + ' 4px 8px)',
+      barAlways: s.scrollbar === 'always',
+      clampDisplay: s.maxLines === 0 ? 'block' : '-webkit-box',
+      clampLines: s.maxLines === 0 ? 'none' : s.maxLines,
+      widgets, draft: s.draft,
+      onDraft: (e) => this.setState({ draft: e.target.value }),
+      managerOpen: s.manager.open, mgrLeft: s.manager.x + 'px', mgrTop: s.manager.y + 'px',
+      mgrTitle: 'WIDGETS · ' + s.widgets.length,
+      mgrTabs, mgrRows, newItems, newOpen: s.newOpen,
+      newLabel: s.newOpen ? '+ NEW ▴' : '+ NEW ▾',
+      hasTrash: !!s.trash, trashLabel: s.trash ? '已删除「' + s.trash.w.title + '」' : '',
+      onUndo: () => this.undo(),
+      onNewToggle: () => this.setState({ newOpen: !s.newOpen }),
+      onMgrClose: (e) => { e.stopPropagation(); this.setState({ manager: { ...s.manager, open:false } }); },
+      onMgrToggle: () => this.setState({ manager: { ...s.manager, open: !s.manager.open } }),
+      onMgrDown: (e) => { this._drag = { kind:'mgr', dx: e.clientX - s.manager.x, dy: e.clientY - s.manager.y }; },
+      mgrPillBg: s.manager.open ? c.fg : c.bg, mgrPillFg: s.manager.open ? c.inv : c.fg,
+      onHideAll: () => this.setState({ widgets: s.widgets.map(w => ({ ...w, hidden:true })) }),
+      onShowAll: () => this.setState({ widgets: s.widgets.map(w => ({ ...w, hidden:false })) }),
+      menuOpen: !!menuW, menuLeft: s.menu ? s.menu.x + 'px' : '0px', menuTop: s.menu ? s.menu.y + 'px' : '0px', menuItems,
+      tipOpen: !!s.tip, tipText: s.tip ? s.tip.text : '',
+      tipLeft: s.tip ? s.tip.x + 'px' : '0px', tipTop: s.tip ? s.tip.y + 'px' : '0px', tipWidth: s.tip ? s.tip.w + 'px' : '0px',
+      onTipOut: () => { clearTimeout(this._tipT); if (this.state.tip) this.setState({ tip:null }); },
+      onLeaveWin: () => this.setState({ hoverWin:null }),
+      onBackdrop: (e) => { if (e && e.button === 2) return; if (s.menu || s.newOpen) this.setState({ menu:null, newOpen:false }); },
+      barPills, linePills,
+      colorsOpen: col.open && (isDefault || !!scopeW),
+      colorsKits: col.view === 'kits', colorsCustom: col.view === 'custom',
+      colorsIsDefault: isDefault,
+      colorsTitle: (col.view === 'custom' ? '自定义 · ' : 'COLORS · ') + (isDefault ? '默认' : (scopeW ? scopeW.title : '')),
+      colLeft: col.x + 'px', colTop: col.y + 'px',
+      onColDown: (e) => { this._drag = { kind:'col', dx: e.clientX - col.x, dy: e.clientY - col.y }; },
+      onColorsClose: (e) => { e.stopPropagation(); this.setState({ colors: { ...col, open:false, part:null } }); },
+      onColorsDefault: () => {
+        const vw = window.innerWidth || 1240;
+        const right = s.settings.x + 340;
+        const p = clampPos(right + 320 > vw ? s.settings.x - 340 : right, s.settings.y, 320, 470);
+        this.setState({ colors: { ...col, open:true, scope:'default', view:'kits', part:null, x: p.x, y: p.y } });
+      },
+      onColorsCustom: () => this.setState({ colors: { ...col, view:'custom', part:null } }),
+      onColorsBack: (e) => { e.stopPropagation(); this.setState({ colors: { ...col, view:'kits', part:null } }); },
+      onApplyAll: (e) => { e.stopPropagation(); this.setState(st => ({ widgets: st.widgets.map(w => ({ ...w, kit: st.defaultKit, parts: Object.assign({}, st.defaultParts), follows:true })) })); },
+      kitRows: Object.keys(KITS).map(id => {
+        const kk = KITS[id], on = activeKitId === id && Object.keys(activeParts).length === 0;
+        return {
+          name: kk.name, paper: kk.paper, accent: kk.accent, ink: kk.ink,
+          note: on ? '当前' : '', rowBg: on ? kk.accent : 'transparent',
+          rowShadow: on ? 'inset 3px 0 0 ' + c.line : 'none',
+          labelColor: on ? '#111' : c.fg, noteColor: on ? '#3b3b38' : c.sub,
+          onPick: () => setKit(id),
+        };
+      }),
+      autoThemeTrack: s.autoTheme ? c.fg : c.bg, autoThemeKnob: s.autoTheme ? ACCENT : c.fg,
+      autoThemeAlign: s.autoTheme ? 'flex-end' : 'flex-start',
+      onToggleAutoTheme: () => this.setState({ autoTheme: !s.autoTheme }),
+      mainSwatches: MAIN_COLORS.map((cl, i) => ({
+        bg: cl, leftBorder: i === 0 ? '1.5px solid ' + c.line : 'none',
+        ring: resolved.accent === cl && resolved.title === cl ? 'inset 0 0 0 3px ' + c.bg : 'none',
+        onPick: () => this.applyMain(col.scope, cl),
+      })),
+      partRows: PART_DEFS.map((pd, i) => {
+        const opts = pd.key === 'paper' ? PAPER_OPTIONS
+          : pd.key === 'shadow' ? ['#111111', '#F2F2F2'].concat(MAIN_COLORS)
+          : MAIN_COLORS.concat([null]);
+        const cur = resolved[pd.key];
+        return {
+          label: pd.label,
+          value: cur || c.bg,
+          caret: col.part === pd.key ? '▴' : '▾',
+          expanded: col.part === pd.key,
+          rowBg: col.part === pd.key ? c.soft : 'transparent',
+          bottomBorder: (i === PART_DEFS.length - 1 ? '1.5px' : '1px') + ' solid ' + c.line,
+          onExpand: () => this.setState({ colors: { ...col, part: col.part === pd.key ? null : pd.key } }),
+          options: opts.map((o, j) => ({
+            bg: o || c.bg, mark: cur === o ? '✓' : (o ? '' : '/'),
+            markColor: o === '#0D0D0D' || o === '#111111' ? '#fff' : '#111',
+            leftBorder: j === 0 ? '1.5px solid ' + c.line : 'none',
+            onPick: () => this.setPart(col.scope, pd.key, o),
+          })),
+        };
+      }),
+      customHint: isDefault ? '同步跟随默认的窗口' : '改动即时作用于本窗口',
+      onCustomReset: () => setKit(activeKitId),
+      defKitName: defKit.name, defKitPaper: defKit.paper, defKitAccent: defKit.accent, defKitInk: defKit.ink,
+      renameDraft: s.renameDraft,
+      onRenameChange: (e) => this.setState({ renameDraft: e.target.value }),
+      settingsOpen: s.settings.open, setLeft: s.settings.x + 'px', setTop: s.settings.y + 'px',
+      onSetOpen: (e) => { e.stopPropagation(); this.setState({ settings: { ...s.settings, open:true, x: s.manager.x + 40, y: s.manager.y + 40 } }); },
+      onSetClose: (e) => { e.stopPropagation(); this.setState({ settings: { ...s.settings, open:false } }); },
+      onSetDown: (e) => { this._drag = { kind:'set', dx: e.clientX - s.settings.x, dy: e.clientY - s.settings.y }; },
+      setToggles: [
+        { key:'pinAll', label:'全部始终置顶' },
+        { key:'autostart', label:'开机自启' },
+        { key:'snap', label:'吸附屏幕边缘' },
+        { key:'hoverFull', label:'溢出悬停显示全文' },
+      ].map(t => ({
+        label: t.label,
+        trackBg: s[t.key] ? c.fg : c.bg,
+        knobBg: s[t.key] ? ACCENT : c.fg,
+        align: s[t.key] ? 'flex-end' : 'flex-start',
+        onToggle: () => {
+          const v = !s[t.key];
+          const patch = {};
+          patch[t.key] = v;
+          if (t.key === 'pinAll') patch.widgets = s.widgets.map(w => ({ ...w, pin: v }));
+          this.setState(patch);
+        },
+      })),
+      themePills: [['light','LIGHT'],['dark','DARK']].map(([k, label]) => ({
+        label, bg: s.theme === k ? c.fg : 'transparent', fg: s.theme === k ? c.inv : c.fg,
+        onPick: () => this.setState({ theme: k }),
+      })),
+      onReset: () => this.setState({ theme:'light', scrollbar:'overlay', maxLines:2, hoverFull:true, pinAll:false, autostart:false, snap:true, opBar:true, defaultOpacity:100, defaultKit:'plain', defaultParts:{}, autoTheme:true }),
+      defaultOpacity: s.defaultOpacity, defOpFill: ((s.defaultOpacity - 35) / 65 * 100) + '%',
+      onDefOpDown: (e) => { this._drag = { kind:'defop', el:e.currentTarget }; this._move(e); },
+      opBarTrack: s.opBar ? c.fg : c.bg, opBarKnob: s.opBar ? ACCENT : c.fg, opBarAlign: s.opBar ? 'flex-end' : 'flex-start',
+      onToggleOpBar: () => this.setState({ opBar: !s.opBar }),
+      menuHasOpacity: !!menuW && !s.opBar,
+      menuOpacity: menuW ? menuW.opacity : 100,
+      menuOpFill: menuW ? ((menuW.opacity - 35) / 65 * 100) + '%' : '0%',
+      onMenuOpDown: (e) => { if (menuW) { this._drag = { kind:'op', id: menuW.id, el: e.currentTarget }; this._move(e); } },
+      themeLabel: s.theme === 'light' ? '浅色' : '深色',
+      themeMark: s.theme === 'light' ? '◐' : '◑',
+      onTheme: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ theme: s.theme === 'light' ? 'dark' : 'light' }); },
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules
+.vite
+out
+dist
+release
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

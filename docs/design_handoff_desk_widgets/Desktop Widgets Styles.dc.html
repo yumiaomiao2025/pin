@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #ECECEF; }
+  a { color: #111; text-decoration: underline; }
+  a:hover { color: #6a6a66; }
+</style>
+</helmet>
+
+<section style="display:flex; flex-direction:column; gap:28px; padding:64px; font-family:'Segoe UI Variable','Segoe UI',system-ui,'Microsoft YaHei',sans-serif; color:#1a1a1a;">
+  <header style="display:flex; flex-direction:column; gap:12px; max-width:880px;">
+    <div style="font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a80;">Turn 7 · 颜色面板</div>
+    <h1 style="margin:0; font-size:34px; font-weight:600; letter-spacing:-.01em;">配色套装面板：设置管默认，右键管当前</h1>
+    <p style="margin:0; font-size:15px; line-height:1.6; color:#5d5d63; text-wrap:pretty;">同一套面板出现在两处：<strong>设置 → COLORS</strong> 改「新建窗口的默认值」，<strong>右键 → 颜色…</strong> 只改当前这一个窗口。<a href="#7a">7a</a> 是套装列表，<a href="#7b">7b</a> 是「自定义」下一级——选一个主色，五个部位同步切换，之后任一部位都能单独改成别的色。</p>
+  </header>
+
+  <div style="display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; width:max-content; padding:32px; border-radius:12px; background:#DCDCD6; font-family:'JetBrains Mono',ui-monospace,monospace;">
+
+    <!-- 套装列表 -->
+    <div id="7a" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#FFE566; border:1.5px solid #111; color:#111; font-size:11px; font-weight:700;">7a</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">配色套装</span>
+      </div>
+      <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+        <div style="height:32px; display:flex; align-items:center; gap:6px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1;">COLORS · 默认</span>
+          <span style="font-size:10px; border:1px solid #111; padding:1px 5px;">应用到全部</span>
+          <span style="font-size:12px;">×</span>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid #111; background:#FFE566; box-shadow:inset 3px 0 0 #111;">
+          <span style="display:flex; flex:none; border:1.5px solid #111;">
+            <span style="width:16px; height:22px; background:#fff;"></span>
+            <span style="width:10px; height:22px; background:#FFE566; border-left:1.5px solid #111;"></span>
+            <span style="width:10px; height:22px; background:#111; border-left:1.5px solid #111;"></span>
+          </span>
+          <span style="font-size:12px; flex:1;">黄标 · 白纸</span>
+          <span style="font-size:10px; color:#5b5b57;">默认</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid #111;">
+          <span style="display:flex; flex:none; border:1.5px solid #111;">
+            <span style="width:16px; height:22px; background:#FFF9D6;"></span>
+            <span style="width:10px; height:22px; background:#E5B64B; border-left:1.5px solid #111;"></span>
+            <span style="width:10px; height:22px; background:#3B3226; border-left:1.5px solid #111;"></span>
+          </span>
+          <span style="font-size:12px; flex:1;">牛皮纸</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid #111;">
+          <span style="display:flex; flex:none; border:1.5px solid #111;">
+            <span style="width:16px; height:22px; background:#E8F1FB;"></span>
+            <span style="width:10px; height:22px; background:#5E82AA; border-left:1.5px solid #111;"></span>
+            <span style="width:10px; height:22px; background:#1E2C38; border-left:1.5px solid #111;"></span>
+          </span>
+          <span style="font-size:12px; flex:1;">蓝图</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid #111;">
+          <span style="display:flex; flex:none; border:1.5px solid #111;">
+            <span style="width:16px; height:22px; background:#EDF6EF;"></span>
+            <span style="width:10px; height:22px; background:#6E9C7B; border-left:1.5px solid #111;"></span>
+            <span style="width:10px; height:22px; background:#20321F; border-left:1.5px solid #111;"></span>
+          </span>
+          <span style="font-size:12px; flex:1;">草绿</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid #111;">
+          <span style="display:flex; flex:none; border:1.5px solid #111;">
+            <span style="width:16px; height:22px; background:#0D0D0D;"></span>
+            <span style="width:10px; height:22px; background:#FFE566; border-left:1.5px solid #F2F2F2;"></span>
+            <span style="width:10px; height:22px; background:#F2F2F2; border-left:1.5px solid #F2F2F2;"></span>
+          </span>
+          <span style="font-size:12px; flex:1;">反相黑</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1.5px solid #111;">
+          <span style="width:38px; height:22px; flex:none; border:1.5px dashed #111; display:grid; place-items:center; font-size:11px;">＋</span>
+          <span style="font-size:12px; flex:1;">自定义…</span>
+          <span style="font-size:11px;">›</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 12px;">
+          <span style="font-size:12px; flex:1;">跟随系统深浅</span>
+          <span style="width:38px; height:18px; border:1.5px solid #111; background:#111; display:flex; justify-content:flex-end; align-items:center; padding:1.5px;"><span style="width:14px; height:100%; background:#FFE566;"></span></span>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; line-height:1.6; max-width:320px;">窗口版（右键 → 颜色…）标题为「COLORS · 当前窗口」，顶部多一行「使用默认套装 ◉ / 单独指定 ○」。</span>
+    </div>
+
+    <!-- 自定义 -->
+    <div id="7b" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#FFE566; border:1.5px solid #111; color:#111; font-size:11px; font-weight:700;">7b</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">自定义</span>
+        <span style="font-size:11px; color:#5b5b57;">选主色 → 五处同步</span>
+      </div>
+      <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+        <div style="height:32px; display:flex; align-items:center; gap:6px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px;">‹</span>
+          <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1;">自定义</span>
+          <span style="font-size:10px; border:1px solid #111; padding:1px 5px;">存为套装</span>
+          <span style="font-size:12px;">×</span>
+        </div>
+        <div style="padding:6px 12px; border-bottom:1px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">主色 · 一选五处同步</div>
+        <div style="display:flex; padding:12px; border-bottom:1px solid #111;">
+          <span style="flex:1; height:34px; background:#FFE566; border:1.5px solid #111; box-shadow:inset 0 0 0 3px #fff;"></span>
+          <span style="flex:1; height:34px; background:#B7E1C1; border:1.5px solid #111; border-left:none;"></span>
+          <span style="flex:1; height:34px; background:#B9D4F2; border:1.5px solid #111; border-left:none;"></span>
+          <span style="flex:1; height:34px; background:#F2C4D8; border:1.5px solid #111; border-left:none;"></span>
+          <span style="flex:1; height:34px; background:#fff; border:1.5px dashed #111; border-left:none; display:grid; place-items:center; font-size:11px;">＋</span>
+        </div>
+        <div style="padding:6px 12px; border-bottom:1px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">五处 · 可各自改</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid #111;">
+          <span style="font-size:12px; flex:1;">标题栏底</span>
+          <span style="width:40px; height:16px; flex:none; background:#FFE566; border:1.5px solid #111; cursor:pointer;"></span>
+          <span style="font-size:11px;">▾</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid #111;">
+          <span style="font-size:12px; flex:1;">选中 / 拖拽行</span>
+          <span style="width:40px; height:16px; flex:none; background:#FFE566; border:1.5px solid #111; cursor:pointer;"></span>
+          <span style="font-size:11px;">▾</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid #111;">
+          <span style="font-size:12px; flex:1;">左色脊</span>
+          <span style="width:40px; height:16px; flex:none; background:#FFE566; border:1.5px solid #111; cursor:pointer;"></span>
+          <span style="font-size:11px;">▾</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid #111; background:#F4F4F1;">
+          <span style="font-size:12px; flex:1;">窗口底纸色</span>
+          <span style="display:flex; flex:none;">
+            <span style="width:22px; height:18px; background:#fff; border:1.5px solid #111; box-shadow:inset 0 0 0 2px #FFE566;"></span>
+            <span style="width:22px; height:18px; background:#FFF9D6; border:1.5px solid #111; border-left:none;"></span>
+            <span style="width:22px; height:18px; background:#EDF6EF; border:1.5px solid #111; border-left:none;"></span>
+            <span style="width:22px; height:18px; background:#E8F1FB; border:1.5px solid #111; border-left:none;"></span>
+            <span style="width:22px; height:18px; background:#0D0D0D; border:1.5px solid #111; border-left:none;"></span>
+          </span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:12px; flex:1;">硬阴影</span>
+          <span style="width:40px; height:16px; flex:none; background:#111; border:1.5px solid #111; cursor:pointer;"></span>
+          <span style="font-size:11px;">▾</span>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px;">
+          <span style="font-size:10px; letter-spacing:.1em; color:#8a8a8a;">改动即时作用于本窗口</span>
+          <span style="font-size:10px; letter-spacing:.1em; border:1px solid #111; padding:2px 7px;">恢复默认</span>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; line-height:1.6; max-width:320px;">点某行的色块展开一排候选色（图中「窗口底纸色」为展开态）。无浓度概念、无预览方块——改动直接落在打开面板的那个窗口上。</span>
+    </div>
+
+    <!-- 入口 -->
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">入口</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">两处</span>
+      </div>
+      <div style="width:230px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:5px 5px 0 #111;">
+        <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px;">再开一个同类</div>
+        <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px;">置顶显示</div>
+        <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px; background:#FFE566; box-shadow:inset 3px 0 0 #111;">颜色…</div>
+        <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px;">重命名…</div>
+        <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px;">隐藏（保留内容）</div>
+        <div style="padding:9px 12px; font-size:12px;">删除</div>
+      </div>
+      <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+        <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">两处入口</div>
+        <div style="display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6;"><span style="width:82px; flex:none; font-weight:700;">右键 → 颜色…</span><span style="flex:1;">只改这一个窗口，改动即时可见</span></div>
+        <div style="display:flex; gap:10px; padding:9px 12px; font-size:11px; line-height:1.6;"><span style="width:82px; flex:none; font-weight:700;">设置 COLORS</span><span style="flex:1;">改新建默认；可「应用到全部现有窗口」</span></div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; line-height:1.6; max-width:320px;">标题栏不加按钮；窗口内那条 34px 颜色格子由此替代，可关掉。</span>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex; flex-direction:column; gap:28px; padding:64px; font-family:'Segoe UI Variable','Segoe UI',system-ui,'Microsoft YaHei',sans-serif; color:#1a1a1a;">
+  <header style="display:flex; flex-direction:column; gap:12px; max-width:860px;">
+    <div style="font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a80;">Turn 6 · 颜色管理方案</div>
+    <h1 style="margin:0; font-size:34px; font-weight:600; letter-spacing:-.01em;">两套颜色的分工，五种落地方式</h1>
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:320px; display:flex; flex-direction:column; gap:6px; padding:16px 18px; background:#fff; border:1.5px solid #111;">
+        <span style="font-size:11px; font-weight:700; letter-spacing:.14em; font-family:'JetBrains Mono',monospace;">① 窗口色标 · 每窗口一个</span>
+        <span style="font-size:13px; line-height:1.6; color:#5d5d63;">身份色。唯一作用是让你在一堆窗口里一眼分组（工作 / 家里 / 某项目）。不承载状态含义。</span>
+      </div>
+      <div style="flex:1; min-width:320px; display:flex; flex-direction:column; gap:6px; padding:16px 18px; background:#fff; border:1.5px solid #111;">
+        <span style="font-size:11px; font-weight:700; letter-spacing:.14em; font-family:'JetBrains Mono',monospace;">② 强调色 accent · 全局唯一</span>
+        <span style="font-size:13px; line-height:1.6; color:#5d5d63;">功能色。选中行、拖拽行、置顶阴影、气泡阴影、开关旋钮。就是你看到那块「背景有颜色」的高亮行。</span>
+      </div>
+    </div>
+    <p style="margin:0; font-size:15px; line-height:1.6; color:#5d5d63; text-wrap:pretty;">下面五种是①的表达方式（②不变）。每种给两个不同色标的窗口，看分组是否一眼可辨。用编号告我，例如 <a href="#6b">6b</a>。</p>
+  </header>
+
+  <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; width:max-content; padding:32px; border-radius:12px; background:#DCDCD6; font-family:'JetBrains Mono',ui-monospace,monospace;">
+
+    <!-- 6a 标题栏着色（现状） -->
+    <div id="6a" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">6a</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">标题栏着色</span>
+        <span style="font-size:11px; color:#5b5b57;">现状</span>
+      </div>
+      <div style="display:flex; gap:16px;">
+        <div style="width:230px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+          <div style="height:30px; display:flex; align-items:center; gap:6px; padding:0 8px 0 12px; border-bottom:1.5px solid #111; background:#FFE566;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">TODO · 3</span>
+            <span style="font-size:11px; color:#111;">×</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid #111;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">整理评审反馈</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid #111; background:#FFE566;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">导出切图</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">预约装帧</span></div>
+        </div>
+        <div style="width:230px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+          <div style="height:30px; display:flex; align-items:center; gap:6px; padding:0 8px 0 12px; border-bottom:1.5px solid #111; background:#B9D4F2;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">NOTE</span>
+            <span style="font-size:11px; color:#111;">×</span>
+          </div>
+          <div style="padding:12px; font-size:12px; line-height:1.8;">马克笔 2 盒<br>A3 描图纸<br>装帧夹 ×4</div>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; line-height:1.6; max-width:476px;">分组最醒目。缺点：色标与高亮行同色时，标题栏那块色容易被误读成「选中」；且标题栏文字必须永远配黑，深色主题下略突兀。</span>
+    </div>
+
+    <!-- 6b 左侧色脊 -->
+    <div id="6b" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#FFE566; border:1.5px solid #111; color:#111; font-size:11px; font-weight:700;">6b</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">左侧色脊</span>
+        <span style="font-size:11px; color:#5b5b57;">推荐</span>
+      </div>
+      <div style="display:flex; gap:16px;">
+        <div style="width:230px; display:flex; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+          <span style="width:8px; flex:none; background:#FFE566; border-right:1.5px solid #111;"></span>
+          <div style="flex:1; display:flex; flex-direction:column;">
+            <div style="height:30px; display:flex; align-items:center; gap:6px; padding:0 8px 0 10px; border-bottom:1.5px solid #111;">
+              <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">TODO · 3</span>
+              <span style="font-size:11px; color:#111;">×</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:9px; padding:10px; border-bottom:1px solid #111;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">整理评审反馈</span></div>
+            <div style="display:flex; align-items:center; gap:9px; padding:10px; border-bottom:1px solid #111; background:#FFE566;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">导出切图</span></div>
+            <div style="display:flex; align-items:center; gap:9px; padding:10px;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">预约装帧</span></div>
+          </div>
+        </div>
+        <div style="width:230px; display:flex; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+          <span style="width:8px; flex:none; background:#B9D4F2; border-right:1.5px solid #111;"></span>
+          <div style="flex:1; display:flex; flex-direction:column;">
+            <div style="height:30px; display:flex; align-items:center; gap:6px; padding:0 8px 0 10px; border-bottom:1.5px solid #111;">
+              <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">NOTE</span>
+              <span style="font-size:11px; color:#111;">×</span>
+            </div>
+            <div style="padding:12px 10px; font-size:12px; line-height:1.8;">马克笔 2 盒<br>A3 描图纸<br>装帧夹 ×4</div>
+          </div>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; line-height:1.6; max-width:476px;">色带贴在窗口最左，与内容区完全分离，永远不会跟高亮行混淆；深浅主题都不用改文字色。分组辨识度只比 6a 略低，窗口边缘可见即可识别。</span>
+    </div>
+
+    <!-- 6c 阴影着色 -->
+    <div id="6c" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">6c</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">阴影着色</span>
+      </div>
+      <div style="display:flex; gap:22px;">
+        <div style="width:230px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:7px 7px 0 #FFE566;">
+          <div style="height:30px; display:flex; align-items:center; gap:6px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">TODO · 3</span>
+            <span style="font-size:11px; color:#111;">×</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid #111;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">整理评审反馈</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid #111; background:#F4F4F1; box-shadow:inset 3px 0 0 #111;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">导出切图</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">预约装帧</span></div>
+        </div>
+        <div style="width:230px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:7px 7px 0 #B9D4F2;">
+          <div style="height:30px; display:flex; align-items:center; gap:6px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">NOTE</span>
+            <span style="font-size:11px; color:#111;">×</span>
+          </div>
+          <div style="padding:12px; font-size:12px; line-height:1.8;">马克笔 2 盒<br>A3 描图纸<br>装帧夹 ×4</div>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; line-height:1.6; max-width:476px;">最省面积、最像这套硬线框语言的原生做法（阴影本来就是它的招牌）。代价：置顶态就得另找表达（改用标题栏 PIN 反白 + 双层阴影），且窗口紧贴屏幕边时阴影会被裁掉。此处高亮行改用「灰底 + 左黑脊」。</span>
+    </div>
+
+    <!-- 6d 整窗纸色 -->
+    <div id="6d" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">6d</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">整窗纸色</span>
+      </div>
+      <div style="display:flex; gap:16px;">
+        <div style="width:230px; display:flex; flex-direction:column; background:#FFF9D6; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+          <div style="height:30px; display:flex; align-items:center; gap:6px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">TODO · 3</span>
+            <span style="font-size:11px; color:#111;">×</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid #111;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">整理评审反馈</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid #111; background:#111;"><span style="width:14px; height:14px; border:1.5px solid #FFF9D6;"></span><span style="font-size:12px; flex:1; color:#FFF9D6;">导出切图</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">预约装帧</span></div>
+        </div>
+        <div style="width:230px; display:flex; flex-direction:column; background:#E8F1FB; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+          <div style="height:30px; display:flex; align-items:center; gap:6px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">NOTE</span>
+            <span style="font-size:11px; color:#111;">×</span>
+          </div>
+          <div style="padding:12px; font-size:12px; line-height:1.8;">马克笔 2 盒<br>A3 描图纸<br>装帧夹 ×4</div>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; line-height:1.6; max-width:476px;">最像真便签，远距离最好认。用的是极淡纸色（原色 12% 浓度），不是色标原色。代价：高亮行只能反黑，斑马纹/soft 底全部要按窗口色重算一套；深色主题需另配一组暗纸色。</span>
+    </div>
+
+    <!-- 6e 色点 -->
+    <div id="6e" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">6e</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">仅色点</span>
+        <span style="font-size:11px; color:#5b5b57;">最克制</span>
+      </div>
+      <div style="display:flex; gap:16px;">
+        <div style="width:230px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+          <div style="height:30px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="width:10px; height:10px; flex:none; background:#FFE566; border:1.5px solid #111;"></span>
+            <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">TODO · 3</span>
+            <span style="font-size:11px; color:#111;">×</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid #111;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">整理评审反馈</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid #111; background:#FFE566;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">导出切图</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 12px;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; flex:1;">预约装帧</span></div>
+        </div>
+        <div style="width:230px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+          <div style="height:30px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="width:10px; height:10px; flex:none; background:#B9D4F2; border:1.5px solid #111;"></span>
+            <span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1; color:#111;">NOTE</span>
+            <span style="font-size:11px; color:#111;">×</span>
+          </div>
+          <div style="padding:12px; font-size:12px; line-height:1.8;">马克笔 2 盒<br>A3 描图纸<br>装帧夹 ×4</div>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; line-height:1.6; max-width:476px;">干扰最小，跟 accent 完全不会混。代价：分组辨识弱，窗口一多要凑近才看得清；折叠成迷你条时色点几乎不可见。</span>
+    </div>
+
+    <!-- 对照表 -->
+    <div style="width:476px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+      <div style="padding:8px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">对照 · 分组辨识 / 干扰 / 占面积</div>
+      <div style="display:flex; padding:9px 12px; border-bottom:1px solid #111; font-size:11px;"><span style="width:96px; flex:none; font-weight:700;">6a 标题栏</span><span style="flex:1; color:#5b5b57;">辨识 ★★★★ · 干扰 中 · 占 0</span></div>
+      <div style="display:flex; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; background:#FFE566;"><span style="width:96px; flex:none; font-weight:700;">6b 左色脊</span><span style="flex:1; color:#3b3b38;">辨识 ★★★☆ · 干扰 低 · 占 8px 宽</span></div>
+      <div style="display:flex; padding:9px 12px; border-bottom:1px solid #111; font-size:11px;"><span style="width:96px; flex:none; font-weight:700;">6c 阴影</span><span style="flex:1; color:#5b5b57;">辨识 ★★★ · 干扰 低 · 占 0（贴边失效）</span></div>
+      <div style="display:flex; padding:9px 12px; border-bottom:1px solid #111; font-size:11px;"><span style="width:96px; flex:none; font-weight:700;">6d 整窗纸色</span><span style="flex:1; color:#5b5b57;">辨识 ★★★★★ · 干扰 高 · 占 0（要重算全套底色）</span></div>
+      <div style="display:flex; padding:9px 12px; font-size:11px;"><span style="width:96px; flex:none; font-weight:700;">6e 色点</span><span style="flex:1; color:#5b5b57;">辨识 ★★ · 干扰 无 · 占 18px</span></div>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex; flex-direction:column; gap:32px; padding:64px; font-family:'Segoe UI Variable','Segoe UI',system-ui,'Microsoft YaHei',sans-serif; color:#1a1a1a;">
+  <header style="display:flex; flex-direction:column; gap:10px; max-width:840px;">
+    <div style="font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a80;">Turn 5 · 交互状态与边缘情况</div>
+    <h1 style="margin:0; font-size:34px; font-weight:600; letter-spacing:-.01em;">状态机、动效时序、以及会出问题的地方</h1>
+    <p style="margin:0; font-size:15px; line-height:1.6; color:#5d5d63; text-wrap:pretty;">线框风格里没有阴影渐变可用，所以状态一律用<strong>反白、位移、边框加粗、条纹</strong>四种手段表达。动效短促（120–180ms）、无回弹，符合硬边气质。</p>
+  </header>
+
+  <!-- 交互状态 -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a80;">A · 交互状态</div>
+    <div style="display:flex; gap:28px; align-items:flex-start; width:max-content; padding:32px; border-radius:12px; background:#DCDCD6; font-family:'JetBrains Mono',ui-monospace,monospace;">
+
+      <!-- 5a 条目状态 -->
+      <div id="5a" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">5a</span>
+          <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">条目 · 六态</span>
+        </div>
+        <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">默认 rest</span><span style="font-size:9px; color:#8a8a8a;">—</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111; background:#F4F4F1;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">悬停 hover</span><span style="font-size:9px; color:#8a8a8a;">底 #F4F4F1 + 显出 ⠿ ×</span><span style="font-size:12px;">⠿</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111; background:#111;"><span style="width:16px; height:16px; border:1.5px solid #fff;"></span><span style="font-size:13px; color:#fff; flex:1;">按下 active</span><span style="font-size:9px; color:#8a8a8a;">整行反白 100ms</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111; background:#fff; box-shadow:inset 0 0 0 2px #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">键盘焦点 focus</span><span style="font-size:9px; color:#8a8a8a;">内描边 2px</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111; background:#FFE566; box-shadow:inset 3px 0 0 #111; transform:translate(2px,0);"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">拖起 dragging</span><span style="font-size:9px; color:#5b5b57;">强调底 + 右移 2px</span><span style="font-size:12px;">⠿</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px;"><span style="width:16px; height:16px; border:1.5px solid #111; background:#111; display:grid; place-items:center; color:#fff; font-size:10px;">✓</span><span style="font-size:13px; color:#8a8a8a; text-decoration:line-through; flex:1;">已完成 done</span><span style="font-size:9px; color:#8a8a8a;">灰 + 删除线</span><span style="font-size:11px; color:#8a8a8a;">↺</span></div>
+        </div>
+      </div>
+
+      <!-- 5b 勾选时序 -->
+      <div id="5b" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#FFE566; border:1.5px solid #111; color:#111; font-size:11px; font-weight:700;">5b</span>
+          <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">勾选动效 · 分帧</span>
+        </div>
+        <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="font-size:9px; color:#8a8a8a; width:52px;">0ms</span><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">点击方框</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="font-size:9px; color:#8a8a8a; width:52px;">0–60</span><span style="width:16px; height:16px; border:1.5px solid #111; background:#111;"></span><span style="font-size:13px; color:#111; flex:1;">方框填黑（无过渡）</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="font-size:9px; color:#8a8a8a; width:52px;">60–120</span><span style="width:16px; height:16px; border:1.5px solid #111; background:#111; display:grid; place-items:center; color:#fff; font-size:10px;">✓</span><span style="font-size:13px; color:#111; flex:1;">✓ 由左至右擦出</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="font-size:9px; color:#8a8a8a; width:52px;">60–180</span><span style="width:16px; height:16px; border:1.5px solid #111; background:#111; display:grid; place-items:center; color:#fff; font-size:10px;">✓</span><span style="font-size:13px; color:#111; flex:1; position:relative;">删除线扫过<span style="position:absolute; left:0; top:50%; width:58%; height:1.5px; background:#111;"></span></span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1.5px solid #111;"><span style="font-size:9px; color:#8a8a8a; width:52px;">180–300</span><span style="width:16px; height:16px; border:1.5px solid #111; background:#111; display:grid; place-items:center; color:#fff; font-size:10px;">✓</span><span style="font-size:13px; color:#8a8a8a; text-decoration:line-through; flex:1;">文字转灰，下沉到已完成区</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; background:#F4F4F1;"><span style="font-size:9px; color:#8a8a8a; width:52px;">规则</span><span style="font-size:11px; color:#111; flex:1; line-height:1.6;">重排用 120ms linear；不用弹性曲线；连点多条时逐条排队，不合批</span></div>
+        </div>
+        <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+          <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">MOTION TOKENS</div>
+          <div style="display:flex; justify-content:space-between; padding:9px 12px; border-bottom:1px solid #111; font-size:11px;"><span>状态切换</span><span style="color:#5b5b57;">120ms linear</span></div>
+          <div style="display:flex; justify-content:space-between; padding:9px 12px; border-bottom:1px solid #111; font-size:11px;"><span>面板切标签</span><span style="color:#5b5b57;">无过渡，直切</span></div>
+          <div style="display:flex; justify-content:space-between; padding:9px 12px; border-bottom:1px solid #111; font-size:11px;"><span>折叠 / 展开</span><span style="color:#5b5b57;">180ms 高度 linear</span></div>
+          <div style="display:flex; justify-content:space-between; padding:9px 12px; border-bottom:1px solid #111; font-size:11px;"><span>撤销条出现</span><span style="color:#5b5b57;">120ms，停留 5s</span></div>
+          <div style="display:flex; justify-content:space-between; padding:9px 12px; font-size:11px;"><span>窗口移动吸附</span><span style="color:#5b5b57;">吸附距 12px，硬跳</span></div>
+        </div>
+      </div>
+
+      <!-- 5c 窗口级交互 -->
+      <div id="5c" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">5c</span>
+          <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">窗口级</span>
+        </div>
+        <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+          <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">TITLEBAR</div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid #111; font-size:11px;"><span style="flex:1;">拖标题栏移动</span><span style="color:#5b5b57;">近边 12px 吸附</span></div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid #111; font-size:11px;"><span style="flex:1;">双击标题栏</span><span style="color:#5b5b57;">折叠 ↔ 展开</span></div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid #111; font-size:11px;"><span style="flex:1;">PIN 按下</span><span style="color:#5b5b57;">反白，窗口置顶</span></div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1.5px solid #111; font-size:11px;"><span style="flex:1;">× 关闭</span><span style="color:#5b5b57;">= 隐藏，不删数据</span></div>
+          <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">RESIZE</div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid #111; font-size:11px;"><span style="flex:1;">最小尺寸</span><span style="color:#5b5b57;">240 × 160</span></div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1.5px solid #111; font-size:11px;"><span style="flex:1;">拖右下角</span><span style="color:#5b5b57;">三条斜线把手</span></div>
+          <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">OPACITY</div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid #111; font-size:11px;"><span style="flex:1;">范围</span><span style="color:#5b5b57;">35% – 100%</span></div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; font-size:11px;"><span style="flex:1;">悬停窗口时</span><span style="color:#5b5b57;">临时恢复 100%</span></div>
+        </div>
+        <div style="width:320px; height:96px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; position:relative; overflow:hidden;">
+          <div style="height:30px; flex:none; display:flex; align-items:center; padding:0 12px; border-bottom:1.5px solid #111;"><span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1;">NOTE</span><span style="font-size:12px;">×</span></div>
+          <div style="flex:1; display:grid; place-items:center; font-size:11px; color:#8a8a8a;">拖右下角改尺寸</div>
+          <span style="position:absolute; right:0; bottom:0; width:18px; height:18px; background:repeating-linear-gradient(-45deg,#111 0 1.5px,transparent 1.5px 5px); border-left:1.5px solid #111; border-top:1.5px solid #111;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 边缘情况 -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a80;">B · 边缘情况</div>
+    <div style="display:flex; gap:28px; align-items:flex-start; width:max-content; padding:32px; border-radius:12px; background:#DCDCD6; font-family:'JetBrains Mono',ui-monospace,monospace;">
+
+      <!-- 5d 长文本 -->
+      <div id="5d" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">5d</span>
+          <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">长文本 / 溢出</span>
+        </div>
+        <div style="width:320px; height:300px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+          <div style="height:32px; flex:none; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">TODO · 供应商比价与合同条款复核清单</span>
+            <span style="font-size:12px; color:#111;">×</span>
+          </div>
+          <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:flex-start; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; flex:none; border:1.5px solid #111; margin-top:1px;"></span><span style="font-size:13px; color:#111; flex:1; line-height:1.55;">条目文字最多折两行，再长就截断——比如这条很长很长的任务名称就会这样处理…</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; flex:none; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">https://intranet.example.com/design/review/2026-08-28/final</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; flex:none; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">正常长度条目</span></div>
+          </div>
+          <div style="height:26px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1.5px solid #111; background:#F4F4F1;">
+            <span style="font-size:10px; color:#5b5b57; letter-spacing:.1em;">标题过长 → 省略号 + 悬停显全名</span>
+          </div>
+        </div>
+        <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+          <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">设置 · 条目行数</div>
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">最多显示</span>
+            <span style="display:flex; gap:0;">
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111;">1 行</span>
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111; border-left:none; background:#111; color:#fff;">2 行</span>
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111; border-left:none;">3 行</span>
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111; border-left:none;">不限</span>
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">悬停显示全文</span>
+            <span style="width:38px; height:18px; border:1.5px solid #111; background:#111; display:flex; justify-content:flex-end; align-items:center; padding:1.5px;"><span style="width:14px; height:100%; background:#FFE566;"></span></span>
+          </div>
+          <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6; color:#5b5b57;">「不限」时条目自动增高，窗口整体滚动</div>
+          <div style="padding:9px 12px; font-size:11px; line-height:1.6; color:#5b5b57;">中英混排不断字，word-break: normal</div>
+        </div>
+
+        <div style="width:320px; height:180px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; position:relative; overflow:visible;">
+          <div style="height:30px; flex:none; display:flex; align-items:center; padding:0 12px; border-bottom:1.5px solid #111;"><span style="font-size:11px; font-weight:700; letter-spacing:.12em; flex:1;">悬停浮层 · 看全文</span></div>
+          <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:flex-start; gap:10px; padding:11px 12px; border-bottom:1px solid #111; background:#F4F4F1;"><span style="width:15px; height:15px; flex:none; border:1.5px solid #111; margin-top:1px;"></span><span style="font-size:12px; color:#111; flex:1; line-height:1.5;">条目文字最多折两行，再长就截断——比如这条很长很…</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; flex:none; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">正常长度条目</span></div>
+          </div>
+          <div style="position:absolute; left:26px; top:76px; width:280px; background:#111; border:1.5px solid #111; box-shadow:5px 5px 0 #FFE566; padding:10px 12px;">
+            <span style="display:block; font-size:12px; color:#fff; line-height:1.65;">条目文字最多折两行，再长就截断——比如这条很长很长的任务名称就会这样处理，悬停 400ms 后浮出全文，跟随窗口边界翻转。</span>
+          </div>
+        </div>
+        <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">溢出条目悬停 400ms 浮出反白气泡显示全文 · 贴边自动翻转</span>
+      </div>
+
+      <!-- 5e 大量条目 -->
+      <div id="5e" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#FFE566; border:1.5px solid #111; color:#111; font-size:11px; font-weight:700;">5e</span>
+          <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">条目很多 · 滚动</span>
+        </div>
+        <div style="width:320px; height:480px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+          <div style="height:32px; flex:none; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">TODO · 34 OPEN</span>
+            <span style="font-size:10px; border:1px solid #111; padding:1px 5px;">PIN</span>
+            <span style="font-size:12px; color:#111;">×</span>
+          </div>
+          <div style="flex:none; display:flex; align-items:center; gap:8px; padding:7px 12px; border-bottom:1.5px solid #111; background:#F4F4F1;">
+            <span style="font-size:10px; font-weight:700; letter-spacing:.1em; color:#111; flex:1;">未完成 34</span>
+            <span style="font-size:10px; color:#111; border:1px solid #111; padding:1px 5px;">隐藏已完成</span>
+          </div>
+          <div style="flex:1; min-height:0; display:flex; position:relative; overflow:hidden;">
+            <div style="flex:1; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">整理评审反馈</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">导出深色版切图</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">预约打印装帧</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">核对供应商报价</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">补写变更记录</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">回邮件给 Lin</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">更新周报模板</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">检查字体授权</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">整理图标命名</span></div>
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">约会议室</span></div>
+            </div>
+            <div style="width:10px; flex:none; border-left:1.5px solid #111; background:repeating-linear-gradient(45deg,#fff 0 4px,#F4F4F1 4px 8px); position:relative;">
+              <span style="position:absolute; left:0; right:0; top:6%; height:26%; background:#111;"></span>
+            </div>
+          </div>
+          <div style="height:30px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1.5px solid #111;">
+            <span style="font-size:10px; color:#5b5b57; letter-spacing:.1em;">已完成 12 ▾</span>
+            <span style="font-size:10px; color:#111; letter-spacing:.1em; border:1px solid #111; padding:1px 5px;">清空已完成</span>
+          </div>
+        </div>
+        <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">模式一 · 常驻方头滚动条（占 10px 宽）</span>
+
+        <div style="width:320px; height:280px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden; position:relative;">
+          <div style="height:32px; flex:none; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">TODO · 34 OPEN</span>
+            <span style="font-size:12px; color:#111;">×</span>
+          </div>
+          <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">整理评审反馈</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">导出深色版切图</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">预约打印装帧</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">核对供应商报价</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">补写变更记录</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; border-bottom:1px solid #111;"><span style="width:15px; height:15px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">回邮件给 Lin</span></div>
+          </div>
+          <span style="position:absolute; right:3px; top:40px; width:6px; height:70px; background:#111;"></span>
+        </div>
+        <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">模式二 · 悬浮细条，不占位置（鼠标移入 120ms 淡入，移出 600ms 后淡出）</span>
+
+        <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+          <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">设置 · 滚动条</div>
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">样式</span>
+            <span style="display:flex; gap:0;">
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111; background:#111; color:#fff;">常驻</span>
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111; border-left:none;">悬浮</span>
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111; border-left:none;">隐藏</span>
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">已完成折叠在底部</span>
+            <span style="width:38px; height:18px; border:1.5px solid #111; background:#111; display:flex; justify-content:flex-end; align-items:center; padding:1.5px;"><span style="width:14px; height:100%; background:#FFE566;"></span></span>
+          </div>
+          <div style="padding:9px 12px; font-size:11px; line-height:1.6; color:#5b5b57;">窗口 &lt; 300px 宽时强制「悬浮」，避免挤压文字</div>
+        </div>
+      </div>
+
+      <!-- 5f 其他边缘 -->
+      <div id="5f" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">5f</span>
+          <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">首启 · 系统环境</span>
+        </div>
+        <div style="width:320px; height:240px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+          <div style="height:32px; flex:none; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+            <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">DESK</span>
+            <span style="font-size:12px; color:#111;">×</span>
+          </div>
+          <div style="flex:1; min-height:0; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:12px; padding:0 16px; background:repeating-linear-gradient(45deg,#fff 0 6px,#F4F4F1 6px 12px);">
+            <span style="font-size:13px; color:#111; line-height:1.6;">还没有任何部件。<br>从这里开一个：</span>
+            <span style="display:flex; gap:0;">
+              <span style="font-size:11px; padding:5px 9px; border:1.5px solid #111; background:#FFE566;">便签</span>
+              <span style="font-size:11px; padding:5px 9px; border:1.5px solid #111; border-left:none;">待办</span>
+              <span style="font-size:11px; padding:5px 9px; border:1.5px solid #111; border-left:none;">剪贴板</span>
+              <span style="font-size:11px; padding:5px 9px; border:1.5px solid #111; border-left:none;">三合一</span>
+            </span>
+          </div>
+        </div>
+
+        <div style="width:320px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111;">
+          <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; background:#F4F4F1;">ENVIRONMENT</div>
+          <div style="display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6;"><span style="width:66px; flex:none; color:#5b5b57;">多显示器</span><span style="flex:1;">记录所属屏幕；屏幕消失则回主屏可见区</span></div>
+          <div style="display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6;"><span style="width:66px; flex:none; color:#5b5b57;">DPI 变化</span><span style="flex:1;">1.5px 边框按整数像素对齐，避免虚边</span></div>
+          <div style="display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6;"><span style="width:66px; flex:none; color:#5b5b57;">分辨率变小</span><span style="flex:1;">超出屏幕的窗口夹回可见范围</span></div>
+          <div style="display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6;"><span style="width:66px; flex:none; color:#5b5b57;">显示桌面</span><span style="flex:1;">置顶部件也随桌面一起隐藏</span></div>
+          <div style="display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6;"><span style="width:66px; flex:none; color:#5b5b57;">全屏应用</span><span style="flex:1;">自动让位，不覆盖全屏窗口</span></div>
+          <div style="display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6;"><span style="width:66px; flex:none; color:#5b5b57;">系统主题切</span><span style="flex:1;">AUTO 模式下随之反相，无过渡</span></div>
+          <div style="display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid #111; font-size:11px; line-height:1.6;"><span style="width:66px; flex:none; color:#5b5b57;">敏感剪贴</span><span style="flex:1;">密码类内容不入库，行内标「已忽略」</span></div>
+          <div style="display:flex; gap:10px; padding:9px 12px; font-size:11px; line-height:1.6;"><span style="width:66px; flex:none; color:#5b5b57;">异常退出</span><span style="flex:1;">输入即存，重启还原位置与内容</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex; flex-direction:column; gap:32px; padding:64px; font-family:'Segoe UI Variable','Segoe UI',system-ui,'Microsoft YaHei',sans-serif; color:#1a1a1a;">
+  <header style="display:flex; flex-direction:column; gap:10px; max-width:820px;">
+    <div style="font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a80;">Turn 4 · 新建与多实例管理</div>
+    <h1 style="margin:0; font-size:34px; font-weight:600; letter-spacing:-.01em;">怎么新增指定类型、怎么管一堆窗口</h1>
+    <p style="margin:0; font-size:15px; line-height:1.6; color:#5d5d63; text-wrap:pretty;">三个入口：<strong>托盘右键</strong>快速新建、<strong>管理器</strong>统一显隐/删除/排序、<strong>窗口内 ＋ 按钮</strong>就地再开一个同类。不占用任何全局快捷键，全部靠托盘与窗口内操作。删除一律走「删除→可撤销」而非二次确认弹窗。</p>
+  </header>
+
+  <div style="display:flex; gap:28px; align-items:flex-start; width:max-content; padding:32px; border-radius:12px; background:#DCDCD6; font-family:'JetBrains Mono',ui-monospace,monospace;">
+
+    <!-- 4a 托盘菜单 -->
+    <div id="4a" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">4a</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">托盘 · 新建</span>
+      </div>
+      <div style="width:240px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:6px 6px 0 #111;">
+        <div style="padding:7px 12px; border-bottom:1.5px solid #111; font-size:10px; font-weight:700; letter-spacing:.16em; color:#111; background:#F4F4F1;">NEW WIDGET</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111; background:#FFE566;"></span><span style="font-size:12px; color:#111; flex:1;">便签</span></div>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #111; background:#FFE566; box-shadow:inset 3px 0 0 #111;"><span style="width:16px; height:16px; border:1.5px solid #111; background:#fff;"></span><span style="font-size:12px; color:#111; flex:1;">待办清单</span></div>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">剪贴板</span><span style="font-size:10px; color:#8a8a8a;">仅一个</span></div>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1.5px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111; background:#111;"></span><span style="font-size:12px; color:#111; flex:1;">三合一</span></div>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #111;"><span style="font-size:12px; color:#111; flex:1;">管理面板…</span><span style="font-size:11px; color:#111;">▤</span></div>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #111;"><span style="font-size:12px; color:#111; flex:1;">全部隐藏</span><span style="font-size:11px; color:#111;">◉</span></div>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px;"><span style="font-size:12px; color:#111; flex:1;">设置 / 退出</span><span style="font-size:11px; color:#111;">⚙</span></div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">右键托盘图标即出</span>
+    </div>
+
+    <!-- 4b 管理器 -->
+    <div id="4b" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#FFE566; border:1.5px solid #111; color:#111; font-size:11px; font-weight:700;">4b</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">WIDGETS 管理器</span>
+      </div>
+      <div style="width:320px; height:480px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+        <div style="height:32px; flex:none; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">WIDGETS · 5</span>
+          <span style="font-size:11px; color:#111;">⚙</span>
+          <span style="font-size:12px; color:#111;">×</span>
+        </div>
+        <div style="flex:none; display:flex; border-bottom:1.5px solid #111;">
+          <span style="flex:1; padding:7px 0; text-align:center; font-size:10px; font-weight:700; letter-spacing:.1em; color:#fff; background:#111; border-right:1.5px solid #111;">ALL</span>
+          <span style="flex:1; padding:7px 0; text-align:center; font-size:10px; font-weight:700; letter-spacing:.1em; color:#111; border-right:1.5px solid #111;">NOTE 2</span>
+          <span style="flex:1; padding:7px 0; text-align:center; font-size:10px; font-weight:700; letter-spacing:.1em; color:#111; border-right:1.5px solid #111;">TODO 2</span>
+          <span style="flex:1; padding:7px 0; text-align:center; font-size:10px; font-weight:700; letter-spacing:.1em; color:#111;">CLIP 1</span>
+        </div>
+        <div style="flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 10px 10px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:11px; color:#8a8a8a;">⠿</span>
+            <span style="font-size:9px; font-weight:700; letter-spacing:.1em; padding:2px 4px; border:1px solid #111; background:#FFE566;">NOTE</span>
+            <span style="font-size:12px; color:#111; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">周四交付评审稿</span>
+            <span style="font-size:10px; padding:1px 4px; border:1px solid #111;">PIN</span>
+            <span style="font-size:11px; color:#111;">◉</span>
+            <span style="font-size:12px; color:#111;">×</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 10px 10px 12px; border-bottom:1px solid #111; background:#FFE566; box-shadow:inset 3px 0 0 #111;">
+            <span style="font-size:11px; color:#111;">⠿</span>
+            <span style="font-size:9px; font-weight:700; letter-spacing:.1em; padding:2px 4px; border:1px solid #111; background:#fff;">TODO</span>
+            <span style="font-size:12px; color:#111; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">本周 · 3 未完成</span>
+            <span style="font-size:10px; padding:1px 4px; border:1px solid #111; background:#111; color:#FFE566;">PIN</span>
+            <span style="font-size:11px; color:#111;">◉</span>
+            <span style="font-size:12px; color:#111;">×</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 10px 10px 12px; border-bottom:1px solid #111; color:#8a8a8a;">
+            <span style="font-size:11px;">⠿</span>
+            <span style="font-size:9px; font-weight:700; letter-spacing:.1em; padding:2px 4px; border:1px solid #8a8a8a;">NOTE</span>
+            <span style="font-size:12px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">采购清单（已隐藏）</span>
+            <span style="font-size:10px; padding:1px 4px; border:1px solid #8a8a8a;">PIN</span>
+            <span style="font-size:11px;">○</span>
+            <span style="font-size:12px;">×</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 10px 10px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:11px; color:#8a8a8a;">⠿</span>
+            <span style="font-size:9px; font-weight:700; letter-spacing:.1em; padding:2px 4px; border:1px solid #111;">CLIP</span>
+            <span style="font-size:12px; color:#111; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">剪贴板历史</span>
+            <span style="font-size:10px; padding:1px 4px; border:1px solid #111;">PIN</span>
+            <span style="font-size:11px; color:#111;">◉</span>
+            <span style="font-size:12px; color:#8a8a8a;">–</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 10px 10px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:11px; color:#8a8a8a;">⠿</span>
+            <span style="font-size:9px; font-weight:700; letter-spacing:.1em; padding:2px 4px; border:1px solid #111; background:#111; color:#fff;">DESK</span>
+            <span style="font-size:12px; color:#111; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">三合一 · 主窗</span>
+            <span style="font-size:10px; padding:1px 4px; border:1px solid #111;">PIN</span>
+            <span style="font-size:11px; color:#111;">◉</span>
+            <span style="font-size:12px; color:#111;">×</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid #111; background:#F4F4F1;">
+            <span style="font-size:11px; color:#111; flex:1;">已删除「旧周报」</span>
+            <span style="font-size:10px; color:#111; border:1px solid #111; padding:1px 5px;">撤销 5s</span>
+          </div>
+        </div>
+        <div style="height:40px; flex:none; display:flex; align-items:center; gap:8px; padding:0 10px 0 12px; border-top:1.5px solid #111;">
+          <span style="font-size:10px; color:#8a8a8a; letter-spacing:.1em; flex:1;">拖拽调整叠放顺序</span>
+          <span style="font-size:10px; color:#fff; background:#111; letter-spacing:.1em; padding:4px 8px;">+ NEW ▾</span>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">◉ 显示 / ○ 隐藏 · × 删除（可撤销）· 剪贴板唯一，只能隐藏</span>
+    </div>
+
+    <!-- 4c NEW 下拉 -->
+    <div id="4c" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">4c</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">+ NEW 下拉</span>
+      </div>
+      <div style="width:320px; height:480px; display:flex; flex-direction:column; justify-content:flex-end; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+        <div style="flex:1; min-height:0; display:grid; place-items:center; background:repeating-linear-gradient(45deg,#fff 0 6px,#F4F4F1 6px 12px); font-size:11px; color:#8a8a8a; letter-spacing:.1em;">列表内容（虚化）</div>
+        <div style="flex:none; border-top:1.5px solid #111;">
+          <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #111;"><span style="width:14px; height:14px; border:1.5px solid #111; background:#FFE566;"></span><span style="font-size:12px; color:#111; flex:1;">新便签</span><span style="font-size:10px; color:#8a8a8a;">2 个</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #111; background:#FFE566; box-shadow:inset 3px 0 0 #111;"><span style="width:14px; height:14px; border:1.5px solid #111; background:#fff;"></span><span style="font-size:12px; color:#111; flex:1;">新待办清单</span><span style="font-size:10px; color:#5b5b57;">2 个</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #111; opacity:.45;"><span style="width:14px; height:14px; border:1.5px solid #111;"></span><span style="font-size:12px; color:#111; flex:1;">剪贴板</span><span style="font-size:10px;">已存在</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1.5px solid #111;"><span style="width:14px; height:14px; border:1.5px solid #111; background:#111;"></span><span style="font-size:12px; color:#111; flex:1;">新三合一</span></div>
+        </div>
+        <div style="height:40px; flex:none; display:flex; align-items:center; gap:8px; padding:0 10px 0 12px; border-top:1.5px solid #111; background:#111;">
+          <span style="font-size:10px; color:#6f6f6f; letter-spacing:.1em; flex:1;">选择类型</span>
+          <span style="font-size:10px; color:#111; background:#FFE566; letter-spacing:.1em; padding:4px 8px;">+ NEW ▴</span>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">从底栏向上展开，不遮标题栏</span>
+    </div>
+
+    <!-- 4d 窗口内右键 -->
+    <div id="4d" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700;">4d</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">窗口右键</span>
+      </div>
+      <div style="width:320px; height:300px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden; position:relative;">
+        <div style="height:32px; flex:none; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">NOTE</span>
+          <span style="font-size:10px; border:1px solid #111; padding:1px 5px;">PIN</span>
+          <span style="font-size:11px; color:#111;">＋</span>
+          <span style="font-size:12px; color:#111;">×</span>
+        </div>
+        <div style="flex:1; min-height:0; padding:14px; font-size:13px; line-height:1.85; color:#111;">周四交付评审稿<br>补一版深色截图</div>
+        <div style="position:absolute; top:64px; left:52px; width:186px; background:#fff; border:1.5px solid #111; box-shadow:5px 5px 0 #111;">
+          <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px; color:#111;">再开一个便签</div>
+          <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px; color:#111;">转为待办清单</div>
+          <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px; color:#111;">重命名…</div>
+          <div style="padding:9px 12px; border-bottom:1px solid #111; font-size:12px; color:#111;">隐藏（保留内容）</div>
+          <div style="padding:9px 12px; font-size:12px; color:#111; background:#FFE566;">删除</div>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">标题栏 ＋ 号也等于「再开一个同类」</span>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex; flex-direction:column; gap:44px; padding:64px; font-family:'Segoe UI Variable','Segoe UI',system-ui,'Microsoft YaHei',sans-serif; color:#1a1a1a;">
+  <header style="display:flex; flex-direction:column; gap:10px; max-width:800px;">
+    <div style="font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a80;">Turn 3 · 硬线框 · 四种部件 + 设置</div>
+    <h1 style="margin:0; font-size:34px; font-weight:600; letter-spacing:-.01em;">硬线框全套：便签 / 待办 / 剪贴板 / 三合一</h1>
+    <p style="margin:0; font-size:15px; line-height:1.6; color:#5d5d63; text-wrap:pretty;">统一规格：320 宽、1.5px 黑边、直角、6–8px 硬阴影、JetBrains Mono、单一强调色 #FFE566。补上了之前缺的<strong>设置面板</strong>与<strong>空状态</strong>。深色版在最下一行。</p>
+  </header>
+
+  <!-- 主行：四种部件 -->
+  <div style="display:flex; gap:28px; align-items:flex-start; width:max-content; padding:32px; border-radius:12px; background:#DCDCD6; font-family:'JetBrains Mono',ui-monospace,monospace;">
+
+    <!-- 便签 -->
+    <div id="3a" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700; letter-spacing:.06em;">3a</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">NOTE 便签</span>
+      </div>
+      <div style="width:320px; height:300px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+        <div style="height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">NOTE</span>
+          <span style="font-size:10px; border:1px solid #111; padding:1px 5px;">PIN</span>
+          <span style="font-size:11px; color:#111;">–</span>
+          <span style="font-size:12px; color:#111;">×</span>
+        </div>
+        <div style="flex:1; padding:14px; font-size:13px; line-height:1.85; color:#111;">周四交付评审稿<br>补一版深色截图<br>问 Lin 要图标源文件<span style="display:inline-block; width:7px; height:14px; margin-left:2px; background:#111; vertical-align:-2px;"></span></div>
+        <div style="height:34px; display:flex; border-top:1.5px solid #111;">
+          <span style="flex:1; background:#FFE566; border-right:1.5px solid #111; display:grid; place-items:center; font-size:11px; font-weight:700; color:#111;">✓</span>
+          <span style="flex:1; background:#B7E1C1; border-right:1.5px solid #111;"></span>
+          <span style="flex:1; background:#B9D4F2; border-right:1.5px solid #111;"></span>
+          <span style="flex:1; background:#F2C4D8; border-right:1.5px solid #111;"></span>
+          <span style="flex:1; background:#fff;"></span>
+        </div>
+      </div>
+      <div style="width:320px; height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; background:#fff; border:1.5px solid #111; box-shadow:5px 5px 0 #111;">
+        <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">NOTE</span>
+        <span style="font-size:11px; color:#111;">▣</span>
+        <span style="font-size:12px; color:#111;">×</span>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">折叠迷你条</span>
+    </div>
+
+    <!-- 待办 -->
+    <div id="3b" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700; letter-spacing:.06em;">3b</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">TODO 待办</span>
+      </div>
+      <div style="width:320px; height:480px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+        <div style="height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">TODO · 3 OPEN</span>
+          <span style="font-size:10px; border:1px solid #111; padding:1px 5px; background:#111; color:#fff;">PIN</span>
+          <span style="font-size:11px; color:#111;">–</span>
+          <span style="font-size:12px; color:#111;">×</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">整理评审反馈</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111; background:#FFE566; box-shadow:inset 3px 0 0 #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">导出深色版切图</span><span style="font-size:12px;">⠿</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px dashed #111; opacity:.55;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">— 放下这里 —</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111; background:#111; display:grid; place-items:center; color:#fff; font-size:10px;">✓</span><span style="font-size:13px; color:#8a8a8a; text-decoration:line-through; flex:1;">同步周会纪要</span><span style="font-size:11px; color:#8a8a8a;">↺</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">预约打印装帧</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1.5px solid #111; background:#F4F4F1;"><span style="font-size:13px; color:#111;">[+]</span><span style="font-size:13px; color:#111; flex:1;">写点什么…<span style="display:inline-block; width:7px; height:13px; margin-left:1px; background:#111; vertical-align:-2px;"></span></span></div>
+        </div>
+        <div style="height:44px; display:flex; align-items:center; gap:10px; padding:0 12px; border-top:1.5px solid #111;">
+          <span style="font-size:10px; color:#111; letter-spacing:.1em;">OPACITY</span>
+          <span style="flex:1; height:10px; border:1.5px solid #111; position:relative; display:block;"><span style="position:absolute; left:0; top:0; bottom:0; width:70%; background:#111;"></span></span>
+          <span style="font-size:10px; color:#111;">70</span>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">含拖拽落位、输入行、撤销勾选</span>
+    </div>
+
+    <!-- 剪贴板 -->
+    <div id="3c" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700; letter-spacing:.06em;">3c</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">CLIP 剪贴板</span>
+      </div>
+      <div style="width:320px; height:300px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+        <div style="height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">CLIPBOARD</span>
+          <span style="font-size:10px; border:1px solid #111; padding:1px 5px;">PIN</span>
+          <span style="font-size:12px; color:#111;">×</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column;">
+          <div style="padding:11px 12px; border-bottom:1px solid #111; font-size:12px; color:#111; display:flex; gap:8px;"><span style="color:#8a8a8a;">01</span><span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">https://intranet/design/review-0904</span></div>
+          <div style="padding:11px 12px; border-bottom:1px solid #111; font-size:12px; color:#111; background:#FFE566; display:flex; gap:8px;"><span>02</span><span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">SHA-1c4f9e0</span><span style="font-weight:700;">⧉</span></div>
+          <div style="padding:11px 12px; border-bottom:1px solid #111; font-size:12px; color:#111; display:flex; gap:8px;"><span style="color:#8a8a8a;">03</span><span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">收货地址：朝阳区 …</span></div>
+          <div style="padding:11px 12px; border-bottom:1px solid #111; font-size:12px; color:#111; display:flex; gap:8px;"><span style="color:#8a8a8a;">04</span><span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">design-review@corp</span></div>
+        </div>
+        <div style="height:32px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1.5px solid #111;">
+          <span style="font-size:10px; color:#8a8a8a; letter-spacing:.1em;">KEEP 20</span>
+          <span style="font-size:10px; color:#111; letter-spacing:.1em; border:1px solid #111; padding:1px 5px;">CLEAR</span>
+        </div>
+      </div>
+
+      <div style="width:320px; height:148px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+        <div style="height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">CLIPBOARD</span>
+          <span style="font-size:12px; color:#111;">×</span>
+        </div>
+        <div style="flex:1; display:grid; place-items:center; gap:6px; align-content:center; background:repeating-linear-gradient(45deg,#fff 0 6px,#F4F4F1 6px 12px);">
+          <span style="font-size:12px; color:#111; letter-spacing:.1em;">EMPTY</span>
+          <span style="font-size:11px; color:#8a8a8a;">复制任意内容即出现</span>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">空状态</span>
+    </div>
+
+    <!-- 三合一 -->
+    <div id="3d" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#111; color:#fff; font-size:11px; font-weight:700; letter-spacing:.06em;">3d</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">DESK 三合一</span>
+      </div>
+      <div style="width:320px; height:480px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+        <div style="height:30px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.14em;">DESK</span>
+          <span style="font-size:10px; border:1px solid #111; padding:1px 5px;">PIN</span>
+          <span style="font-size:11px; color:#111;">⚙</span>
+          <span style="font-size:11px; color:#111;">–</span>
+          <span style="font-size:12px; color:#111;">×</span>
+        </div>
+        <div style="display:flex; border-bottom:1.5px solid #111;">
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#111; border-right:1.5px solid #111;">NOTE</span>
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#fff; background:#111; border-right:1.5px solid #111;">TODO</span>
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#111;">CLIP</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">整理评审反馈</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111; background:#FFE566; box-shadow:inset 3px 0 0 #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">导出深色版切图</span><span style="font-size:12px;">⠿</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111; background:#111; display:grid; place-items:center; color:#fff; font-size:10px;">✓</span><span style="font-size:13px; color:#8a8a8a; text-decoration:line-through; flex:1;">同步周会纪要</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #111;"><span style="width:16px; height:16px; border:1.5px solid #111;"></span><span style="font-size:13px; color:#111; flex:1;">预约打印装帧</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px;"><span style="font-size:13px; color:#111;">[+]</span><span style="font-size:13px; color:#8a8a8a;">NEW ITEM</span></div>
+        </div>
+        <div style="height:44px; display:flex; align-items:center; gap:10px; padding:0 12px; border-top:1.5px solid #111;">
+          <span style="font-size:10px; color:#111; letter-spacing:.1em;">OPACITY</span>
+          <span style="flex:1; height:10px; border:1.5px solid #111; position:relative; display:block;"><span style="position:absolute; left:0; top:0; bottom:0; width:70%; background:#111;"></span></span>
+          <span style="font-size:10px; color:#111;">70</span>
+        </div>
+      </div>
+      <div style="width:320px; height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; background:#111; border:1.5px solid #111; box-shadow:5px 5px 0 #FFE566;">
+        <span style="font-size:11px; font-weight:700; color:#fff; flex:1; letter-spacing:.12em;">DESK · 3 OPEN</span>
+        <span style="font-size:11px; color:#fff;">▣</span>
+        <span style="font-size:12px; color:#fff;">×</span>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">折叠迷你条（三合一为反白）</span>
+    </div>
+
+    <!-- 设置面板 -->
+    <div id="3e" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:22px; padding:0 7px; background:#FFE566; border:1.5px solid #111; color:#111; font-size:11px; font-weight:700; letter-spacing:.06em;">3e</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:.14em; color:#111;">SETTINGS 新增</span>
+      </div>
+      <div style="width:320px; height:480px; display:flex; flex-direction:column; background:#fff; border:1.5px solid #111; box-shadow:8px 8px 0 #111; overflow:hidden;">
+        <div style="height:32px; flex:none; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #111;">
+          <span style="font-size:11px; font-weight:700; color:#111; flex:1; letter-spacing:.12em;">SETTINGS</span>
+          <span style="font-size:12px; color:#111;">×</span>
+        </div>
+        <div style="flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="padding:6px 12px; border-bottom:1px solid #111; background:#F4F4F1; font-size:10px; font-weight:700; letter-spacing:.16em; color:#111;">WINDOW</div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">始终置顶</span>
+            <span style="width:38px; height:18px; border:1.5px solid #111; background:#111; display:flex; justify-content:flex-end; align-items:center; padding:1.5px;"><span style="width:14px; height:100%; background:#FFE566;"></span></span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">开机自启</span>
+            <span style="width:38px; height:18px; border:1.5px solid #111; background:#fff; display:flex; align-items:center; padding:1.5px;"><span style="width:14px; height:100%; background:#111;"></span></span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">吸附屏幕边缘</span>
+            <span style="width:38px; height:18px; border:1.5px solid #111; background:#111; display:flex; justify-content:flex-end; align-items:center; padding:1.5px;"><span style="width:14px; height:100%; background:#FFE566;"></span></span>
+          </div>
+
+          <div style="padding:6px 12px; border-bottom:1px solid #111; background:#F4F4F1; font-size:10px; font-weight:700; letter-spacing:.16em; color:#111;">THEME</div>
+          <div style="display:flex; gap:0; border-bottom:1px solid #111;">
+            <span style="flex:1; padding:8px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#fff; background:#111; border-right:1px solid #111;">LIGHT</span>
+            <span style="flex:1; padding:8px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#111; border-right:1px solid #111;">DARK</span>
+            <span style="flex:1; padding:8px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#111;">AUTO</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">强调色</span>
+            <span style="display:flex; gap:0;">
+              <span style="width:20px; height:18px; background:#FFE566; border:1.5px solid #111; box-shadow:inset 0 0 0 2px #fff;"></span>
+              <span style="width:20px; height:18px; background:#B7E1C1; border:1.5px solid #111; border-left:none;"></span>
+              <span style="width:20px; height:18px; background:#B9D4F2; border:1.5px solid #111; border-left:none;"></span>
+              <span style="width:20px; height:18px; background:#F2C4D8; border:1.5px solid #111; border-left:none;"></span>
+            </span>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">字号</span>
+            <span style="display:flex; gap:0;">
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111;">S</span>
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111; border-left:none; background:#111; color:#fff;">M</span>
+              <span style="padding:2px 8px; font-size:11px; border:1.5px solid #111; border-left:none;">L</span>
+            </span>
+          </div>
+          <div style="padding:6px 12px; border-bottom:1px solid #111; background:#F4F4F1; font-size:10px; font-weight:700; letter-spacing:.16em; color:#111;">BEHAVIOR</div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #111;">
+            <span style="font-size:12px; color:#111; flex:1;">鼠标移出时变淡</span>
+            <span style="width:38px; height:18px; border:1.5px solid #111; background:#fff; display:flex; align-items:center; padding:1.5px;"><span style="width:14px; height:100%; background:#111;"></span></span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px;">
+            <span style="font-size:12px; color:#111; flex:1;">删除后保留撤销</span>
+            <span style="width:38px; height:18px; border:1.5px solid #111; background:#111; display:flex; justify-content:flex-end; align-items:center; padding:1.5px;"><span style="width:14px; height:100%; background:#FFE566;"></span></span>
+          </div>
+        </div>
+        <div style="height:38px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1.5px solid #111;">
+          <span style="font-size:10px; color:#8a8a8a; letter-spacing:.1em;">v0.3</span>
+          <span style="font-size:10px; color:#111; letter-spacing:.1em; border:1px solid #111; padding:2px 7px;">RESET</span>
+        </div>
+      </div>
+      <span style="font-size:11px; color:#5b5b57; letter-spacing:.08em;">之前缺的那块</span>
+    </div>
+  </div>
+
+  <!-- 深色行 -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a80;">深色版 · 反相</div>
+    <div style="display:flex; gap:28px; align-items:flex-start; width:max-content; padding:32px; border-radius:12px; background:#1A1A18; font-family:'JetBrains Mono',ui-monospace,monospace;">
+
+      <div style="width:320px; height:300px; display:flex; flex-direction:column; background:#0D0D0D; border:1.5px solid #F2F2F2; box-shadow:8px 8px 0 #F2F2F2; overflow:hidden;">
+        <div style="height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #F2F2F2;">
+          <span style="font-size:11px; font-weight:700; color:#F2F2F2; flex:1; letter-spacing:.12em;">NOTE</span>
+          <span style="font-size:10px; border:1px solid #F2F2F2; color:#F2F2F2; padding:1px 5px;">PIN</span>
+          <span style="font-size:12px; color:#F2F2F2;">×</span>
+        </div>
+        <div style="flex:1; padding:14px; font-size:13px; line-height:1.85; color:#F2F2F2;">周四交付评审稿<br>补一版深色截图<br>问 Lin 要图标源文件</div>
+        <div style="height:34px; display:flex; border-top:1.5px solid #F2F2F2;">
+          <span style="flex:1; background:#FFE566; border-right:1.5px solid #F2F2F2;"></span>
+          <span style="flex:1; background:#6E9C7B; border-right:1.5px solid #F2F2F2;"></span>
+          <span style="flex:1; background:#5E82AA; border-right:1.5px solid #F2F2F2;"></span>
+          <span style="flex:1; background:#A56A82; border-right:1.5px solid #F2F2F2;"></span>
+          <span style="flex:1; background:#0D0D0D;"></span>
+        </div>
+      </div>
+
+      <div style="width:320px; height:480px; display:flex; flex-direction:column; background:#0D0D0D; border:1.5px solid #F2F2F2; box-shadow:8px 8px 0 #F2F2F2; overflow:hidden;">
+        <div style="height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #F2F2F2;">
+          <span style="font-size:11px; font-weight:700; color:#F2F2F2; flex:1; letter-spacing:.12em;">TODO · 3 OPEN</span>
+          <span style="font-size:10px; border:1px solid #F2F2F2; background:#F2F2F2; color:#0D0D0D; padding:1px 5px;">PIN</span>
+          <span style="font-size:12px; color:#F2F2F2;">×</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #F2F2F2;"><span style="width:16px; height:16px; border:1.5px solid #F2F2F2;"></span><span style="font-size:13px; color:#F2F2F2; flex:1;">整理评审反馈</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #F2F2F2; background:#FFE566;"><span style="width:16px; height:16px; border:1.5px solid #0D0D0D;"></span><span style="font-size:13px; color:#0D0D0D; flex:1;">导出深色版切图</span><span style="font-size:12px; color:#0D0D0D;">⠿</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #F2F2F2;"><span style="width:16px; height:16px; border:1.5px solid #F2F2F2; background:#F2F2F2; display:grid; place-items:center; color:#0D0D0D; font-size:10px;">✓</span><span style="font-size:13px; color:#6f6f6f; text-decoration:line-through; flex:1;">同步周会纪要</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #F2F2F2;"><span style="width:16px; height:16px; border:1.5px solid #F2F2F2;"></span><span style="font-size:13px; color:#F2F2F2; flex:1;">预约打印装帧</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px;"><span style="font-size:13px; color:#F2F2F2;">[+]</span><span style="font-size:13px; color:#6f6f6f;">NEW ITEM</span></div>
+        </div>
+        <div style="height:44px; display:flex; align-items:center; gap:10px; padding:0 12px; border-top:1.5px solid #F2F2F2;">
+          <span style="font-size:10px; color:#F2F2F2; letter-spacing:.1em;">OPACITY</span>
+          <span style="flex:1; height:10px; border:1.5px solid #F2F2F2; position:relative; display:block;"><span style="position:absolute; left:0; top:0; bottom:0; width:55%; background:#F2F2F2;"></span></span>
+          <span style="font-size:10px; color:#F2F2F2;">55</span>
+        </div>
+      </div>
+
+      <div style="width:320px; height:300px; display:flex; flex-direction:column; background:#0D0D0D; border:1.5px solid #F2F2F2; box-shadow:8px 8px 0 #F2F2F2; overflow:hidden;">
+        <div style="height:32px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #F2F2F2;">
+          <span style="font-size:11px; font-weight:700; color:#F2F2F2; flex:1; letter-spacing:.12em;">CLIPBOARD</span>
+          <span style="font-size:12px; color:#F2F2F2;">×</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column;">
+          <div style="padding:11px 12px; border-bottom:1px solid #F2F2F2; font-size:12px; color:#F2F2F2; display:flex; gap:8px;"><span style="color:#6f6f6f;">01</span><span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">https://intranet/design/review-0904</span></div>
+          <div style="padding:11px 12px; border-bottom:1px solid #F2F2F2; font-size:12px; color:#0D0D0D; background:#FFE566; display:flex; gap:8px;"><span>02</span><span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">SHA-1c4f9e0</span><span style="font-weight:700;">⧉</span></div>
+          <div style="padding:11px 12px; border-bottom:1px solid #F2F2F2; font-size:12px; color:#F2F2F2; display:flex; gap:8px;"><span style="color:#6f6f6f;">03</span><span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">收货地址：朝阳区 …</span></div>
+          <div style="padding:11px 12px; border-bottom:1px solid #F2F2F2; font-size:12px; color:#F2F2F2; display:flex; gap:8px;"><span style="color:#6f6f6f;">04</span><span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">design-review@corp</span></div>
+        </div>
+        <div style="height:32px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1.5px solid #F2F2F2;">
+          <span style="font-size:10px; color:#6f6f6f; letter-spacing:.1em;">KEEP 20</span>
+          <span style="font-size:10px; color:#F2F2F2; letter-spacing:.1em; border:1px solid #F2F2F2; padding:1px 5px;">CLEAR</span>
+        </div>
+      </div>
+
+      <div style="width:320px; height:480px; display:flex; flex-direction:column; background:#0D0D0D; border:1.5px solid #F2F2F2; box-shadow:8px 8px 0 #F2F2F2; overflow:hidden;">
+        <div style="height:30px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; border-bottom:1.5px solid #F2F2F2;">
+          <span style="font-size:11px; font-weight:700; color:#F2F2F2; flex:1; letter-spacing:.14em;">DESK</span>
+          <span style="font-size:10px; border:1px solid #F2F2F2; color:#F2F2F2; padding:1px 5px;">PIN</span>
+          <span style="font-size:11px; color:#F2F2F2;">⚙</span>
+          <span style="font-size:12px; color:#F2F2F2;">×</span>
+        </div>
+        <div style="display:flex; border-bottom:1.5px solid #F2F2F2;">
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#F2F2F2; border-right:1.5px solid #F2F2F2;">NOTE</span>
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#0D0D0D; background:#F2F2F2; border-right:1.5px solid #F2F2F2;">TODO</span>
+          <span style="flex:1; padding:9px 0; text-align:center; font-size:11px; font-weight:700; letter-spacing:.1em; color:#F2F2F2;">CLIP</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #F2F2F2;"><span style="width:16px; height:16px; border:1.5px solid #F2F2F2;"></span><span style="font-size:13px; color:#F2F2F2; flex:1;">整理评审反馈</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #F2F2F2; background:#FFE566;"><span style="width:16px; height:16px; border:1.5px solid #0D0D0D;"></span><span style="font-size:13px; color:#0D0D0D; flex:1;">导出深色版切图</span><span style="font-size:12px; color:#0D0D0D;">⠿</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #F2F2F2;"><span style="width:16px; height:16px; border:1.5px solid #F2F2F2; background:#F2F2F2; display:grid; place-items:center; color:#0D0D0D; font-size:10px;">✓</span><span style="font-size:13px; color:#6f6f6f; text-decoration:line-through; flex:1;">同步周会纪要</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px;"><span style="font-size:13px; color:#F2F2F2;">[+]</span><span style="font-size:13px; color:#6f6f6f;">NEW ITEM</span></div>
+        </div>
+        <div style="height:44px; display:flex; align-items:center; gap:10px; padding:0 12px; border-top:1.5px solid #F2F2F2;">
+          <span style="font-size:10px; color:#F2F2F2; letter-spacing:.1em;">OPACITY</span>
+          <span style="flex:1; height:10px; border:1.5px solid #F2F2F2; position:relative; display:block;"><span style="position:absolute; left:0; top:0; bottom:0; width:70%; background:#F2F2F2;"></span></span>
+          <span style="font-size:10px; color:#F2F2F2;">70</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+</body>
+</html>
