@@ -11,7 +11,9 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
+    "db:check": "drizzle-kit check --config=drizzle.config.ts"
   },
   "keywords": [],
   "author": "admin",
@@ -19,8 +21,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
-      "electron-winstaller",
-      "better-sqlite3"
+      "electron-winstaller"
     ]
   },
   "devDependencies": {
@@ -49,7 +50,7 @@
     "vite": "^5.0.12"
   },
   "dependencies": {
-    "better-sqlite3": "^12.4.6",
+    "better-sqlite3": "13.0.3",
     "drizzle-orm": "^0.45.2",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.2.8",

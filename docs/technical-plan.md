@@ -12,7 +12,7 @@
 - 设计原型只说明已经演示的部分，不代表没有演示的功能不需要实现。
 - 每个阶段完成后先验收，再进入下一阶段。
 
-当前状态：阶段 0、阶段 1 和阶段 2.1 已完成；应用工程骨架和 SQLite 运行依赖已通过基础验证，尚未实现表结构和业务功能。
+当前状态：阶段 0、阶段 1、阶段 2.1 和阶段 2.2 已完成；数据库表结构、迁移、主进程连接和默认设置已落地，尚未实现 repository/service 和业务功能。
 
 ## 一、已确认的产品决定
 
@@ -239,19 +239,28 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 ### 阶段 2：数据库基础
 
 - [x] 配置 better-sqlite3 的 Electron 原生模块重建。
-- [ ] 用 Drizzle 定义五张表和约束。
-- [ ] 配置迁移脚本。
-- [ ] 在主进程建立唯一数据库连接。
+- [x] 用 Drizzle 定义五张表和约束。
+- [x] 配置迁移脚本。
+- [x] 在主进程建立唯一数据库连接。
 - [ ] 实现 repository/service 层。
-- [ ] 实现数据库初始化和首次启动默认设置。
+- [x] 实现数据库初始化和首次启动默认设置。
 - [ ] 为窗口、待办、CLIP、配色模板写基础单元测试。
 
 阶段 2.1 实际验证结果：
 
-- 使用 `better-sqlite3 12.4.6`，同时支持当前 Node 20 和 Electron 44 的运行时版本。
-- `AutoUnpackNativesPlugin` 已加入 Forge 配置，pnpm 已允许构建 `better-sqlite3`。
-- Node 20 和 Electron 44 均已通过内存数据库创建、插入和读取探针。
-- 当前机器没有 Visual Studio C++ 工具链，因此不依赖本地源码编译；安装包仍由 Forge 负责目标 Electron 环境处理。
+- 使用固定版本 `better-sqlite3 13.0.3`，使用其自带的 `win32-x64` 预构建二进制，匹配 Electron 44 的 Node 24.19 运行时。
+- `AutoUnpackNativesPlugin` 已加入 Forge 配置，`rebuildConfig.ignoreModules` 保留对 `better-sqlite3` 的跳过，避免在没有 Visual Studio C++ 工具链的机器上源码重编译。
+- Electron 44 已通过内存数据库创建、插入和读取探针；Node 20 不作为该版本原生模块的直接运行时。
+- 当前机器没有 Visual Studio C++ 工具链，因此不依赖本地源码编译；安装包由 Forge 直接携带预构建二进制。
+
+阶段 2.2 实际验证结果：
+
+- `pnpm typecheck` 通过。
+- `pnpm lint` 通过。
+- `pnpm db:check` 通过，Drizzle migration 文件完整。
+- `pnpm package` 通过，生成 `out/Pin-win32-x64`。
+- 使用打包后的 `app.asar` 启动 Electron，确认 `AppData/Roaming/Pin/desk-widgets.sqlite` 创建成功。
+- 数据库包含 `settings`、`widgets`、`todos`、`clip_items`、`custom_kits` 五张业务表和 `__drizzle_migrations`；首次启动自动写入 `settings.id = 1`，WAL 和外键约束均已启用。
 
 阶段验收：创建、读取、修改、删除和事务行为可通过测试；重启应用后数据仍存在。
 
@@ -340,4 +349,4 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 
 ## 五、当前下一步
 
-阶段 1 已完成。下一步是阶段 2：数据库基础；开始前先由用户确认是否进入该阶段。
+阶段 2.2 已完成。下一步是实现 repository/service 层和数据库行为测试；开始前先验收本阶段结果，再确认是否进入阶段 2.3。
