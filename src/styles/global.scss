@@ -858,6 +858,31 @@ button:disabled {
   white-space: nowrap;
 }
 
+.manager-name-button {
+  min-width: 0;
+  min-height: 20px;
+  padding: 2px 0;
+  overflow: hidden;
+  border: 0;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-name-input {
+  min-width: 0;
+  height: 22px;
+  flex: 1;
+  padding: 1px 4px;
+  border: 1.5px solid #111111;
+  outline: 0;
+  color: #111111;
+  background: #ffffff;
+  font-size: 12px;
+}
+
 .manager-action {
   min-width: 30px;
   height: 20px;
@@ -881,12 +906,43 @@ button:disabled {
   font-size: 13px;
 }
 
+.manager-delete-action {
+  color: #6f6f6f;
+}
+
 .manager-empty {
   margin: 0;
   padding: 28px 12px;
   color: #6f6f6f;
   font-size: 11px;
   text-align: center;
+}
+
+.manager-undo-row {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  color: #6f6f6f;
+  background: #f4f4f1;
+  font-size: 11px;
+}
+
+.manager-undo-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-undo-button {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid #111111;
+  font-size: 10px;
+  line-height: 1.2;
 }
 
 .manager-footer {
@@ -958,4 +1014,53 @@ button:disabled {
 
 .manager-new-menu button:last-child {
   border-bottom: 0;
+}
+
+.manager-confirm-backdrop {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.manager-confirm {
+  width: min(260px, 100%);
+  padding: 16px;
+  border: 1.5px solid #111111;
+  background: #ffffff;
+  box-shadow: 5px 5px 0 #111111;
+}
+
+.manager-confirm h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.manager-confirm p {
+  margin: 0 0 16px;
+  color: #6f6f6f;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.manager-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.manager-confirm-actions button {
+  min-width: 52px;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.manager-confirm-delete {
+  color: #ffffff;
+  background: #111111;
 }

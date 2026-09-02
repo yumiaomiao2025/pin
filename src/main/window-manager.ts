@@ -39,6 +39,9 @@ export interface WindowManager {
   hideManager(event: IpcMainInvokeEvent): boolean;
   createWidget(type: WidgetType): Widget;
   createWidgetForEvent(event: IpcMainInvokeEvent, type: WidgetType): Widget | undefined;
+  renameWidget(event: IpcMainInvokeEvent, widgetId: string, title: string): Widget | undefined;
+  deleteWidget(event: IpcMainInvokeEvent, widgetId: string): Widget | undefined;
+  restoreWidget(event: IpcMainInvokeEvent): Widget | undefined;
   getSettings(): Settings;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
   getWidgetsForEvent(event: IpcMainInvokeEvent): Widget[] | undefined;
@@ -133,6 +136,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
   let contentTrash:
     | { kind: 'todo'; widgetId: string; item: Todo; timer: ReturnType<typeof setTimeout> }
     | { kind: 'clip'; widgetId: string; item: ClipItem; timer: ReturnType<typeof setTimeout> }
+    | { kind: 'widget'; item: Widget; todos: Todo[]; clips: ClipItem[]; timer: ReturnType<typeof setTimeout> }
     | undefined;
   let quitting = false;
 
@@ -420,6 +424,73 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       });
       openWidget(widget.id);
       return widget;
+    },
+
+    renameWidget: (event, widgetId, title) => {
+      if (!isManagerEvent(event)) {
+        return undefined;
+      }
+      const widget = service.widgets.getById(widgetId);
+      if (!widget) {
+        return undefined;
+      }
+      const normalizedTitle = title.trim();
+      if (!normalizedTitle) {
+        return widget;
+      }
+      return service.widgets.update(widgetId, { title: normalizedTitle });
+    },
+
+    deleteWidget: (event, widgetId) => {
+      if (!isManagerEvent(event)) {
+        return undefined;
+      }
+      const widget = service.widgets.getById(widgetId);
+      if (!widget) {
+        return undefined;
+      }
+
+      if (contentTrash) {
+        clearTimeout(contentTrash.timer);
+      }
+      const persistTimer = persistTimers.get(widgetId);
+      if (persistTimer) {
+        clearTimeout(persistTimer);
+        persistTimers.delete(widgetId);
+      }
+
+      const todos = service.todos.listByWidget(widgetId);
+      const clips = service.clipItems.listByWidget(widgetId);
+      const targetWindow = windows.get(widgetId);
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        targetWindow.destroy();
+      }
+      windows.delete(widgetId);
+      service.widgets.delete(widgetId);
+
+      const timer = setTimeout(() => {
+        if (contentTrash?.kind === 'widget' && contentTrash.item.id === widget.id) {
+          contentTrash = undefined;
+        }
+      }, 5_000);
+      contentTrash = { kind: 'widget', item: widget, todos, clips, timer };
+      return widget;
+    },
+
+    restoreWidget: (event) => {
+      if (!isManagerEvent(event) || !contentTrash || contentTrash.kind !== 'widget') {
+        return undefined;
+      }
+      const { item: widget, todos, clips, timer } = contentTrash;
+      clearTimeout(timer);
+      contentTrash = undefined;
+      service.transaction(({ widgets, todos: todoRepository, clipItems }) => {
+        widgets.create(widget);
+        todos.forEach((todo) => todoRepository.create(todo));
+        clips.forEach((clip) => clipItems.create(clip));
+      });
+      openWidget(widget.id);
+      return service.widgets.getById(widget.id);
     },
 
     getSettings: () => service.settings.ensure(),

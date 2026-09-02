@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('pinApi', {
   setAllManagedWidgetsHidden: (hidden: boolean) => ipcRenderer.invoke('manager:set-all-hidden', hidden),
   createManagedWidget: (type: 'note' | 'todo' | 'clip' | 'desk') =>
     ipcRenderer.invoke('manager:create-widget', type),
+  renameManagedWidget: (id: string, title: string) => ipcRenderer.invoke('manager:rename-widget', { id, title }),
+  deleteManagedWidget: (id: string) => ipcRenderer.invoke('manager:delete-widget', id),
+  restoreManagedWidget: () => ipcRenderer.invoke('manager:restore-widget'),
   setActiveTab: (activeTab: 'note' | 'todo' | 'clip') => ipcRenderer.invoke('desk:set-tab', activeTab),
   listTodos: () => ipcRenderer.invoke('todo:list'),
   createTodo: (text: string) => ipcRenderer.invoke('todo:create', text),

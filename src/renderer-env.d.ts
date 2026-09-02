@@ -54,6 +54,9 @@ interface Window {
     setManagedWidgetPin: (id: string, pin: boolean) => Promise<PinWidget | null>;
     setAllManagedWidgetsHidden: (hidden: boolean) => Promise<PinWidget[] | null>;
     createManagedWidget: (type: PinWidget['type']) => Promise<PinWidget | null>;
+    renameManagedWidget: (id: string, title: string) => Promise<PinWidget | null>;
+    deleteManagedWidget: (id: string) => Promise<PinWidget | null>;
+    restoreManagedWidget: () => Promise<PinWidget | null>;
     setActiveTab: (activeTab: PinWidget['activeTab']) => Promise<PinWidget | null>;
     listTodos: () => Promise<PinTodo[] | null>;
     createTodo: (text: string) => Promise<PinTodo | null>;

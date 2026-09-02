@@ -171,6 +171,26 @@ ipcMain.handle('manager:create-widget', (event, type: unknown) => {
   }
   return getManager().createWidgetForEvent(event, type as WidgetType) ?? null;
 });
+ipcMain.handle('manager:rename-widget', (event, input: unknown) => {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    !('id' in input) ||
+    typeof input.id !== 'string' ||
+    !('title' in input) ||
+    typeof input.title !== 'string'
+  ) {
+    throw new TypeError('widget rename must contain id and title');
+  }
+  return getManager().renameWidget(event, input.id, input.title) ?? null;
+});
+ipcMain.handle('manager:delete-widget', (event, widgetId: unknown) => {
+  if (typeof widgetId !== 'string') {
+    throw new TypeError('widget id must be a string');
+  }
+  return getManager().deleteWidget(event, widgetId) ?? null;
+});
+ipcMain.handle('manager:restore-widget', (event) => getManager().restoreWidget(event) ?? null);
 ipcMain.handle('desk:set-tab', (event, activeTab: unknown) => {
   if (typeof activeTab !== 'string' || !DESK_TABS.includes(activeTab as DeskTab)) {
     throw new TypeError('Unknown desk tab');
