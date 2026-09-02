@@ -16,6 +16,8 @@ import type {
   UpdateTodoInput,
 } from './database/repositories';
 import { DEFAULT_COLORS, type ClipItem, type DeskTab, type Settings, type Todo, type Widget, type WidgetType } from './database/schema';
+import type { ColorSet } from '../shared/colors';
+import { COLOR_PRESETS } from '../shared/colors';
 
 const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
@@ -31,6 +33,7 @@ const DEFAULT_BOUNDS: Record<WidgetType, { width: number; height: number }> = {
 
 type WidgetWindow = BrowserWindow & { __pinWidgetId?: string };
 type UtilityWindow = BrowserWindow & { __pinRole?: 'manager' | 'settings' };
+type ColorsWindow = BrowserWindow & { __pinRole?: 'colors'; __pinColorsScope?: 'default' };
 
 export interface WindowManager {
   openVisibleWidgets(): void;
@@ -41,6 +44,8 @@ export interface WindowManager {
   hideManager(event: IpcMainInvokeEvent): boolean;
   openSettings(): BrowserWindow;
   hideSettings(event: IpcMainInvokeEvent): boolean;
+  openColors(scope: 'default'): BrowserWindow;
+  hideColors(event: IpcMainInvokeEvent): boolean;
   createWidget(type: WidgetType): Widget;
   createWidgetForEvent(event: IpcMainInvokeEvent, type: WidgetType): Widget | undefined;
   renameWidget(event: IpcMainInvokeEvent, widgetId: string, title: string): Widget | undefined;
@@ -49,6 +54,8 @@ export interface WindowManager {
   getSettings(): Settings;
   updateSettings(event: IpcMainInvokeEvent, patch: UpdateSettingsInput): Settings | undefined;
   resetSettings(event: IpcMainInvokeEvent): Settings | undefined;
+  getColorContext(event: IpcMainInvokeEvent): { scope: 'default'; colors: ColorSet; activePresetId: string | null } | undefined;
+  applyDefaultPreset(event: IpcMainInvokeEvent, presetId: string): Settings | undefined;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
   getWidgetsForEvent(event: IpcMainInvokeEvent): Widget[] | undefined;
   setWidgetHidden(event: IpcMainInvokeEvent, widgetId: string, hidden: boolean): Widget | undefined;
@@ -139,10 +146,59 @@ function isSettingsWindow(window: BrowserWindow): window is UtilityWindow {
   return (window as UtilityWindow).__pinRole === 'settings';
 }
 
+function isColorsWindow(window: BrowserWindow): window is ColorsWindow {
+  return (window as ColorsWindow).__pinRole === 'colors';
+}
+
+function settingsToColors(settings: Settings): ColorSet {
+  return {
+    paper: settings.defaultPaperColor,
+    ink: settings.defaultInkColor,
+    title: settings.defaultTitleColor,
+    accent: settings.defaultAccentColor,
+    spine: settings.defaultSpineColor,
+    shadow: settings.defaultShadowColor,
+  };
+}
+
+function colorsToSettings(colors: ColorSet) {
+  return {
+    defaultPaperColor: colors.paper,
+    defaultInkColor: colors.ink,
+    defaultTitleColor: colors.title,
+    defaultAccentColor: colors.accent,
+    defaultSpineColor: colors.spine,
+    defaultShadowColor: colors.shadow,
+  };
+}
+
+function colorsToWidgetPatch(colors: ColorSet) {
+  return {
+    paperColor: colors.paper,
+    inkColor: colors.ink,
+    titleColor: colors.title,
+    accentColor: colors.accent,
+    spineColor: colors.spine,
+    shadowColor: colors.shadow,
+  };
+}
+
+function colorsEqual(left: ColorSet, right: ColorSet) {
+  return (
+    left.paper === right.paper &&
+    left.ink === right.ink &&
+    left.title === right.title &&
+    left.accent === right.accent &&
+    left.spine === right.spine &&
+    left.shadow === right.shadow
+  );
+}
+
 export function createWindowManager(service: AppDatabaseService): WindowManager {
   const windows = new Map<string, WidgetWindow>();
   let managerWindow: UtilityWindow | undefined;
   let settingsWindow: UtilityWindow | undefined;
+  let colorsWindow: ColorsWindow | undefined;
   const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let contentTrash:
     | { kind: 'todo'; widgetId: string; item: Todo; timer: ReturnType<typeof setTimeout> }
@@ -169,10 +225,35 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     return Boolean(senderWindow && isSettingsWindow(senderWindow));
   };
 
+  const colorsScopeForEvent = (event: IpcMainInvokeEvent) => {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!senderWindow || !isColorsWindow(senderWindow)) {
+      return undefined;
+    }
+    return senderWindow.__pinColorsScope;
+  };
+
   const broadcastSettings = (settings: Settings) => {
     BrowserWindow.getAllWindows().forEach((window) => {
       if (!window.isDestroyed()) {
         window.webContents.send('settings:changed', settings);
+      }
+    });
+  };
+
+  const broadcastWidget = (widget: Widget) => {
+    const targetWindow = windows.get(widget.id);
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send('widget:changed', widget);
+    }
+  };
+
+  const syncDefaultColors = (settings: Settings) => {
+    const colors = settingsToColors(settings);
+    service.widgets.list().filter((widget) => widget.followsDefault).forEach((widget) => {
+      const updated = service.widgets.update(widget.id, colorsToWidgetPatch(colors));
+      if (updated) {
+        broadcastWidget(updated);
       }
     });
   };
@@ -191,6 +272,16 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     const updated = service.settings.update(patch);
     if (patch.autostart !== undefined && process.platform !== 'linux') {
       app.setLoginItemSettings({ openAtLogin: updated.autostart });
+    }
+    if (
+      patch.defaultPaperColor !== undefined ||
+      patch.defaultInkColor !== undefined ||
+      patch.defaultTitleColor !== undefined ||
+      patch.defaultAccentColor !== undefined ||
+      patch.defaultSpineColor !== undefined ||
+      patch.defaultShadowColor !== undefined
+    ) {
+      syncDefaultColors(updated);
     }
     applyGlobalWindowSettings(updated);
     broadcastSettings(updated);
@@ -277,6 +368,20 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
   const loadSettings = (window: UtilityWindow) => {
     const query = { role: 'settings', id: 'settings' };
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      void window.loadURL(
+        `${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`,
+      );
+    } else {
+      void window.loadFile(
+        path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+        { query },
+      );
+    }
+  };
+
+  const loadColors = (window: ColorsWindow) => {
+    const query = { role: 'colors', id: 'colors', scope: 'default' };
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       void window.loadURL(
         `${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`,
@@ -448,6 +553,46 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     return settingsWindow;
   };
 
+  const openColors = (scope: 'default') => {
+    if (colorsWindow && !colorsWindow.isDestroyed()) {
+      colorsWindow.show();
+      colorsWindow.focus();
+      return colorsWindow;
+    }
+
+    colorsWindow = new BrowserWindow({
+      width: 320,
+      height: 480,
+      minWidth: 240,
+      minHeight: 160,
+      frame: false,
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    }) as ColorsWindow;
+    colorsWindow.__pinRole = 'colors';
+    colorsWindow.__pinColorsScope = scope;
+    colorsWindow.on('close', (event) => {
+      if (!quitting) {
+        event.preventDefault();
+        colorsWindow?.hide();
+      }
+    });
+    colorsWindow.once('closed', () => {
+      colorsWindow = undefined;
+    });
+    colorsWindow.once('ready-to-show', () => {
+      if (!quitting && colorsWindow && !colorsWindow.isDestroyed()) {
+        colorsWindow.show();
+      }
+    });
+    loadColors(colorsWindow);
+    return colorsWindow;
+  };
+
   const showWidgetForEvent = (event: IpcMainInvokeEvent) => {
     const widgetId = widgetIdForEvent(event);
     if (!widgetId) {
@@ -502,8 +647,19 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return true;
     },
 
+    openColors,
+
+    hideColors: (event) => {
+      if (!colorsScopeForEvent(event) || !colorsWindow || colorsWindow.isDestroyed()) {
+        return false;
+      }
+      colorsWindow.hide();
+      return true;
+    },
+
     createWidget: (type) => {
       const defaults = DEFAULT_BOUNDS[type];
+      const defaultColors = settingsToColors(service.settings.ensure());
       const input: CreateWidgetInput = {
         type,
         width: defaults.width,
@@ -512,6 +668,8 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         x: screen.getPrimaryDisplay().workArea.x + 32,
         y: screen.getPrimaryDisplay().workArea.y + 32,
         hidden: false,
+        ...colorsToWidgetPatch(defaultColors),
+        followsDefault: true,
       };
       const widget = service.widgets.create(input);
       openWidget(widget.id);
@@ -522,6 +680,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (!isManagerEvent(event)) {
         return undefined;
       }
+      const defaultColors = settingsToColors(service.settings.ensure());
       const widget = service.widgets.create({
         type,
         width: DEFAULT_BOUNDS[type].width,
@@ -530,6 +689,8 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         x: screen.getPrimaryDisplay().workArea.x + 32,
         y: screen.getPrimaryDisplay().workArea.y + 32,
         hidden: false,
+        ...colorsToWidgetPatch(defaultColors),
+        followsDefault: true,
       });
       openWidget(widget.id);
       return widget;
@@ -633,6 +794,26 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         autostart: false,
         snap: true,
       });
+    },
+
+    getColorContext: (event) => {
+      if (colorsScopeForEvent(event) !== 'default') {
+        return undefined;
+      }
+      const colors = settingsToColors(service.settings.ensure());
+      const activePresetId = COLOR_PRESETS.find((preset) => colorsEqual(preset, colors))?.id ?? null;
+      return { scope: 'default' as const, colors, activePresetId };
+    },
+
+    applyDefaultPreset: (event, presetId) => {
+      if (colorsScopeForEvent(event) !== 'default') {
+        return undefined;
+      }
+      const preset = COLOR_PRESETS.find((candidate) => candidate.id === presetId);
+      if (!preset) {
+        return undefined;
+      }
+      return updateGlobalSettings(colorsToSettings(preset));
     },
 
     getWidgetForEvent: (event) => {
@@ -952,6 +1133,9 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       }
       if (settingsWindow && !settingsWindow.isDestroyed()) {
         settingsWindow.destroy();
+      }
+      if (colorsWindow && !colorsWindow.isDestroyed()) {
+        colorsWindow.destroy();
       }
     },
   };

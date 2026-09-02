@@ -5,10 +5,19 @@ contextBridge.exposeInMainWorld('pinApi', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   updateSettings: (patch: Record<string, unknown>) => ipcRenderer.invoke('settings:update', patch),
   resetSettings: () => ipcRenderer.invoke('settings:reset'),
+  openDefaultColors: () => ipcRenderer.invoke('colors:open-default'),
+  getColorContext: () => ipcRenderer.invoke('colors:get-context'),
+  applyColorPreset: (presetId: string) => ipcRenderer.invoke('colors:apply-preset', presetId),
+  hideColors: () => ipcRenderer.invoke('colors:hide'),
   onSettingsChanged: (listener: (settings: unknown) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, settings: unknown) => listener(settings);
     ipcRenderer.on('settings:changed', handler);
     return () => ipcRenderer.removeListener('settings:changed', handler);
+  },
+  onWidgetChanged: (listener: (widget: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, widget: unknown) => listener(widget);
+    ipcRenderer.on('widget:changed', handler);
+    return () => ipcRenderer.removeListener('widget:changed', handler);
   },
   getWidget: () => ipcRenderer.invoke('widget:get'),
   openManager: () => ipcRenderer.invoke('manager:open'),

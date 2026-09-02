@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import './styles/global.scss';
+import { COLOR_PRESETS, colorSetEquals, deriveColorVars } from './shared/colors';
 
 type WidgetType = PinWidget['type'];
 
@@ -31,6 +32,30 @@ const MANAGER_FILTER_OPTIONS: Array<{ type: WidgetType | 'all'; label: string }>
 
 function widgetDisplayName(widget: PinWidget) {
   return widget.title.trim() || widget.type.toUpperCase();
+}
+
+function widgetColorStyle(widget: PinWidget): React.CSSProperties {
+  const colors = deriveColorVars({
+    paper: widget.paperColor,
+    ink: widget.inkColor,
+    title: widget.titleColor,
+    accent: widget.accentColor,
+    spine: widget.spineColor,
+    shadow: widget.shadowColor,
+  });
+  return {
+    '--widget-paper': colors.paper,
+    '--widget-ink': colors.ink,
+    '--widget-title': colors.title,
+    '--widget-accent': colors.accent,
+    '--widget-spine': colors.spine ?? 'transparent',
+    '--widget-shadow': colors.shadow,
+    '--widget-sub': colors.sub,
+    '--widget-soft': colors.soft,
+    boxShadow: colors.spine
+      ? `inset 8px 0 0 ${colors.spine}, 8px 8px 0 ${colors.shadow}`
+      : `8px 8px 0 ${colors.shadow}`,
+  } as React.CSSProperties;
 }
 
 type WindowDisplaySettings = Pick<PinSettings, 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar'>;
@@ -64,6 +89,15 @@ function useWindowDisplaySettings() {
   }, []);
 
   return settings;
+}
+
+function useWidgetUpdates(setWidget: React.Dispatch<React.SetStateAction<PinWidget>>) {
+  useEffect(() => {
+    const unsubscribe = window.pinApi.onWidgetChanged((nextWidget) => {
+      setWidget((current) => (current.id === nextWidget.id ? nextWidget : current));
+    });
+    return unsubscribe;
+  }, [setWidget]);
 }
 
 function compareTodos(left: PinTodo, right: PinTodo) {
@@ -595,6 +629,16 @@ function SettingsSegmented<T extends string>({
   );
 }
 
+function ColorSwatches({ colors }: { colors: { paper: string; accent: string; ink: string } }) {
+  return (
+    <span aria-hidden="true" className="color-swatches">
+      <span style={{ background: colors.paper }} />
+      <span style={{ background: colors.accent }} />
+      <span style={{ background: colors.ink }} />
+    </span>
+  );
+}
+
 function SettingsPanel() {
   const [settings, setSettings] = useState<PinSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
@@ -641,6 +685,15 @@ function SettingsPanel() {
     }
   };
 
+  const currentPreset = COLOR_PRESETS.find((preset) => colorSetEquals(preset, {
+    paper: settings.defaultPaperColor,
+    ink: settings.defaultInkColor,
+    title: settings.defaultTitleColor,
+    accent: settings.defaultAccentColor,
+    spine: settings.defaultSpineColor,
+    shadow: settings.defaultShadowColor,
+  }));
+
   const updateDefaultOpacity = (defaultOpacity: number) => {
     setSettings((current) => ({ ...current, defaultOpacity }));
     void window.pinApi.updateSettings({ defaultOpacity }).then((updated) => {
@@ -669,6 +722,13 @@ function SettingsPanel() {
           />
         </SettingsSection>
         <SettingsSection title="DEFAULTS">
+          <button className="settings-kit-row" onClick={() => void window.pinApi.openDefaultColors()} type="button">
+            <span>配色套装</span>
+            <span className="settings-kit-value">
+              <ColorSwatches colors={{ paper: settings.defaultPaperColor, accent: settings.defaultAccentColor, ink: settings.defaultInkColor }} />
+              {currentPreset?.name ?? '自定义'} <span aria-hidden="true">›</span>
+            </span>
+          </button>
           <div className="settings-row settings-range-row">
             <label htmlFor="default-opacity">新窗口透明度</label>
             <input
@@ -710,6 +770,98 @@ function SettingsPanel() {
       <footer className="settings-footer">
         <span>v0.3</span>
         <button disabled={busy} onClick={() => void resetSettings()} type="button">RESET</button>
+      </footer>
+    </main>
+  );
+}
+
+function ColorsTitleBar({ onHide }: { onHide: () => void }) {
+  return (
+    <header className="colors-titlebar">
+      <span className="type-label">COLORS · 默认</span>
+      <button
+        aria-label="关闭颜色面板"
+        className="title-action title-action--icon"
+        onClick={onHide}
+        title="关闭颜色面板"
+        type="button"
+      >
+        ×
+      </button>
+    </header>
+  );
+}
+
+function ColorsPanel() {
+  const [context, setContext] = useState<PinColorContext | null>(null);
+  const [theme, setTheme] = useState<PinSettings['theme']>('light');
+  const [busy, setBusy] = useState(false);
+
+  const reload = async () => {
+    const nextContext = await window.pinApi.getColorContext();
+    if (nextContext) {
+      setContext(nextContext);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = window.pinApi.onSettingsChanged((settings) => {
+      if (active) {
+        setTheme(settings.theme);
+        void reload();
+      }
+    });
+    void Promise.all([window.pinApi.getSettings(), window.pinApi.getColorContext()]).then(
+      ([settings, nextContext]) => {
+        if (!active) {
+          return;
+        }
+        setTheme(settings.theme);
+        setContext(nextContext);
+      },
+    );
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const applyPreset = async (presetId: string) => {
+    setBusy(true);
+    try {
+      await window.pinApi.applyColorPreset(presetId);
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const currentColors = context?.colors;
+  return (
+    <main className={theme === 'dark' ? 'app colors-app management-dark' : 'app colors-app'}>
+      <ColorsTitleBar onHide={() => void window.pinApi.hideColors()} />
+      <section className="colors-section">
+        <h2>套装</h2>
+        {COLOR_PRESETS.map((preset) => (
+          <button
+            className={context?.activePresetId === preset.id ? 'color-preset color-preset--active' : 'color-preset'}
+            disabled={busy}
+            key={preset.id}
+            onClick={() => void applyPreset(preset.id)}
+            type="button"
+          >
+            <ColorSwatches colors={preset} />
+            <span>{preset.name}</span>
+            {context?.activePresetId === preset.id && <span className="color-preset-current">当前</span>}
+          </button>
+        ))}
+        <button className="color-custom-placeholder" disabled type="button">
+          ＋ 自定义… ›
+        </button>
+      </section>
+      <footer className="colors-footer">
+        <span>{currentColors ? '同步跟随默认的窗口' : '加载中…'}</span>
       </footer>
     </main>
   );
@@ -1172,6 +1324,7 @@ function ClipRow({
 
 function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
+  useWidgetUpdates(setWidget);
   const [items, setItems] = useState<PinClipItem[]>([]);
   const contextMenu = useContextMenu(!embedded);
   const [draft, setDraft] = useState('');
@@ -1341,8 +1494,9 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
 
   return (
     <main
-      className={embedded ? 'desk-panel' : 'app'}
+      className={embedded ? 'desk-panel widget-themed' : 'app widget-themed'}
       onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
+      style={widgetColorStyle(widget)}
     >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
@@ -1557,6 +1711,7 @@ function TodoRow({
 
 function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
+  useWidgetUpdates(setWidget);
   const [todos, setTodos] = useState<PinTodo[]>([]);
   const contextMenu = useContextMenu(!embedded);
   const [draft, setDraft] = useState('');
@@ -1783,8 +1938,9 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
 
   return (
     <main
-      className={embedded ? 'desk-panel' : 'app'}
+      className={embedded ? 'desk-panel widget-themed' : 'app widget-themed'}
       onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
+      style={widgetColorStyle(widget)}
     >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
@@ -1874,6 +2030,7 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
 
 function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
+  useWidgetUpdates(setWidget);
   const contextMenu = useContextMenu(!embedded);
   const viewSettings = useWindowDisplaySettings();
   const [draft, setDraft] = useState(initialWidget.noteText);
@@ -1943,8 +2100,9 @@ function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
 
   return (
     <main
-      className={embedded ? 'desk-panel' : 'app'}
+      className={embedded ? 'desk-panel widget-themed' : 'app widget-themed'}
       onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
+      style={widgetColorStyle(widget)}
     >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
@@ -1973,6 +2131,7 @@ const DESK_TAB_OPTIONS: Array<{ id: PinWidget['activeTab']; label: string }> = [
 
 function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const [widget, setWidget] = useState(initialWidget);
+  useWidgetUpdates(setWidget);
   const contextMenu = useContextMenu(true);
   const viewSettings = useWindowDisplaySettings();
 
@@ -2028,7 +2187,7 @@ function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
   };
 
   return (
-    <main className="app" onContextMenu={contextMenu.handleContextMenu}>
+    <main className="app widget-themed" onContextMenu={contextMenu.handleContextMenu} style={widgetColorStyle(widget)}>
       <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
       {!widget.collapsed && (
         <>
@@ -2080,7 +2239,7 @@ function UnsupportedWidget({ widget }: { widget: PinWidget }) {
   };
 
   return (
-    <main className="app">
+    <main className="app widget-themed" style={widgetColorStyle(currentWidget)}>
       <TitleBar
         onCollapse={toggleCollapsed}
         onHide={() => void window.pinApi.hideWindow()}
@@ -2132,6 +2291,9 @@ function App() {
   }
   if (context.role === 'settings') {
     return <SettingsPanel />;
+  }
+  if (context.role === 'colors') {
+    return <ColorsPanel />;
   }
   return <WidgetApp />;
 }

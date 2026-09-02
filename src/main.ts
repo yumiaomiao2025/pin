@@ -267,6 +267,18 @@ ipcMain.handle('settings:update', (event, input: unknown) => {
   return getManager().updateSettings(event, patch) ?? null;
 });
 ipcMain.handle('settings:reset', (event) => getManager().resetSettings(event) ?? null);
+ipcMain.handle('colors:open-default', () => {
+  getManager().openColors('default');
+  return true;
+});
+ipcMain.handle('colors:get-context', (event) => getManager().getColorContext(event) ?? null);
+ipcMain.handle('colors:apply-preset', (event, presetId: unknown) => {
+  if (typeof presetId !== 'string') {
+    throw new TypeError('preset id must be a string');
+  }
+  return getManager().applyDefaultPreset(event, presetId) ?? null;
+});
+ipcMain.handle('colors:hide', (event) => getManager().hideColors(event));
 ipcMain.handle('todo:list', (event) => getManager().getTodosForEvent(event) ?? null);
 ipcMain.handle('todo:create', (event, text: unknown) => {
   if (typeof text !== 'string') {

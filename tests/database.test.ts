@@ -10,6 +10,7 @@ import {
 } from '../src/main/database/app-service';
 import { openDatabase, type DatabaseHandle } from '../src/main/database/database';
 import { createRepositories, type AppRepositories } from '../src/main/database/repositories';
+import { COLOR_PRESETS, deriveColorVars } from '../src/shared/colors';
 
 const migrationsFolder = path.resolve('drizzle');
 
@@ -72,6 +73,18 @@ test('persists the global window and text settings', () => {
   assert.equal(updated.maxLines, 2);
   assert.equal(updated.scrollbar, 'hidden');
   assert.equal(updated.defaultOpacity, 72);
+});
+
+test('provides stable color presets and derived display colors', () => {
+  const invert = COLOR_PRESETS.find((preset) => preset.id === 'invert');
+  assert.ok(invert);
+  assert.equal(invert.paper, '#0D0D0D');
+  assert.equal(invert.ink, '#F2F2F2');
+
+  const derived = deriveColorVars(invert);
+  assert.equal(derived.title, '#FFE566');
+  assert.equal(derived.sub, '#808080');
+  assert.equal(derived.soft, '#1B1B1B');
 });
 
 test('creates, updates, and deletes widgets with cascading content', () => {

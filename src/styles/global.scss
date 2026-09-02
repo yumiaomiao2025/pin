@@ -1328,3 +1328,283 @@ button:disabled {
 .management-dark .manager-new-menu button {
   border-color: #6f6f6f;
 }
+
+.colors-titlebar {
+  display: flex;
+  height: 32px;
+  min-height: 32px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1.5px solid #111111;
+  background: #ffe566;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.colors-titlebar .title-action {
+  -webkit-app-region: no-drag;
+}
+
+.colors-section {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.colors-section h2 {
+  margin: 0;
+  padding: 6px 12px;
+  color: #6f6f6f;
+  background: #f4f4f1;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.color-preset,
+.color-custom-placeholder {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid #d8d8d8;
+  font-size: 12px;
+  text-align: left;
+}
+
+.color-preset--active {
+  background: #ffe566;
+  box-shadow: inset 3px 0 0 #111111;
+}
+
+.color-swatches {
+  display: inline-flex;
+  width: 38px;
+  height: 22px;
+  flex: none;
+  border: 1.5px solid #111111;
+}
+
+.color-swatches > span {
+  min-width: 0;
+  flex: 1;
+  border-right: 1px solid #111111;
+}
+
+.color-swatches > span:last-child {
+  border-right: 0;
+}
+
+.color-preset-current {
+  margin-left: auto;
+  color: #111111;
+  font-size: 10px;
+}
+
+.color-custom-placeholder {
+  color: #6f6f6f;
+  border-bottom: 0;
+  cursor: default;
+}
+
+.color-custom-placeholder:disabled {
+  opacity: 1;
+}
+
+.colors-footer {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 6px 12px;
+  border-top: 1.5px solid #111111;
+  color: #6f6f6f;
+  background: #f4f4f1;
+  font-size: 10px;
+}
+
+.management-dark .colors-titlebar {
+  border-color: #f2f2f2;
+  background: #1a1a18;
+}
+
+.management-dark .colors-section,
+.management-dark .colors-section h2,
+.management-dark .color-preset,
+.management-dark .color-custom-placeholder,
+.management-dark .colors-footer {
+  border-color: #f2f2f2;
+}
+
+.management-dark .colors-section h2,
+.management-dark .colors-footer {
+  color: #6f6f6f;
+  background: #1a1a18;
+}
+
+.management-dark .color-preset--active {
+  color: #0d0d0d;
+  background: #ffe566;
+  box-shadow: inset 3px 0 0 #f2f2f2;
+}
+
+.management-dark .color-preset-current {
+  color: #111111;
+}
+
+.widget-themed {
+  color: var(--widget-ink);
+  background: var(--widget-paper);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed button,
+.widget-themed input,
+.widget-themed textarea {
+  color: var(--widget-ink);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .titlebar {
+  color: #111111;
+  background: var(--widget-title);
+  border-color: #111111;
+}
+
+.widget-themed .titlebar .type-label,
+.widget-themed .titlebar .title-action {
+  color: #111111;
+}
+
+.widget-themed .title-action--active {
+  color: var(--widget-title);
+  background: #111111;
+  border-color: #111111;
+}
+
+.widget-themed .note-editor,
+.widget-themed .clip-text,
+.widget-themed .todo-text,
+.widget-themed .clip-input,
+.widget-themed .todo-input {
+  color: var(--widget-ink);
+}
+
+.widget-themed .note-editor::placeholder,
+.widget-themed .clip-input::placeholder,
+.widget-themed .todo-input::placeholder {
+  color: var(--widget-sub);
+}
+
+.widget-themed .clip-row,
+.widget-themed .todo-row {
+  border-color: var(--widget-soft);
+}
+
+.widget-themed .clip-row--copied,
+.widget-themed .clip-row--dragging,
+.widget-themed .todo-row--dragging {
+  color: #111111;
+  background: var(--widget-accent);
+  box-shadow: inset 3px 0 0 var(--widget-ink);
+}
+
+.widget-themed .clip-row--drag-over,
+.widget-themed .todo-row--drag-over {
+  box-shadow: inset 0 2px 0 var(--widget-accent);
+}
+
+.widget-themed .clip-index,
+.widget-themed .clip-copy-mark,
+.widget-themed .clip-drag-handle,
+.widget-themed .clip-delete,
+.widget-themed .todo-drag-handle,
+.widget-themed .todo-delete,
+.widget-themed .todo-row--done .todo-text {
+  color: var(--widget-sub);
+}
+
+.widget-themed .todo-check {
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .todo-check--done,
+.widget-themed .todo-check--completing {
+  color: var(--widget-paper);
+  background: var(--widget-ink);
+}
+
+.widget-themed .todo-completed-heading,
+.widget-themed .todo-input-row,
+.widget-themed .clip-input-row,
+.widget-themed .todo-undo-row,
+.widget-themed .clip-undo-row {
+  color: var(--widget-sub);
+  background: var(--widget-soft);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .todo-completed-heading {
+  color: var(--widget-sub);
+}
+
+.widget-themed .todo-input-symbol,
+.widget-themed .clip-input-symbol {
+  color: var(--widget-ink);
+}
+
+.widget-themed .todo-text-strike {
+  background: var(--widget-ink);
+}
+
+.widget-themed .desk-tabs {
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .desk-tab {
+  color: var(--widget-ink);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .desk-tab--active {
+  color: var(--widget-paper);
+  background: var(--widget-ink);
+}
+
+.widget-themed .opacity-bar {
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .opacity-bar input[type='range'] {
+  accent-color: var(--widget-ink);
+}
+
+.widget-themed .resize-handle {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--widget-ink) 0 1.5px,
+    transparent 1.5px 5px
+  );
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .overflow-tooltip {
+  color: var(--widget-paper);
+  background: var(--widget-ink);
+  border-color: var(--widget-ink);
+  box-shadow: 5px 5px 0 var(--widget-accent);
+}
+
+.widget-themed .window-context-menu {
+  color: var(--widget-ink);
+  background: var(--widget-paper);
+  border-color: var(--widget-ink);
+  box-shadow: 5px 5px 0 var(--widget-shadow);
+}
+
+.widget-themed .window-context-menu input[type='range'] {
+  accent-color: var(--widget-ink);
+}

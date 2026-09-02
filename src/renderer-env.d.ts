@@ -15,6 +15,13 @@ interface PinWidget {
   width: number;
   height: number;
   activeTab: 'note' | 'todo' | 'clip';
+  paperColor: string;
+  inkColor: string;
+  titleColor: string | null;
+  accentColor: string;
+  spineColor: string | null;
+  shadowColor: string;
+  followsDefault: boolean;
 }
 
 interface PinTodo {
@@ -55,6 +62,19 @@ interface PinSettings {
   snap: boolean;
 }
 
+interface PinColorContext {
+  scope: 'default';
+  colors: {
+    paper: string;
+    ink: string;
+    title: string | null;
+    accent: string;
+    spine: string | null;
+    shadow: string;
+  };
+  activePresetId: string | null;
+}
+
 type PinSettingsUpdate = Partial<Pick<
   PinSettings,
   'theme' | 'autoTheme' | 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar' | 'defaultOpacity' | 'pinAll' | 'autostart' | 'snap'
@@ -66,7 +86,12 @@ interface Window {
     getSettings: () => Promise<PinSettings>;
     updateSettings: (patch: PinSettingsUpdate) => Promise<PinSettings | null>;
     resetSettings: () => Promise<PinSettings | null>;
+    openDefaultColors: () => Promise<boolean>;
+    getColorContext: () => Promise<PinColorContext | null>;
+    applyColorPreset: (presetId: string) => Promise<PinSettings | null>;
+    hideColors: () => Promise<boolean>;
     onSettingsChanged: (listener: (settings: PinSettings) => void) => () => void;
+    onWidgetChanged: (listener: (widget: PinWidget) => void) => () => void;
     getWidget: () => Promise<PinWidget | null>;
     openManager: () => Promise<boolean>;
     hideManager: () => Promise<boolean>;
