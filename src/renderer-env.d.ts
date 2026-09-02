@@ -10,6 +10,7 @@ interface PinWidget {
   noteText: string;
   opacity: number;
   pin: boolean;
+  hidden: boolean;
   collapsed: boolean;
   width: number;
   height: number;
@@ -46,6 +47,13 @@ interface Window {
     ping: () => Promise<PinPingResult>;
     getSettings: () => Promise<PinSettings>;
     getWidget: () => Promise<PinWidget | null>;
+    openManager: () => Promise<boolean>;
+    hideManager: () => Promise<boolean>;
+    listManagedWidgets: () => Promise<PinWidget[] | null>;
+    setManagedWidgetHidden: (id: string, hidden: boolean) => Promise<PinWidget | null>;
+    setManagedWidgetPin: (id: string, pin: boolean) => Promise<PinWidget | null>;
+    setAllManagedWidgetsHidden: (hidden: boolean) => Promise<PinWidget[] | null>;
+    createManagedWidget: (type: PinWidget['type']) => Promise<PinWidget | null>;
     setActiveTab: (activeTab: PinWidget['activeTab']) => Promise<PinWidget | null>;
     listTodos: () => Promise<PinTodo[] | null>;
     createTodo: (text: string) => Promise<PinTodo | null>;

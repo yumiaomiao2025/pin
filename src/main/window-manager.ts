@@ -28,13 +28,23 @@ const DEFAULT_BOUNDS: Record<WidgetType, { width: number; height: number }> = {
 };
 
 type WidgetWindow = BrowserWindow & { __pinWidgetId?: string };
+type ManagerWindow = BrowserWindow & { __pinRole?: 'manager' };
 
 export interface WindowManager {
   openVisibleWidgets(): void;
+  showAllWidgets(): void;
+  hideAllWidgets(): void;
   openWidget(widgetId: string): BrowserWindow | undefined;
+  openManager(): BrowserWindow;
+  hideManager(event: IpcMainInvokeEvent): boolean;
   createWidget(type: WidgetType): Widget;
+  createWidgetForEvent(event: IpcMainInvokeEvent, type: WidgetType): Widget | undefined;
   getSettings(): Settings;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
+  getWidgetsForEvent(event: IpcMainInvokeEvent): Widget[] | undefined;
+  setWidgetHidden(event: IpcMainInvokeEvent, widgetId: string, hidden: boolean): Widget | undefined;
+  setWidgetPin(event: IpcMainInvokeEvent, widgetId: string, pin: boolean): Widget | undefined;
+  setAllWidgetsHidden(event: IpcMainInvokeEvent, hidden: boolean): Widget[] | undefined;
   setActiveTab(event: IpcMainInvokeEvent, activeTab: DeskTab): Widget | undefined;
   getTodosForEvent(event: IpcMainInvokeEvent): Todo[] | undefined;
   createTodo(event: IpcMainInvokeEvent, text: string): Todo | undefined;
@@ -112,8 +122,13 @@ function isWidgetWindow(window: BrowserWindow): window is WidgetWindow {
   return Boolean((window as WidgetWindow).__pinWidgetId);
 }
 
+function isManagerWindow(window: BrowserWindow): window is ManagerWindow {
+  return (window as ManagerWindow).__pinRole === 'manager';
+}
+
 export function createWindowManager(service: AppDatabaseService): WindowManager {
   const windows = new Map<string, WidgetWindow>();
+  let managerWindow: ManagerWindow | undefined;
   const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let contentTrash:
     | { kind: 'todo'; widgetId: string; item: Todo; timer: ReturnType<typeof setTimeout> }
@@ -127,6 +142,11 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return undefined;
     }
     return senderWindow.__pinWidgetId;
+  };
+
+  const isManagerEvent = (event: IpcMainInvokeEvent) => {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    return Boolean(senderWindow && isManagerWindow(senderWindow));
   };
 
   const todoForEvent = (event: IpcMainInvokeEvent, todoId: string) => {
@@ -181,6 +201,20 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
   const loadWidget = (window: WidgetWindow, widgetId: string) => {
     const query = { role: 'widget', id: widgetId };
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      void window.loadURL(
+        `${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`,
+      );
+    } else {
+      void window.loadFile(
+        path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+        { query },
+      );
+    }
+  };
+
+  const loadManager = (window: ManagerWindow) => {
+    const query = { role: 'manager', id: 'manager' };
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       void window.loadURL(
         `${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`,
@@ -274,6 +308,45 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     return window;
   };
 
+  const openManager = () => {
+    if (managerWindow && !managerWindow.isDestroyed()) {
+      managerWindow.show();
+      managerWindow.focus();
+      return managerWindow;
+    }
+
+    managerWindow = new BrowserWindow({
+      width: 320,
+      height: 480,
+      minWidth: 240,
+      minHeight: 160,
+      frame: false,
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    }) as ManagerWindow;
+    managerWindow.__pinRole = 'manager';
+    managerWindow.on('close', (event) => {
+      if (!quitting) {
+        event.preventDefault();
+        managerWindow?.hide();
+      }
+    });
+    managerWindow.once('closed', () => {
+      managerWindow = undefined;
+    });
+    managerWindow.once('ready-to-show', () => {
+      if (!quitting && managerWindow && !managerWindow.isDestroyed()) {
+        managerWindow.show();
+      }
+    });
+    loadManager(managerWindow);
+    return managerWindow;
+  };
+
   const showWidgetForEvent = (event: IpcMainInvokeEvent) => {
     const widgetId = widgetIdForEvent(event);
     if (!widgetId) {
@@ -289,7 +362,34 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       });
     },
 
+    showAllWidgets: () => {
+      service.widgets.list().forEach((widget) => {
+        service.widgets.update(widget.id, { hidden: false });
+        openWidget(widget.id);
+      });
+    },
+
+    hideAllWidgets: () => {
+      service.widgets.list().forEach((widget) => {
+        const targetWindow = windows.get(widget.id);
+        if (targetWindow && !targetWindow.isDestroyed()) {
+          targetWindow.hide();
+        }
+        service.widgets.update(widget.id, { hidden: true });
+      });
+    },
+
     openWidget,
+
+    openManager,
+
+    hideManager: (event) => {
+      if (!isManagerEvent(event) || !managerWindow || managerWindow.isDestroyed()) {
+        return false;
+      }
+      managerWindow.hide();
+      return true;
+    },
 
     createWidget: (type) => {
       const defaults = DEFAULT_BOUNDS[type];
@@ -306,11 +406,82 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return widget;
     },
 
+    createWidgetForEvent: (event, type) => {
+      if (!isManagerEvent(event)) {
+        return undefined;
+      }
+      const widget = service.widgets.create({
+        type,
+        width: DEFAULT_BOUNDS[type].width,
+        height: DEFAULT_BOUNDS[type].height,
+        x: screen.getPrimaryDisplay().workArea.x + 32,
+        y: screen.getPrimaryDisplay().workArea.y + 32,
+        hidden: false,
+      });
+      openWidget(widget.id);
+      return widget;
+    },
+
     getSettings: () => service.settings.ensure(),
 
     getWidgetForEvent: (event) => {
       const widgetId = widgetIdForEvent(event);
       return widgetId ? service.widgets.getById(widgetId) : undefined;
+    },
+
+    getWidgetsForEvent: (event) => (isManagerEvent(event) ? service.widgets.list() : undefined),
+
+    setWidgetHidden: (event, widgetId, hidden) => {
+      if (!isManagerEvent(event)) {
+        return undefined;
+      }
+      const widget = service.widgets.getById(widgetId);
+      if (!widget) {
+        return undefined;
+      }
+      if (hidden) {
+        const targetWindow = windows.get(widgetId);
+        if (targetWindow && !targetWindow.isDestroyed()) {
+          targetWindow.hide();
+        }
+        return service.widgets.update(widgetId, { hidden: true });
+      }
+      service.widgets.update(widgetId, { hidden: false });
+      openWidget(widgetId);
+      return service.widgets.getById(widgetId);
+    },
+
+    setWidgetPin: (event, widgetId, pin) => {
+      if (!isManagerEvent(event)) {
+        return undefined;
+      }
+      const widget = service.widgets.getById(widgetId);
+      if (!widget) {
+        return undefined;
+      }
+      const targetWindow = windows.get(widgetId);
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        targetWindow.setAlwaysOnTop(pin);
+      }
+      return service.widgets.update(widgetId, { pin });
+    },
+
+    setAllWidgetsHidden: (event, hidden) => {
+      if (!isManagerEvent(event)) {
+        return undefined;
+      }
+      service.widgets.list().forEach((widget) => {
+        if (hidden) {
+          const targetWindow = windows.get(widget.id);
+          if (targetWindow && !targetWindow.isDestroyed()) {
+            targetWindow.hide();
+          }
+          service.widgets.update(widget.id, { hidden: true });
+        } else {
+          openWidget(widget.id);
+        }
+      });
+      return service.widgets.list();
     },
 
     setActiveTab: (event, activeTab) => {
@@ -565,6 +736,9 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         }
       });
       persistTimers.clear();
+      if (managerWindow && !managerWindow.isDestroyed()) {
+        managerWindow.destroy();
+      }
     },
   };
 }

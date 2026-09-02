@@ -68,6 +68,26 @@ test('creates, updates, and deletes widgets with cascading content', () => {
   assert.equal(repositories.clipItems.getById(clip.id), undefined);
 });
 
+test('persists widget visibility and pin state in z-index order', () => {
+  const first = repositories.widgets.create({
+    id: 'manager-first',
+    type: 'note',
+    zIndex: 2,
+    hidden: true,
+    pin: true,
+  });
+  const second = repositories.widgets.create({ id: 'manager-second', type: 'todo', zIndex: 1 });
+
+  assert.equal(repositories.widgets.getById(first.id)?.hidden, true);
+  assert.equal(repositories.widgets.getById(first.id)?.pin, true);
+  assert.deepEqual(
+    repositories.widgets.list().map((widget) => widget.id),
+    [second.id, first.id],
+  );
+  assert.equal(repositories.widgets.update(first.id, { hidden: false, pin: false })?.hidden, false);
+  assert.equal(repositories.widgets.getById(first.id)?.pin, false);
+});
+
 test('persists the active tab for each desk widget', () => {
   const firstDesk = repositories.widgets.create({ id: 'desk-tabs-first', type: 'desk' });
   const secondDesk = repositories.widgets.create({ id: 'desk-tabs-second', type: 'desk' });

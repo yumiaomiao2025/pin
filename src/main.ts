@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
@@ -10,6 +10,13 @@ import {
   registerDisplayRecovery,
   type WindowManager,
 } from './main/window-manager';
+
+const WIDGET_OPTIONS_LABELS: Record<WidgetType, string> = {
+  note: '新便签',
+  todo: '新待办清单',
+  clip: '新剪贴板',
+  desk: '新三合一',
+};
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -24,6 +31,49 @@ if (!gotSingleInstanceLock) {
 
 let windowManager: WindowManager | undefined;
 let onboardingWindow: BrowserWindow | undefined;
+let tray: Tray | undefined;
+
+const createTray = () => {
+  if (tray) {
+    return;
+  }
+  const bitmap = Buffer.alloc(16 * 16 * 4);
+  for (let index = 0; index < bitmap.length; index += 4) {
+    bitmap[index] = 17;
+    bitmap[index + 1] = 17;
+    bitmap[index + 2] = 17;
+    bitmap[index + 3] = 255;
+  }
+  tray = new Tray(nativeImage.createFromBitmap(bitmap, { width: 16, height: 16, scaleFactor: 1 }));
+  tray.setToolTip('Pin');
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: '管理面板…',
+        click: () => windowManager?.openManager(),
+      },
+      {
+        label: '全部显示',
+        click: () => windowManager?.showAllWidgets(),
+      },
+      {
+        label: '全部隐藏',
+        click: () => windowManager?.hideAllWidgets(),
+      },
+      { type: 'separator' },
+      {
+        label: '新建',
+        submenu: WIDGET_TYPES.map((type) => ({
+          label: WIDGET_OPTIONS_LABELS[type],
+          click: () => windowManager?.createWidget(type),
+        })),
+      },
+      { type: 'separator' },
+      { label: '退出', click: () => app.quit() },
+    ]),
+  );
+  tray.on('double-click', () => windowManager?.openManager());
+};
 
 const loadOnboarding = (window: BrowserWindow) => {
   const query = { role: 'onboarding', id: 'onboarding' };
@@ -77,6 +127,50 @@ ipcMain.handle('app:ping', () => ({
 }));
 
 ipcMain.handle('widget:get', (event) => getManager().getWidgetForEvent(event) ?? null);
+ipcMain.handle('manager:open', () => {
+  getManager().openManager();
+  return true;
+});
+ipcMain.handle('manager:hide', (event) => getManager().hideManager(event));
+ipcMain.handle('manager:list-widgets', (event) => getManager().getWidgetsForEvent(event) ?? null);
+ipcMain.handle('manager:set-hidden', (event, input: unknown) => {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    !('id' in input) ||
+    typeof input.id !== 'string' ||
+    !('hidden' in input) ||
+    typeof input.hidden !== 'boolean'
+  ) {
+    throw new TypeError('widget visibility update must contain id and hidden');
+  }
+  return getManager().setWidgetHidden(event, input.id, input.hidden) ?? null;
+});
+ipcMain.handle('manager:set-pin', (event, input: unknown) => {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    !('id' in input) ||
+    typeof input.id !== 'string' ||
+    !('pin' in input) ||
+    typeof input.pin !== 'boolean'
+  ) {
+    throw new TypeError('widget pin update must contain id and pin');
+  }
+  return getManager().setWidgetPin(event, input.id, input.pin) ?? null;
+});
+ipcMain.handle('manager:set-all-hidden', (event, hidden: unknown) => {
+  if (typeof hidden !== 'boolean') {
+    throw new TypeError('all widget visibility must be a boolean');
+  }
+  return getManager().setAllWidgetsHidden(event, hidden) ?? null;
+});
+ipcMain.handle('manager:create-widget', (event, type: unknown) => {
+  if (typeof type !== 'string' || !WIDGET_TYPES.includes(type as WidgetType)) {
+    throw new TypeError('Unknown widget type');
+  }
+  return getManager().createWidgetForEvent(event, type as WidgetType) ?? null;
+});
 ipcMain.handle('desk:set-tab', (event, activeTab: unknown) => {
   if (typeof activeTab !== 'string' || !DESK_TABS.includes(activeTab as DeskTab)) {
     throw new TypeError('Unknown desk tab');
@@ -218,6 +312,7 @@ app.whenReady().then(() => {
   const service = createAppDatabaseService(db);
   windowManager = createWindowManager(service);
   registerDisplayRecovery(windowManager);
+  createTray();
   windowManager.openVisibleWidgets();
   if (service.widgets.list().length === 0) {
     createOnboardingWindow();
@@ -233,7 +328,11 @@ app.on('second-instance', () => {
 });
 
 app.on('before-quit', () => windowManager?.prepareQuit());
-app.on('will-quit', closeAppDatabase);
+app.on('will-quit', () => {
+  tray?.destroy();
+  tray = undefined;
+  closeAppDatabase();
+});
 
 // Quit when all windows are closed, except on macOS.
 app.on('window-all-closed', () => {

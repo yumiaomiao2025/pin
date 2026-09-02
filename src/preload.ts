@@ -4,6 +4,15 @@ contextBridge.exposeInMainWorld('pinApi', {
   ping: () => ipcRenderer.invoke('app:ping'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   getWidget: () => ipcRenderer.invoke('widget:get'),
+  openManager: () => ipcRenderer.invoke('manager:open'),
+  hideManager: () => ipcRenderer.invoke('manager:hide'),
+  listManagedWidgets: () => ipcRenderer.invoke('manager:list-widgets'),
+  setManagedWidgetHidden: (id: string, hidden: boolean) =>
+    ipcRenderer.invoke('manager:set-hidden', { id, hidden }),
+  setManagedWidgetPin: (id: string, pin: boolean) => ipcRenderer.invoke('manager:set-pin', { id, pin }),
+  setAllManagedWidgetsHidden: (hidden: boolean) => ipcRenderer.invoke('manager:set-all-hidden', hidden),
+  createManagedWidget: (type: 'note' | 'todo' | 'clip' | 'desk') =>
+    ipcRenderer.invoke('manager:create-widget', type),
   setActiveTab: (activeTab: 'note' | 'todo' | 'clip') => ipcRenderer.invoke('desk:set-tab', activeTab),
   listTodos: () => ipcRenderer.invoke('todo:list'),
   createTodo: (text: string) => ipcRenderer.invoke('todo:create', text),
