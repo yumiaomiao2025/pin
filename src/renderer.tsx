@@ -456,7 +456,7 @@ function ClipRow({
   );
 }
 
-function ClipWidget({ initialWidget }: { initialWidget: PinWidget }) {
+function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
   const [items, setItems] = useState<PinClipItem[]>([]);
   const [draft, setDraft] = useState('');
@@ -626,8 +626,8 @@ function ClipWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const listClassName = `clip-list clip-list--${scrollbarMode}${listHovered ? ' clip-list--hovered' : ''}`;
 
   return (
-    <main className="app">
-      <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
+    <main className={embedded ? 'desk-panel' : 'app'}>
+      {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
           <div
@@ -681,8 +681,8 @@ function ClipWidget({ initialWidget }: { initialWidget: PinWidget }) {
               value={draft}
             />
           </footer>
-          <OpacityBar onChange={setOpacity} widget={widget} />
-          <ResizeHandle />
+          {!embedded && <OpacityBar onChange={setOpacity} widget={widget} />}
+          {!embedded && <ResizeHandle />}
         </>
       )}
     </main>
@@ -837,7 +837,7 @@ function TodoRow({
   );
 }
 
-function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
+function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
   const [todos, setTodos] = useState<PinTodo[]>([]);
   const [draft, setDraft] = useState('');
@@ -1064,8 +1064,8 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
   };
 
   return (
-    <main className="app">
-      <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
+    <main className={embedded ? 'desk-panel' : 'app'}>
+      {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
           <div
@@ -1142,15 +1142,15 @@ function TodoWidget({ initialWidget }: { initialWidget: PinWidget }) {
               value={draft}
             />
           </footer>
-          <OpacityBar onChange={setOpacity} widget={widget} />
-          <ResizeHandle />
+          {!embedded && <OpacityBar onChange={setOpacity} widget={widget} />}
+          {!embedded && <ResizeHandle />}
         </>
       )}
     </main>
   );
 }
 
-function NoteWidget({ initialWidget }: { initialWidget: PinWidget }) {
+function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
   const [draft, setDraft] = useState(initialWidget.noteText);
   const [loaded, setLoaded] = useState(false);
@@ -1218,8 +1218,8 @@ function NoteWidget({ initialWidget }: { initialWidget: PinWidget }) {
   };
 
   return (
-    <main className="app">
-      <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
+    <main className={embedded ? 'desk-panel' : 'app'}>
+      {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
           <textarea
@@ -1229,6 +1229,98 @@ function NoteWidget({ initialWidget }: { initialWidget: PinWidget }) {
             placeholder="写点什么…"
             value={draft}
           />
+          {!embedded && <OpacityBar onChange={setOpacity} widget={widget} />}
+          {!embedded && <ResizeHandle />}
+        </>
+      )}
+    </main>
+  );
+}
+
+const DESK_TAB_OPTIONS: Array<{ id: PinWidget['activeTab']; label: string }> = [
+  { id: 'note', label: 'NOTE' },
+  { id: 'todo', label: 'TODO' },
+  { id: 'clip', label: 'CLIP' },
+];
+
+function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
+  const [widget, setWidget] = useState(initialWidget);
+
+  useEffect(() => {
+    let active = true;
+    void window.pinApi.getWidget().then((nextWidget) => {
+      if (active && nextWidget) {
+        setWidget(nextWidget);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const hide = () => {
+    void window.pinApi.hideWindow();
+  };
+
+  const togglePin = () => {
+    void window.pinApi.setPin(!widget.pin).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const toggleCollapsed = () => {
+    void window.pinApi.setCollapsed(!widget.collapsed).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const setOpacity = (opacity: number) => {
+    void window.pinApi.setOpacity(opacity).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  const selectTab = (activeTab: PinWidget['activeTab']) => {
+    if (activeTab === widget.activeTab) {
+      return;
+    }
+    void window.pinApi.setActiveTab(activeTab).then((updated) => {
+      if (updated) {
+        setWidget(updated);
+      }
+    });
+  };
+
+  return (
+    <main className="app">
+      <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
+      {!widget.collapsed && (
+        <>
+          <nav aria-label="DESK 标签页" className="desk-tabs">
+            {DESK_TAB_OPTIONS.map((tab) => (
+              <button
+                aria-selected={widget.activeTab === tab.id}
+                className={widget.activeTab === tab.id ? 'desk-tab desk-tab--active' : 'desk-tab'}
+                key={tab.id}
+                onClick={() => selectTab(tab.id)}
+                role="tab"
+                type="button"
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+          <section className="desk-content">
+            {widget.activeTab === 'note' && <NoteWidget embedded initialWidget={widget} />}
+            {widget.activeTab === 'todo' && <TodoWidget embedded initialWidget={widget} />}
+            {widget.activeTab === 'clip' && <ClipWidget embedded initialWidget={widget} />}
+          </section>
           <OpacityBar onChange={setOpacity} widget={widget} />
           <ResizeHandle />
         </>
@@ -1292,6 +1384,9 @@ function WidgetApp() {
   }
   if (widget.type === 'clip') {
     return <ClipWidget initialWidget={widget} />;
+  }
+  if (widget.type === 'desk') {
+    return <DeskWidget initialWidget={widget} />;
   }
   return <UnsupportedWidget widget={widget} />;
 }

@@ -13,6 +13,7 @@ interface PinWidget {
   collapsed: boolean;
   width: number;
   height: number;
+  activeTab: 'note' | 'todo' | 'clip';
 }
 
 interface PinTodo {
@@ -45,6 +46,7 @@ interface Window {
     ping: () => Promise<PinPingResult>;
     getSettings: () => Promise<PinSettings>;
     getWidget: () => Promise<PinWidget | null>;
+    setActiveTab: (activeTab: PinWidget['activeTab']) => Promise<PinWidget | null>;
     listTodos: () => Promise<PinTodo[] | null>;
     createTodo: (text: string) => Promise<PinTodo | null>;
     updateTodo: (id: string, patch: { text?: string; done?: boolean }) => Promise<PinTodo | null>;

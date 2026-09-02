@@ -13,7 +13,7 @@ import type {
   UpdateClipItemInput,
   UpdateTodoInput,
 } from './database/repositories';
-import type { ClipItem, Settings, Todo, Widget, WidgetType } from './database/schema';
+import type { ClipItem, DeskTab, Settings, Todo, Widget, WidgetType } from './database/schema';
 
 const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
@@ -35,6 +35,7 @@ export interface WindowManager {
   createWidget(type: WidgetType): Widget;
   getSettings(): Settings;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
+  setActiveTab(event: IpcMainInvokeEvent, activeTab: DeskTab): Widget | undefined;
   getTodosForEvent(event: IpcMainInvokeEvent): Todo[] | undefined;
   createTodo(event: IpcMainInvokeEvent, text: string): Todo | undefined;
   updateTodo(event: IpcMainInvokeEvent, todoId: string, patch: UpdateTodoInput): Todo | undefined;
@@ -310,6 +311,18 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     getWidgetForEvent: (event) => {
       const widgetId = widgetIdForEvent(event);
       return widgetId ? service.widgets.getById(widgetId) : undefined;
+    },
+
+    setActiveTab: (event, activeTab) => {
+      const widgetId = widgetIdForEvent(event);
+      if (!widgetId) {
+        return undefined;
+      }
+      const widget = service.widgets.getById(widgetId);
+      if (!widget || widget.type !== 'desk') {
+        return undefined;
+      }
+      return service.widgets.update(widgetId, { activeTab });
     },
 
     getTodosForEvent: (event) => {

@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('pinApi', {
   ping: () => ipcRenderer.invoke('app:ping'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   getWidget: () => ipcRenderer.invoke('widget:get'),
+  setActiveTab: (activeTab: 'note' | 'todo' | 'clip') => ipcRenderer.invoke('desk:set-tab', activeTab),
   listTodos: () => ipcRenderer.invoke('todo:list'),
   createTodo: (text: string) => ipcRenderer.invoke('todo:create', text),
   updateTodo: (id: string, patch: { text?: string; done?: boolean }) =>

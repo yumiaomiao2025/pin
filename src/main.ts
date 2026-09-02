@@ -4,7 +4,7 @@ import started from 'electron-squirrel-startup';
 
 import { createAppDatabaseService } from './main/database/app-service';
 import { closeAppDatabase, initializeAppDatabase } from './main/database/app-database';
-import { WIDGET_TYPES, type WidgetType } from './main/database/schema';
+import { DESK_TABS, WIDGET_TYPES, type DeskTab, type WidgetType } from './main/database/schema';
 import {
   createWindowManager,
   registerDisplayRecovery,
@@ -77,6 +77,12 @@ ipcMain.handle('app:ping', () => ({
 }));
 
 ipcMain.handle('widget:get', (event) => getManager().getWidgetForEvent(event) ?? null);
+ipcMain.handle('desk:set-tab', (event, activeTab: unknown) => {
+  if (typeof activeTab !== 'string' || !DESK_TABS.includes(activeTab as DeskTab)) {
+    throw new TypeError('Unknown desk tab');
+  }
+  return getManager().setActiveTab(event, activeTab as DeskTab) ?? null;
+});
 ipcMain.handle('settings:get', () => getManager().getSettings());
 ipcMain.handle('todo:list', (event) => getManager().getTodosForEvent(event) ?? null);
 ipcMain.handle('todo:create', (event, text: unknown) => {

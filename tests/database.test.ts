@@ -68,6 +68,16 @@ test('creates, updates, and deletes widgets with cascading content', () => {
   assert.equal(repositories.clipItems.getById(clip.id), undefined);
 });
 
+test('persists the active tab for each desk widget', () => {
+  const firstDesk = repositories.widgets.create({ id: 'desk-tabs-first', type: 'desk' });
+  const secondDesk = repositories.widgets.create({ id: 'desk-tabs-second', type: 'desk' });
+
+  assert.equal(firstDesk.activeTab, 'note');
+  assert.equal(repositories.widgets.update(firstDesk.id, { activeTab: 'clip' })?.activeTab, 'clip');
+  assert.equal(repositories.widgets.getById(firstDesk.id)?.activeTab, 'clip');
+  assert.equal(repositories.widgets.getById(secondDesk.id)?.activeTab, 'note');
+});
+
 test('restricts todo and clip content to compatible widget types', () => {
   const note = repositories.widgets.create({ id: 'note-widget', type: 'note' });
   const todo = repositories.widgets.create({ id: 'todo-widget-service', type: 'todo' });
