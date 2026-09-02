@@ -52,6 +52,28 @@ test('initializes and updates the singleton settings row', () => {
   assert.equal(repositories.settings.ensure().theme, 'dark');
 });
 
+test('persists the global window and text settings', () => {
+  const updated = repositories.settings.update({
+    pinAll: true,
+    autostart: true,
+    snap: false,
+    opacityBar: false,
+    hoverFull: false,
+    maxLines: 2,
+    scrollbar: 'hidden',
+    defaultOpacity: 72,
+  });
+
+  assert.equal(updated.pinAll, true);
+  assert.equal(updated.autostart, true);
+  assert.equal(updated.snap, false);
+  assert.equal(updated.opacityBar, false);
+  assert.equal(updated.hoverFull, false);
+  assert.equal(updated.maxLines, 2);
+  assert.equal(updated.scrollbar, 'hidden');
+  assert.equal(updated.defaultOpacity, 72);
+});
+
 test('creates, updates, and deletes widgets with cascading content', () => {
   const widget = repositories.widgets.create({ id: 'widget-1', type: 'desk', title: 'Desk' });
   const todo = repositories.todos.create({ id: 'todo-1', widgetId: widget.id, text: 'First' });

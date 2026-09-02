@@ -4,7 +4,17 @@ import started from 'electron-squirrel-startup';
 
 import { createAppDatabaseService } from './main/database/app-service';
 import { closeAppDatabase, initializeAppDatabase } from './main/database/app-database';
-import { DESK_TABS, WIDGET_TYPES, type DeskTab, type WidgetType } from './main/database/schema';
+import {
+  DESK_TABS,
+  SCROLLBAR_MODES,
+  THEMES,
+  WIDGET_TYPES,
+  type DeskTab,
+  type ScrollbarMode,
+  type Theme,
+  type WidgetType,
+} from './main/database/schema';
+import type { UpdateSettingsInput } from './main/database/repositories';
 import {
   createWindowManager,
   registerDisplayRecovery,
@@ -51,6 +61,10 @@ const createTray = () => {
       {
         label: '管理面板…',
         click: () => windowManager?.openManager(),
+      },
+      {
+        label: '设置',
+        click: () => windowManager?.openSettings(),
       },
       {
         label: '全部显示',
@@ -132,6 +146,11 @@ ipcMain.handle('manager:open', () => {
   return true;
 });
 ipcMain.handle('manager:hide', (event) => getManager().hideManager(event));
+ipcMain.handle('settings:open', () => {
+  getManager().openSettings();
+  return true;
+});
+ipcMain.handle('settings:hide', (event) => getManager().hideSettings(event));
 ipcMain.handle('manager:list-widgets', (event) => getManager().getWidgetsForEvent(event) ?? null);
 ipcMain.handle('manager:set-hidden', (event, input: unknown) => {
   if (
@@ -198,6 +217,56 @@ ipcMain.handle('desk:set-tab', (event, activeTab: unknown) => {
   return getManager().setActiveTab(event, activeTab as DeskTab) ?? null;
 });
 ipcMain.handle('settings:get', () => getManager().getSettings());
+ipcMain.handle('settings:update', (event, input: unknown) => {
+  if (!input || typeof input !== 'object') {
+    throw new TypeError('settings update must be an object');
+  }
+  const values = input as Record<string, unknown>;
+  const patch: UpdateSettingsInput = {};
+  if ('theme' in values && values.theme !== undefined) {
+    if (typeof values.theme !== 'string' || !THEMES.includes(values.theme as Theme)) {
+      throw new TypeError('Unknown theme');
+    }
+    patch.theme = values.theme as Theme;
+  }
+  if ('autoTheme' in values && values.autoTheme !== undefined) {
+    if (typeof values.autoTheme !== 'boolean') {
+      throw new TypeError('autoTheme must be a boolean');
+    }
+    patch.autoTheme = values.autoTheme;
+  }
+  if ('scrollbar' in values && values.scrollbar !== undefined) {
+    if (typeof values.scrollbar !== 'string' || !SCROLLBAR_MODES.includes(values.scrollbar as ScrollbarMode)) {
+      throw new TypeError('Unknown scrollbar mode');
+    }
+    patch.scrollbar = values.scrollbar as ScrollbarMode;
+  }
+  if ('maxLines' in values && values.maxLines !== undefined) {
+    if (typeof values.maxLines !== 'number' || !Number.isInteger(values.maxLines) || values.maxLines < 0 || values.maxLines > 3) {
+      throw new TypeError('maxLines must be an integer from 0 to 3');
+    }
+    patch.maxLines = values.maxLines;
+  }
+  if ('defaultOpacity' in values && values.defaultOpacity !== undefined) {
+    if (typeof values.defaultOpacity !== 'number' || !Number.isInteger(values.defaultOpacity) || values.defaultOpacity < 35 || values.defaultOpacity > 100) {
+      throw new TypeError('defaultOpacity must be an integer from 35 to 100');
+    }
+    patch.defaultOpacity = values.defaultOpacity;
+  }
+  (['hoverFull', 'opacityBar', 'pinAll', 'autostart', 'snap'] as const).forEach((key) => {
+    if (key in values && values[key] !== undefined) {
+      if (typeof values[key] !== 'boolean') {
+        throw new TypeError(`${key} must be a boolean`);
+      }
+      patch[key] = values[key];
+    }
+  });
+  if (Object.keys(patch).length === 0) {
+    throw new TypeError('settings update is empty');
+  }
+  return getManager().updateSettings(event, patch) ?? null;
+});
+ipcMain.handle('settings:reset', (event) => getManager().resetSettings(event) ?? null);
 ipcMain.handle('todo:list', (event) => getManager().getTodosForEvent(event) ?? null);
 ipcMain.handle('todo:create', (event, text: unknown) => {
   if (typeof text !== 'string') {

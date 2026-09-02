@@ -1,4 +1,5 @@
 import {
+  app,
   BrowserWindow,
   clipboard,
   screen,
@@ -11,9 +12,10 @@ import type { AppDatabaseService } from './database/app-service';
 import type {
   CreateWidgetInput,
   UpdateClipItemInput,
+  UpdateSettingsInput,
   UpdateTodoInput,
 } from './database/repositories';
-import type { ClipItem, DeskTab, Settings, Todo, Widget, WidgetType } from './database/schema';
+import { DEFAULT_COLORS, type ClipItem, type DeskTab, type Settings, type Todo, type Widget, type WidgetType } from './database/schema';
 
 const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
@@ -28,7 +30,7 @@ const DEFAULT_BOUNDS: Record<WidgetType, { width: number; height: number }> = {
 };
 
 type WidgetWindow = BrowserWindow & { __pinWidgetId?: string };
-type ManagerWindow = BrowserWindow & { __pinRole?: 'manager' };
+type UtilityWindow = BrowserWindow & { __pinRole?: 'manager' | 'settings' };
 
 export interface WindowManager {
   openVisibleWidgets(): void;
@@ -37,12 +39,16 @@ export interface WindowManager {
   openWidget(widgetId: string): BrowserWindow | undefined;
   openManager(): BrowserWindow;
   hideManager(event: IpcMainInvokeEvent): boolean;
+  openSettings(): BrowserWindow;
+  hideSettings(event: IpcMainInvokeEvent): boolean;
   createWidget(type: WidgetType): Widget;
   createWidgetForEvent(event: IpcMainInvokeEvent, type: WidgetType): Widget | undefined;
   renameWidget(event: IpcMainInvokeEvent, widgetId: string, title: string): Widget | undefined;
   deleteWidget(event: IpcMainInvokeEvent, widgetId: string): Widget | undefined;
   restoreWidget(event: IpcMainInvokeEvent): Widget | undefined;
   getSettings(): Settings;
+  updateSettings(event: IpcMainInvokeEvent, patch: UpdateSettingsInput): Settings | undefined;
+  resetSettings(event: IpcMainInvokeEvent): Settings | undefined;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
   getWidgetsForEvent(event: IpcMainInvokeEvent): Widget[] | undefined;
   setWidgetHidden(event: IpcMainInvokeEvent, widgetId: string, hidden: boolean): Widget | undefined;
@@ -125,13 +131,18 @@ function isWidgetWindow(window: BrowserWindow): window is WidgetWindow {
   return Boolean((window as WidgetWindow).__pinWidgetId);
 }
 
-function isManagerWindow(window: BrowserWindow): window is ManagerWindow {
-  return (window as ManagerWindow).__pinRole === 'manager';
+function isManagerWindow(window: BrowserWindow): window is UtilityWindow {
+  return (window as UtilityWindow).__pinRole === 'manager';
+}
+
+function isSettingsWindow(window: BrowserWindow): window is UtilityWindow {
+  return (window as UtilityWindow).__pinRole === 'settings';
 }
 
 export function createWindowManager(service: AppDatabaseService): WindowManager {
   const windows = new Map<string, WidgetWindow>();
-  let managerWindow: ManagerWindow | undefined;
+  let managerWindow: UtilityWindow | undefined;
+  let settingsWindow: UtilityWindow | undefined;
   const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let contentTrash:
     | { kind: 'todo'; widgetId: string; item: Todo; timer: ReturnType<typeof setTimeout> }
@@ -151,6 +162,39 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
   const isManagerEvent = (event: IpcMainInvokeEvent) => {
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
     return Boolean(senderWindow && isManagerWindow(senderWindow));
+  };
+
+  const isSettingsEvent = (event: IpcMainInvokeEvent) => {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    return Boolean(senderWindow && isSettingsWindow(senderWindow));
+  };
+
+  const broadcastSettings = (settings: Settings) => {
+    BrowserWindow.getAllWindows().forEach((window) => {
+      if (!window.isDestroyed()) {
+        window.webContents.send('settings:changed', settings);
+      }
+    });
+  };
+
+  const applyGlobalWindowSettings = (settings: Settings) => {
+    windows.forEach((window, widgetId) => {
+      if (window.isDestroyed()) {
+        return;
+      }
+      const widget = service.widgets.getById(widgetId);
+      window.setAlwaysOnTop(Boolean(widget?.pin || settings.pinAll));
+    });
+  };
+
+  const updateGlobalSettings = (patch: UpdateSettingsInput) => {
+    const updated = service.settings.update(patch);
+    if (patch.autostart !== undefined && process.platform !== 'linux') {
+      app.setLoginItemSettings({ openAtLogin: updated.autostart });
+    }
+    applyGlobalWindowSettings(updated);
+    broadcastSettings(updated);
+    return updated;
   };
 
   const todoForEvent = (event: IpcMainInvokeEvent, todoId: string) => {
@@ -217,8 +261,22 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     }
   };
 
-  const loadManager = (window: ManagerWindow) => {
+  const loadManager = (window: UtilityWindow) => {
     const query = { role: 'manager', id: 'manager' };
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      void window.loadURL(
+        `${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`,
+      );
+    } else {
+      void window.loadFile(
+        path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+        { query },
+      );
+    }
+  };
+
+  const loadSettings = (window: UtilityWindow) => {
+    const query = { role: 'settings', id: 'settings' };
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       void window.loadURL(
         `${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`,
@@ -268,7 +326,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     window.__pinWidgetId = widgetId;
     windows.set(widgetId, window);
     window.setOpacity(widget.opacity / 100);
-    window.setAlwaysOnTop(widget.pin);
+    window.setAlwaysOnTop(Boolean(widget.pin || service.settings.ensure().pinAll));
 
     let snapping = false;
     window.on('move', () => {
@@ -276,7 +334,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         return;
       }
       const currentBounds = window.getBounds();
-      const nextBounds = snapBounds(currentBounds);
+      const nextBounds = service.settings.ensure().snap ? snapBounds(currentBounds) : currentBounds;
       if (nextBounds.x !== currentBounds.x || nextBounds.y !== currentBounds.y) {
         snapping = true;
         window.setPosition(nextBounds.x, nextBounds.y);
@@ -331,7 +389,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         contextIsolation: true,
         nodeIntegration: false,
       },
-    }) as ManagerWindow;
+    }) as UtilityWindow;
     managerWindow.__pinRole = 'manager';
     managerWindow.on('close', (event) => {
       if (!quitting) {
@@ -349,6 +407,45 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     });
     loadManager(managerWindow);
     return managerWindow;
+  };
+
+  const openSettings = () => {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.show();
+      settingsWindow.focus();
+      return settingsWindow;
+    }
+
+    settingsWindow = new BrowserWindow({
+      width: 320,
+      height: 480,
+      minWidth: 240,
+      minHeight: 160,
+      frame: false,
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    }) as UtilityWindow;
+    settingsWindow.__pinRole = 'settings';
+    settingsWindow.on('close', (event) => {
+      if (!quitting) {
+        event.preventDefault();
+        settingsWindow?.hide();
+      }
+    });
+    settingsWindow.once('closed', () => {
+      settingsWindow = undefined;
+    });
+    settingsWindow.once('ready-to-show', () => {
+      if (!quitting && settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.show();
+      }
+    });
+    loadSettings(settingsWindow);
+    return settingsWindow;
   };
 
   const showWidgetForEvent = (event: IpcMainInvokeEvent) => {
@@ -395,12 +492,23 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return true;
     },
 
+    openSettings,
+
+    hideSettings: (event) => {
+      if (!isSettingsEvent(event) || !settingsWindow || settingsWindow.isDestroyed()) {
+        return false;
+      }
+      settingsWindow.hide();
+      return true;
+    },
+
     createWidget: (type) => {
       const defaults = DEFAULT_BOUNDS[type];
       const input: CreateWidgetInput = {
         type,
         width: defaults.width,
         height: defaults.height,
+        opacity: service.settings.ensure().defaultOpacity,
         x: screen.getPrimaryDisplay().workArea.x + 32,
         y: screen.getPrimaryDisplay().workArea.y + 32,
         hidden: false,
@@ -418,6 +526,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         type,
         width: DEFAULT_BOUNDS[type].width,
         height: DEFAULT_BOUNDS[type].height,
+        opacity: service.settings.ensure().defaultOpacity,
         x: screen.getPrimaryDisplay().workArea.x + 32,
         y: screen.getPrimaryDisplay().workArea.y + 32,
         hidden: false,
@@ -495,6 +604,37 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
     getSettings: () => service.settings.ensure(),
 
+    updateSettings: (event, patch) => {
+      if (!isSettingsEvent(event)) {
+        return undefined;
+      }
+      return updateGlobalSettings(patch);
+    },
+
+    resetSettings: (event) => {
+      if (!isSettingsEvent(event)) {
+        return undefined;
+      }
+      return updateGlobalSettings({
+        theme: 'light',
+        autoTheme: false,
+        defaultPaperColor: DEFAULT_COLORS.paper,
+        defaultInkColor: DEFAULT_COLORS.ink,
+        defaultTitleColor: DEFAULT_COLORS.title,
+        defaultAccentColor: DEFAULT_COLORS.accent,
+        defaultSpineColor: DEFAULT_COLORS.spine,
+        defaultShadowColor: DEFAULT_COLORS.shadow,
+        scrollbar: 'overlay',
+        maxLines: 0,
+        hoverFull: true,
+        opacityBar: true,
+        defaultOpacity: 100,
+        pinAll: false,
+        autostart: false,
+        snap: true,
+      });
+    },
+
     getWidgetForEvent: (event) => {
       const widgetId = widgetIdForEvent(event);
       return widgetId ? service.widgets.getById(widgetId) : undefined;
@@ -532,7 +672,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       }
       const targetWindow = windows.get(widgetId);
       if (targetWindow && !targetWindow.isDestroyed()) {
-        targetWindow.setAlwaysOnTop(pin);
+        targetWindow.setAlwaysOnTop(pin || service.settings.ensure().pinAll);
       }
       return service.widgets.update(widgetId, { pin });
     },
@@ -766,7 +906,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (!target?.window || target.window.isDestroyed()) {
         return undefined;
       }
-      target.window.setAlwaysOnTop(pin);
+      target.window.setAlwaysOnTop(pin || service.settings.ensure().pinAll);
       return service.widgets.update(target.widgetId, { pin });
     },
 
@@ -809,6 +949,9 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       persistTimers.clear();
       if (managerWindow && !managerWindow.isDestroyed()) {
         managerWindow.destroy();
+      }
+      if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.destroy();
       }
     },
   };

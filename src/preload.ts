@@ -3,9 +3,18 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('pinApi', {
   ping: () => ipcRenderer.invoke('app:ping'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
+  updateSettings: (patch: Record<string, unknown>) => ipcRenderer.invoke('settings:update', patch),
+  resetSettings: () => ipcRenderer.invoke('settings:reset'),
+  onSettingsChanged: (listener: (settings: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, settings: unknown) => listener(settings);
+    ipcRenderer.on('settings:changed', handler);
+    return () => ipcRenderer.removeListener('settings:changed', handler);
+  },
   getWidget: () => ipcRenderer.invoke('widget:get'),
   openManager: () => ipcRenderer.invoke('manager:open'),
   hideManager: () => ipcRenderer.invoke('manager:hide'),
+  openSettings: () => ipcRenderer.invoke('settings:open'),
+  hideSettings: () => ipcRenderer.invoke('settings:hide'),
   listManagedWidgets: () => ipcRenderer.invoke('manager:list-widgets'),
   setManagedWidgetHidden: (id: string, hidden: boolean) =>
     ipcRenderer.invoke('manager:set-hidden', { id, hidden }),

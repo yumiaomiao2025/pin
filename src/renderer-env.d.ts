@@ -37,18 +37,41 @@ interface PinClipItem {
 }
 
 interface PinSettings {
+  theme: 'light' | 'dark';
+  autoTheme: boolean;
+  defaultPaperColor: string;
+  defaultInkColor: string;
+  defaultTitleColor: string | null;
+  defaultAccentColor: string;
+  defaultSpineColor: string | null;
+  defaultShadowColor: string;
   maxLines: number;
   hoverFull: boolean;
   scrollbar: 'always' | 'overlay' | 'hidden';
+  opacityBar: boolean;
+  defaultOpacity: number;
+  pinAll: boolean;
+  autostart: boolean;
+  snap: boolean;
 }
+
+type PinSettingsUpdate = Partial<Pick<
+  PinSettings,
+  'theme' | 'autoTheme' | 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar' | 'defaultOpacity' | 'pinAll' | 'autostart' | 'snap'
+>>;
 
 interface Window {
   pinApi: {
     ping: () => Promise<PinPingResult>;
     getSettings: () => Promise<PinSettings>;
+    updateSettings: (patch: PinSettingsUpdate) => Promise<PinSettings | null>;
+    resetSettings: () => Promise<PinSettings | null>;
+    onSettingsChanged: (listener: (settings: PinSettings) => void) => () => void;
     getWidget: () => Promise<PinWidget | null>;
     openManager: () => Promise<boolean>;
     hideManager: () => Promise<boolean>;
+    openSettings: () => Promise<boolean>;
+    hideSettings: () => Promise<boolean>;
     listManagedWidgets: () => Promise<PinWidget[] | null>;
     setManagedWidgetHidden: (id: string, hidden: boolean) => Promise<PinWidget | null>;
     setManagedWidgetPin: (id: string, pin: boolean) => Promise<PinWidget | null>;

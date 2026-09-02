@@ -33,11 +33,38 @@ function widgetDisplayName(widget: PinWidget) {
   return widget.title.trim() || widget.type.toUpperCase();
 }
 
-const DEFAULT_TODO_SETTINGS: PinSettings = {
+type WindowDisplaySettings = Pick<PinSettings, 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar'>;
+
+const DEFAULT_TODO_SETTINGS: WindowDisplaySettings = {
   maxLines: 0,
   hoverFull: true,
   scrollbar: 'overlay',
+  opacityBar: true,
 };
+
+function useWindowDisplaySettings() {
+  const [settings, setSettings] = useState<WindowDisplaySettings>(DEFAULT_TODO_SETTINGS);
+
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = window.pinApi.onSettingsChanged((nextSettings) => {
+      if (active) {
+        setSettings(nextSettings);
+      }
+    });
+    void window.pinApi.getSettings().then((nextSettings) => {
+      if (active) {
+        setSettings(nextSettings);
+      }
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  return settings;
+}
 
 function compareTodos(left: PinTodo, right: PinTodo) {
   return left.sortOrder - right.sortOrder || left.createdAt - right.createdAt || left.id.localeCompare(right.id);
@@ -86,10 +113,19 @@ function Onboarding() {
   );
 }
 
-function ManagerTitleBar({ count, onHide }: { count: number; onHide: () => void }) {
+function ManagerTitleBar({ count, onHide, onSettings }: { count: number; onHide: () => void; onSettings: () => void }) {
   return (
     <header className="manager-titlebar">
       <span className="type-label">WIDGETS · {count}</span>
+      <button
+        aria-label="打开设置"
+        className="title-action title-action--icon"
+        onClick={onSettings}
+        title="设置"
+        type="button"
+      >
+        ⚙
+      </button>
       <button
         aria-label="关闭管理面板"
         className="title-action title-action--icon"
@@ -197,6 +233,7 @@ function ManagerWidgetRow({
 
 function Manager() {
   const [widgets, setWidgets] = useState<PinWidget[]>([]);
+  const [theme, setTheme] = useState<PinSettings['theme']>('light');
   const [filter, setFilter] = useState<WidgetType | 'all'>('all');
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -214,6 +251,24 @@ function Manager() {
 
   useEffect(() => {
     void reload();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = window.pinApi.onSettingsChanged((settings) => {
+      if (active) {
+        setTheme(settings.theme);
+      }
+    });
+    void window.pinApi.getSettings().then((settings) => {
+      if (active) {
+        setTheme(settings.theme);
+      }
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -339,8 +394,12 @@ function Manager() {
   const filteredWidgets = filter === 'all' ? widgets : widgets.filter((widget) => widget.type === filter);
 
   return (
-    <main className="app manager-app">
-      <ManagerTitleBar count={widgets.length} onHide={() => void window.pinApi.hideManager()} />
+    <main className={theme === 'dark' ? 'app manager-app management-dark' : 'app manager-app'}>
+      <ManagerTitleBar
+        count={widgets.length}
+        onHide={() => void window.pinApi.hideManager()}
+        onSettings={() => void window.pinApi.openSettings()}
+      />
       <nav aria-label="窗口类型筛选" className="manager-filters">
         {MANAGER_FILTER_OPTIONS.map((option) => {
           const count = option.type === 'all' ? widgets.length : widgets.filter((widget) => widget.type === option.type).length;
@@ -435,6 +494,227 @@ function Manager() {
   );
 }
 
+const DEFAULT_SETTINGS: PinSettings = {
+  theme: 'light',
+  autoTheme: false,
+  defaultPaperColor: '#FFFFFF',
+  defaultInkColor: '#111111',
+  defaultTitleColor: '#FFE566',
+  defaultAccentColor: '#FFE566',
+  defaultSpineColor: null,
+  defaultShadowColor: '#111111',
+  maxLines: 0,
+  hoverFull: true,
+  scrollbar: 'overlay',
+  opacityBar: true,
+  defaultOpacity: 100,
+  pinAll: false,
+  autostart: false,
+  snap: true,
+};
+
+function SettingsTitleBar({ onHide }: { onHide: () => void }) {
+  return (
+    <header className="settings-titlebar">
+      <span className="type-label">SETTINGS</span>
+      <button
+        aria-label="关闭设置"
+        className="title-action title-action--icon"
+        onClick={onHide}
+        title="关闭设置"
+        type="button"
+      >
+        ×
+      </button>
+    </header>
+  );
+}
+
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="settings-section">
+      <h2>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function SettingsToggle({
+  checked,
+  disabled,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="settings-row">
+      <span>{label}</span>
+      <button
+        aria-pressed={checked}
+        className={checked ? 'settings-toggle settings-toggle--on' : 'settings-toggle'}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        type="button"
+      >
+        <span aria-hidden="true" className="settings-toggle-knob" />
+      </button>
+    </div>
+  );
+}
+
+function SettingsSegmented<T extends string>({
+  disabled,
+  options,
+  value,
+  onChange,
+}: {
+  disabled: boolean;
+  options: Array<{ id: T; label: string }>;
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="settings-segmented">
+      {options.map((option) => (
+        <button
+          aria-pressed={value === option.id}
+          className={value === option.id ? 'settings-segment settings-segment--active' : 'settings-segment'}
+          disabled={disabled}
+          key={option.id}
+          onClick={() => onChange(option.id)}
+          type="button"
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SettingsPanel() {
+  const [settings, setSettings] = useState<PinSettings>(DEFAULT_SETTINGS);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = window.pinApi.onSettingsChanged((nextSettings) => {
+      if (active) {
+        setSettings(nextSettings);
+      }
+    });
+    void window.pinApi.getSettings().then((nextSettings) => {
+      if (active) {
+        setSettings(nextSettings);
+      }
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const updateSettings = async (patch: PinSettingsUpdate) => {
+    setBusy(true);
+    try {
+      const updated = await window.pinApi.updateSettings(patch);
+      if (updated) {
+        setSettings(updated);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetSettings = async () => {
+    setBusy(true);
+    try {
+      const updated = await window.pinApi.resetSettings();
+      if (updated) {
+        setSettings(updated);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const updateDefaultOpacity = (defaultOpacity: number) => {
+    setSettings((current) => ({ ...current, defaultOpacity }));
+    void window.pinApi.updateSettings({ defaultOpacity }).then((updated) => {
+      if (updated) {
+        setSettings(updated);
+      }
+    });
+  };
+
+  return (
+    <main className={settings.theme === 'dark' ? 'app settings-app management-dark' : 'app settings-app'}>
+      <SettingsTitleBar onHide={() => void window.pinApi.hideSettings()} />
+      <div className="settings-scroll">
+        <SettingsSection title="WINDOW">
+          <SettingsToggle checked={settings.pinAll} disabled={busy} label="全部始终置顶" onChange={(pinAll) => void updateSettings({ pinAll })} />
+          <SettingsToggle checked={settings.autostart} disabled={busy} label="开机自启" onChange={(autostart) => void updateSettings({ autostart })} />
+          <SettingsToggle checked={settings.snap} disabled={busy} label="吸附屏幕边缘" onChange={(snap) => void updateSettings({ snap })} />
+          <SettingsToggle checked={settings.hoverFull} disabled={busy} label="溢出悬停显示全文" onChange={(hoverFull) => void updateSettings({ hoverFull })} />
+        </SettingsSection>
+        <SettingsSection title="THEME">
+          <SettingsSegmented
+            disabled={busy}
+            onChange={(theme) => void updateSettings({ theme })}
+            options={[{ id: 'light', label: 'LIGHT' }, { id: 'dark', label: 'DARK' }]}
+            value={settings.theme}
+          />
+        </SettingsSection>
+        <SettingsSection title="DEFAULTS">
+          <div className="settings-row settings-range-row">
+            <label htmlFor="default-opacity">新窗口透明度</label>
+            <input
+              aria-label="新窗口透明度"
+              disabled={busy}
+              id="default-opacity"
+              max="100"
+              min="35"
+              onChange={(event) => updateDefaultOpacity(Number(event.target.value))}
+              type="range"
+              value={settings.defaultOpacity}
+            />
+            <output>{settings.defaultOpacity}%</output>
+          </div>
+          <SettingsToggle checked={settings.opacityBar} disabled={busy} label="窗口内显示透明度条" onChange={(opacityBar) => void updateSettings({ opacityBar })} />
+          <p className="settings-hint">关掉透明度条后，它会出现在窗口右键菜单里</p>
+        </SettingsSection>
+        <SettingsSection title="TEXT">
+          <div className="settings-row settings-choice-row">
+            <span>条目最多显示</span>
+            <SettingsSegmented
+              disabled={busy}
+              onChange={(maxLines) => void updateSettings({ maxLines: Number(maxLines) })}
+              options={[{ id: '1', label: '1 行' }, { id: '2', label: '2 行' }, { id: '3', label: '3 行' }, { id: '0', label: '不限' }]}
+              value={String(settings.maxLines) as '0' | '1' | '2' | '3'}
+            />
+          </div>
+          <div className="settings-row settings-choice-row">
+            <span>滚动条</span>
+            <SettingsSegmented
+              disabled={busy}
+              onChange={(scrollbar) => void updateSettings({ scrollbar })}
+              options={[{ id: 'always', label: '常驻' }, { id: 'overlay', label: '悬浮' }, { id: 'hidden', label: '隐藏' }]}
+              value={settings.scrollbar}
+            />
+          </div>
+        </SettingsSection>
+      </div>
+      <footer className="settings-footer">
+        <span>v0.3</span>
+        <button disabled={busy} onClick={() => void resetSettings()} type="button">RESET</button>
+      </footer>
+    </main>
+  );
+}
+
 function TitleBar({ widget, onHide, onPin, onCollapse }: {
   widget: PinWidget;
   onHide: () => void;
@@ -496,6 +776,79 @@ function OpacityBar({ widget, onChange }: { widget: PinWidget; onChange: (value:
       />
       <output>{widget.opacity}%</output>
     </footer>
+  );
+}
+
+interface ContextMenuState {
+  position: { left: number; top: number } | null;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  handleContextMenu: (event: React.MouseEvent<HTMLElement>) => void;
+}
+
+function useContextMenu(enabled: boolean): ContextMenuState {
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!position) {
+      return undefined;
+    }
+    const close = (event: MouseEvent) => {
+      if (event.button !== 0 || (event.target instanceof Node && menuRef.current?.contains(event.target))) {
+        return;
+      }
+      setPosition(null);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [position]);
+
+  const handleContextMenu = (event: React.MouseEvent<HTMLElement>) => {
+    if (!enabled) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    setPosition({
+      left: Math.min(event.clientX, Math.max(8, window.innerWidth - 204)),
+      top: Math.min(event.clientY, Math.max(8, window.innerHeight - 94)),
+    });
+  };
+
+  return { position, menuRef, handleContextMenu };
+}
+
+function OpacityContextMenu({
+  menu,
+  onChange,
+  widget,
+}: {
+  menu: ContextMenuState;
+  onChange: (value: number) => void;
+  widget: PinWidget;
+}) {
+  if (!menu.position) {
+    return null;
+  }
+  return (
+    <div
+      className="window-context-menu"
+      onContextMenu={(event) => event.stopPropagation()}
+      ref={menu.menuRef}
+      style={menu.position}
+    >
+      <label htmlFor="context-opacity">透明度</label>
+      <input
+        aria-label="窗口透明度"
+        id="context-opacity"
+        max="100"
+        min="35"
+        onChange={(event) => onChange(Number(event.target.value))}
+        type="range"
+        value={widget.opacity}
+      />
+      <output>{widget.opacity}%</output>
+    </div>
   );
 }
 
@@ -820,12 +1173,13 @@ function ClipRow({
 function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
   const [items, setItems] = useState<PinClipItem[]>([]);
+  const contextMenu = useContextMenu(!embedded);
   const [draft, setDraft] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletedClip, setDeletedClip] = useState<PinClipItem | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const [viewSettings, setViewSettings] = useState(DEFAULT_TODO_SETTINGS);
+  const viewSettings = useWindowDisplaySettings();
   const [loaded, setLoaded] = useState(false);
   const [listHovered, setListHovered] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.outerWidth);
@@ -849,13 +1203,12 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
 
   useEffect(() => {
     let active = true;
-    void Promise.all([window.pinApi.listClips(), window.pinApi.getSettings()]).then(
-      ([nextItems, nextSettings]) => {
+    void window.pinApi.listClips().then(
+      (nextItems) => {
         if (!active) {
           return;
         }
         setItems(nextItems ?? []);
-        setViewSettings(nextSettings);
         setLoaded(true);
       },
     );
@@ -987,7 +1340,10 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   const listClassName = `clip-list clip-list--${scrollbarMode}${listHovered ? ' clip-list--hovered' : ''}`;
 
   return (
-    <main className={embedded ? 'desk-panel' : 'app'}>
+    <main
+      className={embedded ? 'desk-panel' : 'app'}
+      onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
+    >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
@@ -1042,10 +1398,11 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
               value={draft}
             />
           </footer>
-          {!embedded && <OpacityBar onChange={setOpacity} widget={widget} />}
+          {!embedded && viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}
           {!embedded && <ResizeHandle />}
         </>
       )}
+      {!embedded && !viewSettings.opacityBar && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} widget={widget} />}
     </main>
   );
 }
@@ -1201,12 +1558,13 @@ function TodoRow({
 function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
   const [todos, setTodos] = useState<PinTodo[]>([]);
+  const contextMenu = useContextMenu(!embedded);
   const [draft, setDraft] = useState('');
   const [deletedTodo, setDeletedTodo] = useState<PinTodo | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(() => new Set());
-  const [viewSettings, setViewSettings] = useState(DEFAULT_TODO_SETTINGS);
+  const viewSettings = useWindowDisplaySettings();
   const [listHovered, setListHovered] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.outerWidth);
   const [loaded, setLoaded] = useState(false);
@@ -1230,13 +1588,12 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
 
   useEffect(() => {
     let active = true;
-    void Promise.all([window.pinApi.listTodos(), window.pinApi.getSettings()]).then(
-      ([nextTodos, nextSettings]) => {
+    void window.pinApi.listTodos().then(
+      (nextTodos) => {
         if (!active) {
           return;
         }
         setTodos(nextTodos ?? []);
-        setViewSettings(nextSettings);
         setLoaded(true);
       },
     );
@@ -1425,7 +1782,10 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   };
 
   return (
-    <main className={embedded ? 'desk-panel' : 'app'}>
+    <main
+      className={embedded ? 'desk-panel' : 'app'}
+      onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
+    >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
@@ -1503,16 +1863,19 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
               value={draft}
             />
           </footer>
-          {!embedded && <OpacityBar onChange={setOpacity} widget={widget} />}
+          {!embedded && viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}
           {!embedded && <ResizeHandle />}
         </>
       )}
+      {!embedded && !viewSettings.opacityBar && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} widget={widget} />}
     </main>
   );
 }
 
 function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
+  const contextMenu = useContextMenu(!embedded);
+  const viewSettings = useWindowDisplaySettings();
   const [draft, setDraft] = useState(initialWidget.noteText);
   const [loaded, setLoaded] = useState(false);
   const draftRef = useRef(draft);
@@ -1579,7 +1942,10 @@ function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   };
 
   return (
-    <main className={embedded ? 'desk-panel' : 'app'}>
+    <main
+      className={embedded ? 'desk-panel' : 'app'}
+      onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
+    >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
@@ -1590,10 +1956,11 @@ function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
             placeholder="写点什么…"
             value={draft}
           />
-          {!embedded && <OpacityBar onChange={setOpacity} widget={widget} />}
+          {!embedded && viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}
           {!embedded && <ResizeHandle />}
         </>
       )}
+      {!embedded && !viewSettings.opacityBar && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} widget={widget} />}
     </main>
   );
 }
@@ -1606,6 +1973,8 @@ const DESK_TAB_OPTIONS: Array<{ id: PinWidget['activeTab']; label: string }> = [
 
 function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
   const [widget, setWidget] = useState(initialWidget);
+  const contextMenu = useContextMenu(true);
+  const viewSettings = useWindowDisplaySettings();
 
   useEffect(() => {
     let active = true;
@@ -1659,7 +2028,7 @@ function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
   };
 
   return (
-    <main className="app">
+    <main className="app" onContextMenu={contextMenu.handleContextMenu}>
       <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
       {!widget.collapsed && (
         <>
@@ -1682,10 +2051,11 @@ function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
             {widget.activeTab === 'todo' && <TodoWidget embedded initialWidget={widget} />}
             {widget.activeTab === 'clip' && <ClipWidget embedded initialWidget={widget} />}
           </section>
-          <OpacityBar onChange={setOpacity} widget={widget} />
+          {viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}
           <ResizeHandle />
         </>
       )}
+      {!viewSettings.opacityBar && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} widget={widget} />}
     </main>
   );
 }
@@ -1759,6 +2129,9 @@ function App() {
   }
   if (context.role === 'manager') {
     return <Manager />;
+  }
+  if (context.role === 'settings') {
+    return <SettingsPanel />;
   }
   return <WidgetApp />;
 }
