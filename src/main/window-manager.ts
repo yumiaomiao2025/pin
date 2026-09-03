@@ -7,6 +7,7 @@ import {
   type IpcMainInvokeEvent,
   type Rectangle,
 } from 'electron';
+import { execFile } from 'node:child_process';
 import path from 'node:path';
 
 import type { AppDatabaseService } from './database/app-service';
@@ -19,6 +20,7 @@ const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
 const COLLAPSED_HEIGHT = 32;
 const SNAP_DISTANCE = 12;
+const SYSTEM_STATE_POLL_MS = 600;
 
 const DEFAULT_BOUNDS: Record<WidgetType, { width: number; height: number }> = {
   note: { width: 320, height: 230 },
@@ -34,6 +36,226 @@ type ColorsWindow = BrowserWindow & {
   __pinColorsScope?: 'default' | 'widget';
   __pinColorsWidgetId?: string;
 };
+
+type AutoHideReason = 'desktop' | 'fullscreen';
+
+type AutoHideState = {
+  reasons: Set<AutoHideReason>;
+  wasVisible: boolean;
+  visibilityVersion: number;
+  userOverride: boolean;
+};
+
+type ForegroundWindowInfo = {
+  processId: number;
+  className: string;
+  isShell: boolean;
+  isMaximized: boolean;
+  windowBounds: Rectangle;
+  monitorBounds: Rectangle;
+};
+
+type SystemVisibilityState = {
+  desktopShown: boolean;
+  fullscreenDisplays: Array<{ id?: number; bounds: Rectangle }>;
+};
+
+const WINDOWS_FOREGROUND_PROBE = String.raw`
+$ErrorActionPreference = 'Stop'
+Add-Type @'
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+
+public static class PinWindowProbe {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct RECT {
+    public int Left;
+    public int Top;
+    public int Right;
+    public int Bottom;
+  }
+
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public struct MONITORINFO {
+    public int cbSize;
+    public RECT rcMonitor;
+    public RECT rcWork;
+    public uint dwFlags;
+  }
+
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+  [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
+  [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+  [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr hWnd);
+}
+'@
+
+$window = [PinWindowProbe]::GetForegroundWindow()
+if ($window -eq [IntPtr]::Zero) { exit 0 }
+
+$windowRect = New-Object PinWindowProbe+RECT
+if (-not [PinWindowProbe]::GetWindowRect($window, [ref]$windowRect)) { exit 0 }
+
+$monitor = [PinWindowProbe]::MonitorFromWindow($window, 2)
+$monitorInfo = New-Object PinWindowProbe+MONITORINFO
+$monitorInfo.cbSize = [Runtime.InteropServices.Marshal]::SizeOf($monitorInfo)
+if ($monitor -eq [IntPtr]::Zero -or -not [PinWindowProbe]::GetMonitorInfo($monitor, [ref]$monitorInfo)) { exit 0 }
+
+$classNameBuilder = New-Object Text.StringBuilder 256
+[void][PinWindowProbe]::GetClassName($window, $classNameBuilder, $classNameBuilder.Capacity)
+$processId = [uint32]0
+[void][PinWindowProbe]::GetWindowThreadProcessId($window, [ref]$processId)
+
+[pscustomobject]@{
+  processId = [int]$processId
+  className = $classNameBuilder.ToString()
+  isMaximized = [bool][PinWindowProbe]::IsZoomed($window)
+  windowLeft = $windowRect.Left
+  windowTop = $windowRect.Top
+  windowRight = $windowRect.Right
+  windowBottom = $windowRect.Bottom
+  monitorLeft = $monitorInfo.rcMonitor.Left
+  monitorTop = $monitorInfo.rcMonitor.Top
+  monitorRight = $monitorInfo.rcMonitor.Right
+  monitorBottom = $monitorInfo.rcMonitor.Bottom
+} | ConvertTo-Json -Compress
+`;
+
+function parseProbeRectangle(record: Record<string, unknown>, prefix: 'window' | 'monitor') {
+  const left = record[`${prefix}Left`];
+  const top = record[`${prefix}Top`];
+  const right = record[`${prefix}Right`];
+  const bottom = record[`${prefix}Bottom`];
+  if (
+    typeof left !== 'number' ||
+    typeof top !== 'number' ||
+    typeof right !== 'number' ||
+    typeof bottom !== 'number' ||
+    ![left, top, right, bottom].every(Number.isFinite) ||
+    right <= left ||
+    bottom <= top
+  ) {
+    return undefined;
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+function readForegroundWindow(): Promise<ForegroundWindowInfo | undefined> {
+  if (process.platform !== 'win32') {
+    return Promise.resolve(undefined);
+  }
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', WINDOWS_FOREGROUND_PROBE],
+      { windowsHide: true, timeout: 500, maxBuffer: 32 * 1024 },
+      (error, stdout) => {
+        if (error || !stdout.trim()) {
+          resolve(undefined);
+          return;
+        }
+        try {
+          const parsed: unknown = JSON.parse(stdout.trim());
+          if (!parsed || typeof parsed !== 'object') {
+            resolve(undefined);
+            return;
+          }
+          const record = parsed as Record<string, unknown>;
+          const processId = record.processId;
+          const className = record.className;
+          const isMaximized = record.isMaximized;
+          const windowBounds = parseProbeRectangle(record, 'window');
+          const monitorBounds = parseProbeRectangle(record, 'monitor');
+          if (
+            typeof processId !== 'number' ||
+            !Number.isInteger(processId) ||
+            typeof className !== 'string' ||
+            typeof isMaximized !== 'boolean' ||
+            !windowBounds ||
+            !monitorBounds
+          ) {
+            resolve(undefined);
+            return;
+          }
+          const normalizedClassName = className.toLowerCase();
+          resolve({
+            processId,
+            className: normalizedClassName,
+            isShell: ['progman', 'workerw', 'shell_traywnd', 'shell_secondarytraywnd'].includes(
+              normalizedClassName,
+            ),
+            isMaximized,
+            windowBounds,
+            monitorBounds,
+          });
+        } catch {
+          resolve(undefined);
+        }
+      },
+    );
+  });
+}
+
+function rectanglesMatch(left: Rectangle, right: Rectangle, tolerance = 4) {
+  return (
+    Math.abs(left.x - right.x) <= tolerance &&
+    Math.abs(left.y - right.y) <= tolerance &&
+    Math.abs(left.width - right.width) <= tolerance &&
+    Math.abs(left.height - right.height) <= tolerance
+  );
+}
+
+function intersectionArea(left: Rectangle, right: Rectangle) {
+  const width = Math.max(0, Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x));
+  const height = Math.max(0, Math.min(left.y + left.height, right.y + right.height) - Math.max(left.y, right.y));
+  return width * height;
+}
+
+function displayForNativeMonitor(bounds: Rectangle) {
+  const displays = screen.getAllDisplays();
+  const exact = displays.find((display) => rectanglesMatch(display.bounds, bounds));
+  if (exact) {
+    return exact;
+  }
+  const monitorCenter = {
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2,
+  };
+  const containing = displays.find(
+    (display) =>
+      monitorCenter.x >= display.bounds.x &&
+      monitorCenter.x <= display.bounds.x + display.bounds.width &&
+      monitorCenter.y >= display.bounds.y &&
+      monitorCenter.y <= display.bounds.y + display.bounds.height,
+  );
+  if (containing) {
+    return containing;
+  }
+  return displays
+    .map((display) => ({ display, overlap: intersectionArea(display.bounds, bounds) }))
+    .sort((left, right) => right.overlap - left.overlap)[0]?.display;
+}
+
+function isDesktopForeground(info: ForegroundWindowInfo) {
+  return info.processId !== process.pid && (info.className === 'progman' || info.className === 'workerw');
+}
+
+function isFullscreenForeground(info: ForegroundWindowInfo) {
+  if (info.processId === process.pid || info.isShell || info.isMaximized) {
+    return false;
+  }
+  const tolerance = 4;
+  return (
+    Math.abs(info.windowBounds.x - info.monitorBounds.x) <= tolerance &&
+    Math.abs(info.windowBounds.y - info.monitorBounds.y) <= tolerance &&
+    Math.abs(info.windowBounds.width - info.monitorBounds.width) <= tolerance &&
+    Math.abs(info.windowBounds.height - info.monitorBounds.height) <= tolerance
+  );
+}
 
 export interface WindowManager {
   openVisibleWidgets(): void;
@@ -261,6 +483,14 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     | { kind: 'widget'; item: Widget; todos: Todo[]; clips: ClipItem[]; timer: ReturnType<typeof setTimeout> }
     | undefined;
   let quitting = false;
+  const autoHideStates = new Map<string, AutoHideState>();
+  const visibilityVersions = new Map<string, number>();
+  let systemStatePollTimer: ReturnType<typeof setInterval> | undefined;
+  let systemStatePollInFlight = false;
+  let currentSystemVisibility: SystemVisibilityState = {
+    desktopShown: false,
+    fullscreenDisplays: [],
+  };
 
   const widgetIdForEvent = (event: IpcMainInvokeEvent) => {
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
@@ -363,6 +593,11 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     applyGlobalWindowSettings(updated);
     broadcastSettings(updated);
     return updated;
+  };
+
+  const isAutoHidden = (widgetId: string) => {
+    const state = autoHideStates.get(widgetId);
+    return Boolean(state && state.reasons.size > 0 && !state.userOverride);
   };
 
   const todoForEvent = (event: IpcMainInvokeEvent, todoId: string) => {
@@ -490,6 +725,9 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         existingWindow.setBounds(recoveredBounds);
         persistBounds(widgetId, existingWindow, recoveredBounds);
       }
+      if (isAutoHidden(widgetId)) {
+        return existingWindow;
+      }
       existingWindow.show();
       existingWindow.focus();
       service.widgets.update(widgetId, { hidden: false });
@@ -542,15 +780,14 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     window.on('close', (event) => {
       if (!quitting) {
         event.preventDefault();
-        window.hide();
-        service.widgets.update(widgetId, { hidden: true });
+        markUserVisibility(widgetId, true);
       }
     });
     window.on('closed', () => {
       windows.delete(widgetId);
     });
     window.once('ready-to-show', () => {
-      if (!widget.hidden && !window.isDestroyed()) {
+      if (!widget.hidden && !isAutoHidden(widgetId) && !window.isDestroyed()) {
         window.show();
       }
     });
@@ -560,6 +797,178 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return window;
     }
     return window;
+  };
+
+  const markUserVisibility = (widgetId: string, hidden: boolean) => {
+    const visibilityVersion = (visibilityVersions.get(widgetId) ?? 0) + 1;
+    visibilityVersions.set(widgetId, visibilityVersion);
+    const autoHideState = autoHideStates.get(widgetId);
+    if (autoHideState) {
+      autoHideState.userOverride = true;
+    } else {
+      const widget = service.widgets.getById(widgetId);
+      const targetWindow = windows.get(widgetId);
+      const reasons = widget ? reasonsForWidget(widget, targetWindow) : new Set<AutoHideReason>();
+      if (reasons.size > 0) {
+        autoHideStates.set(widgetId, {
+          reasons,
+          wasVisible: false,
+          visibilityVersion,
+          userOverride: true,
+        });
+      }
+    }
+    const targetWindow = windows.get(widgetId);
+    if (hidden) {
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        targetWindow.hide();
+      }
+      return service.widgets.update(widgetId, { hidden: true });
+    }
+    service.widgets.update(widgetId, { hidden: false });
+    openWidget(widgetId);
+    return service.widgets.getById(widgetId);
+  };
+
+  function widgetIsOnFullscreenDisplay(
+    widget: Widget,
+    targetWindow: WidgetWindow,
+    fullscreenDisplay: { id?: number; bounds: Rectangle },
+  ) {
+    const display = screen.getDisplayMatching(targetWindow.getBounds());
+    if (fullscreenDisplay.id !== undefined && display.id === fullscreenDisplay.id) {
+      return true;
+    }
+    if (rectanglesMatch(display.bounds, fullscreenDisplay.bounds)) {
+      return true;
+    }
+    const bounds = targetWindow.getBounds();
+    const center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    const nativeBounds = fullscreenDisplay.bounds;
+    if (
+      center.x >= nativeBounds.x &&
+      center.x <= nativeBounds.x + nativeBounds.width &&
+      center.y >= nativeBounds.y &&
+      center.y <= nativeBounds.y + nativeBounds.height
+    ) {
+      return true;
+    }
+    return widget.displayId !== null && widget.displayId === fullscreenDisplay.id;
+  }
+
+  function reasonsForWidget(
+    widget: Widget,
+    targetWindow: WidgetWindow | undefined,
+    systemState = currentSystemVisibility,
+  ) {
+    const reasons = new Set<AutoHideReason>();
+    if (systemState.desktopShown && widget.pin) {
+      reasons.add('desktop');
+    }
+    if (systemState.fullscreenDisplays.some((display) => {
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        return widgetIsOnFullscreenDisplay(widget, targetWindow, display);
+      }
+      return widget.displayId !== null && widget.displayId === display.id;
+    })) {
+      reasons.add('fullscreen');
+    }
+    return reasons;
+  }
+
+  const applySystemVisibility = (systemState: SystemVisibilityState) => {
+    const widgets = service.widgets.list();
+    const widgetIds = new Set(widgets.map((widget) => widget.id));
+    autoHideStates.forEach((_state, widgetId) => {
+      if (!widgetIds.has(widgetId)) {
+        autoHideStates.delete(widgetId);
+        visibilityVersions.delete(widgetId);
+      }
+    });
+
+    widgets.forEach((widget) => {
+      const targetWindow = windows.get(widget.id);
+      const reasons = reasonsForWidget(widget, targetWindow, systemState);
+
+      const currentState = autoHideStates.get(widget.id);
+      if (reasons.size === 0) {
+        if (!currentState) {
+          return;
+        }
+        autoHideStates.delete(widget.id);
+        const currentWindow = windows.get(widget.id);
+        if (
+          !currentState.userOverride &&
+          currentState.wasVisible &&
+          visibilityVersions.get(widget.id) === currentState.visibilityVersion &&
+          !widget.hidden &&
+          currentWindow &&
+          !currentWindow.isDestroyed()
+        ) {
+          currentWindow.show();
+        }
+        return;
+      }
+
+      if (currentState) {
+        currentState.reasons = reasons;
+        if (
+          !currentState.userOverride &&
+          !widget.hidden &&
+          targetWindow &&
+          !targetWindow.isDestroyed() &&
+          targetWindow.isVisible()
+        ) {
+          targetWindow.hide();
+        }
+        return;
+      }
+
+      if (
+        widget.hidden ||
+        !targetWindow ||
+        targetWindow.isDestroyed() ||
+        !targetWindow.isVisible()
+      ) {
+        return;
+      }
+      autoHideStates.set(widget.id, {
+        reasons,
+        wasVisible: true,
+        visibilityVersion: visibilityVersions.get(widget.id) ?? 0,
+        userOverride: false,
+      });
+      targetWindow.hide();
+    });
+  };
+
+  const pollSystemVisibility = async () => {
+    if (quitting || systemStatePollInFlight) {
+      return;
+    }
+    systemStatePollInFlight = true;
+    try {
+      const foregroundWindow = await readForegroundWindow();
+      if (quitting) {
+        return;
+      }
+      const fullscreenDisplays: SystemVisibilityState['fullscreenDisplays'] = [];
+      if (foregroundWindow && isFullscreenForeground(foregroundWindow)) {
+        const display = displayForNativeMonitor(foregroundWindow.monitorBounds);
+        fullscreenDisplays.push({
+          id: display?.id,
+          bounds: foregroundWindow.monitorBounds,
+        });
+      }
+      const nextSystemVisibility: SystemVisibilityState = {
+        desktopShown: Boolean(foregroundWindow && isDesktopForeground(foregroundWindow)),
+        fullscreenDisplays,
+      };
+      currentSystemVisibility = nextSystemVisibility;
+      applySystemVisibility(nextSystemVisibility);
+    } finally {
+      systemStatePollInFlight = false;
+    }
   };
 
   const openManager = (renameWidgetId?: string) => {
@@ -784,6 +1193,13 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     return widget;
   };
 
+  if (process.platform === 'win32') {
+    void pollSystemVisibility();
+    systemStatePollTimer = setInterval(() => {
+      void pollSystemVisibility();
+    }, SYSTEM_STATE_POLL_MS);
+  }
+
   return {
     openVisibleWidgets: () => {
       service.widgets.list().filter((widget) => !widget.hidden).forEach((widget) => {
@@ -793,18 +1209,13 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
     showAllWidgets: () => {
       service.widgets.list().forEach((widget) => {
-        service.widgets.update(widget.id, { hidden: false });
-        openWidget(widget.id);
+        markUserVisibility(widget.id, false);
       });
     },
 
     hideAllWidgets: () => {
       service.widgets.list().forEach((widget) => {
-        const targetWindow = windows.get(widget.id);
-        if (targetWindow && !targetWindow.isDestroyed()) {
-          targetWindow.hide();
-        }
-        service.widgets.update(widget.id, { hidden: true });
+        markUserVisibility(widget.id, true);
       });
     },
 
@@ -1150,16 +1561,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (!widget) {
         return undefined;
       }
-      if (hidden) {
-        const targetWindow = windows.get(widgetId);
-        if (targetWindow && !targetWindow.isDestroyed()) {
-          targetWindow.hide();
-        }
-        return service.widgets.update(widgetId, { hidden: true });
-      }
-      service.widgets.update(widgetId, { hidden: false });
-      openWidget(widgetId);
-      return service.widgets.getById(widgetId);
+      return markUserVisibility(widgetId, hidden);
     },
 
     setWidgetPin: (event, widgetId, pin) => {
@@ -1182,15 +1584,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         return undefined;
       }
       service.widgets.list().forEach((widget) => {
-        if (hidden) {
-          const targetWindow = windows.get(widget.id);
-          if (targetWindow && !targetWindow.isDestroyed()) {
-            targetWindow.hide();
-          }
-          service.widgets.update(widget.id, { hidden: true });
-        } else {
-          openWidget(widget.id);
-        }
+        markUserVisibility(widget.id, hidden);
       });
       return service.widgets.list();
     },
@@ -1365,8 +1759,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (!target?.window || target.window.isDestroyed()) {
         return false;
       }
-      target.window.hide();
-      service.widgets.update(target.widgetId, { hidden: true });
+      markUserVisibility(target.widgetId, true);
       return true;
     },
 
@@ -1435,6 +1828,12 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
     prepareQuit: () => {
       quitting = true;
+      if (systemStatePollTimer) {
+        clearInterval(systemStatePollTimer);
+        systemStatePollTimer = undefined;
+      }
+      autoHideStates.clear();
+      visibilityVersions.clear();
       nativeTheme.removeListener('updated', handleNativeThemeUpdated);
       if (contentTrash) {
         clearTimeout(contentTrash.timer);
