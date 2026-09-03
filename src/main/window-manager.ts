@@ -33,7 +33,11 @@ const DEFAULT_BOUNDS: Record<WidgetType, { width: number; height: number }> = {
 
 type WidgetWindow = BrowserWindow & { __pinWidgetId?: string };
 type UtilityWindow = BrowserWindow & { __pinRole?: 'manager' | 'settings' };
-type ColorsWindow = BrowserWindow & { __pinRole?: 'colors'; __pinColorsScope?: 'default' };
+type ColorsWindow = BrowserWindow & {
+  __pinRole?: 'colors';
+  __pinColorsScope?: 'default' | 'widget';
+  __pinColorsWidgetId?: string;
+};
 
 export interface WindowManager {
   openVisibleWidgets(): void;
@@ -44,7 +48,8 @@ export interface WindowManager {
   hideManager(event: IpcMainInvokeEvent): boolean;
   openSettings(): BrowserWindow;
   hideSettings(event: IpcMainInvokeEvent): boolean;
-  openColors(scope: 'default'): BrowserWindow;
+  openColors(scope: 'default' | 'widget', widgetId?: string): BrowserWindow;
+  openWidgetColors(event: IpcMainInvokeEvent): boolean;
   hideColors(event: IpcMainInvokeEvent): boolean;
   createWidget(type: WidgetType): Widget;
   createWidgetForEvent(event: IpcMainInvokeEvent, type: WidgetType): Widget | undefined;
@@ -54,8 +59,16 @@ export interface WindowManager {
   getSettings(): Settings;
   updateSettings(event: IpcMainInvokeEvent, patch: UpdateSettingsInput): Settings | undefined;
   resetSettings(event: IpcMainInvokeEvent): Settings | undefined;
-  getColorContext(event: IpcMainInvokeEvent): { scope: 'default'; colors: ColorSet; activePresetId: string | null } | undefined;
+  getColorContext(event: IpcMainInvokeEvent): {
+    scope: 'default' | 'widget';
+    colors: ColorSet;
+    activePresetId: string | null;
+    followsDefault?: boolean;
+    widgetTitle?: string;
+  } | undefined;
   applyDefaultPreset(event: IpcMainInvokeEvent, presetId: string): Settings | undefined;
+  applyWidgetPreset(event: IpcMainInvokeEvent, presetId: string): Widget | undefined;
+  setWidgetFollowDefault(event: IpcMainInvokeEvent, followsDefault: boolean): Widget | undefined;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
   getWidgetsForEvent(event: IpcMainInvokeEvent): Widget[] | undefined;
   setWidgetHidden(event: IpcMainInvokeEvent, widgetId: string, hidden: boolean): Widget | undefined;
@@ -230,7 +243,10 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     if (!senderWindow || !isColorsWindow(senderWindow)) {
       return undefined;
     }
-    return senderWindow.__pinColorsScope;
+    return {
+      scope: senderWindow.__pinColorsScope,
+      widgetId: senderWindow.__pinColorsWidgetId,
+    };
   };
 
   const broadcastSettings = (settings: Settings) => {
@@ -242,10 +258,14 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
   };
 
   const broadcastWidget = (widget: Widget) => {
-    const targetWindow = windows.get(widget.id);
-    if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.webContents.send('widget:changed', widget);
-    }
+    const recipients = [windows.get(widget.id), managerWindow, colorsWindow];
+    const sent = new Set<BrowserWindow>();
+    recipients.forEach((targetWindow) => {
+      if (targetWindow && !targetWindow.isDestroyed() && !sent.has(targetWindow)) {
+        sent.add(targetWindow);
+        targetWindow.webContents.send('widget:changed', widget);
+      }
+    });
   };
 
   const syncDefaultColors = (settings: Settings) => {
@@ -381,7 +401,14 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
   };
 
   const loadColors = (window: ColorsWindow) => {
-    const query = { role: 'colors', id: 'colors', scope: 'default' };
+    const query: Record<string, string> = {
+      role: 'colors',
+      id: 'colors',
+      scope: window.__pinColorsScope ?? 'default',
+    };
+    if (window.__pinColorsWidgetId) {
+      query.widgetId = window.__pinColorsWidgetId;
+    }
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       void window.loadURL(
         `${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`,
@@ -553,8 +580,14 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     return settingsWindow;
   };
 
-  const openColors = (scope: 'default') => {
+  const openColors = (scope: 'default' | 'widget', widgetId?: string) => {
+    if (scope === 'widget' && (!widgetId || !service.widgets.getById(widgetId))) {
+      return openColors('default');
+    }
     if (colorsWindow && !colorsWindow.isDestroyed()) {
+      colorsWindow.__pinColorsScope = scope;
+      colorsWindow.__pinColorsWidgetId = widgetId;
+      loadColors(colorsWindow);
       colorsWindow.show();
       colorsWindow.focus();
       return colorsWindow;
@@ -575,6 +608,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     }) as ColorsWindow;
     colorsWindow.__pinRole = 'colors';
     colorsWindow.__pinColorsScope = scope;
+    colorsWindow.__pinColorsWidgetId = widgetId;
     colorsWindow.on('close', (event) => {
       if (!quitting) {
         event.preventDefault();
@@ -648,6 +682,15 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     },
 
     openColors,
+
+    openWidgetColors: (event) => {
+      const widgetId = widgetIdForEvent(event);
+      if (!widgetId || !service.widgets.getById(widgetId)) {
+        return false;
+      }
+      openColors('widget', widgetId);
+      return true;
+    },
 
     hideColors: (event) => {
       if (!colorsScopeForEvent(event) || !colorsWindow || colorsWindow.isDestroyed()) {
@@ -797,8 +840,34 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     },
 
     getColorContext: (event) => {
-      if (colorsScopeForEvent(event) !== 'default') {
+      const context = colorsScopeForEvent(event);
+      if (!context || (context.scope !== 'default' && context.scope !== 'widget')) {
         return undefined;
+      }
+      if (context.scope === 'widget') {
+        if (!context.widgetId) {
+          return undefined;
+        }
+        const widget = service.widgets.getById(context.widgetId);
+        if (!widget) {
+          return undefined;
+        }
+        const colors = {
+          paper: widget.paperColor,
+          ink: widget.inkColor,
+          title: widget.titleColor,
+          accent: widget.accentColor,
+          spine: widget.spineColor,
+          shadow: widget.shadowColor,
+        } satisfies ColorSet;
+        const activePresetId = COLOR_PRESETS.find((preset) => colorsEqual(preset, colors))?.id ?? null;
+        return {
+          scope: 'widget' as const,
+          colors,
+          activePresetId,
+          followsDefault: widget.followsDefault,
+          widgetTitle: widget.title.trim() || widget.type.toUpperCase(),
+        };
       }
       const colors = settingsToColors(service.settings.ensure());
       const activePresetId = COLOR_PRESETS.find((preset) => colorsEqual(preset, colors))?.id ?? null;
@@ -806,7 +875,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     },
 
     applyDefaultPreset: (event, presetId) => {
-      if (colorsScopeForEvent(event) !== 'default') {
+      if (colorsScopeForEvent(event)?.scope !== 'default') {
         return undefined;
       }
       const preset = COLOR_PRESETS.find((candidate) => candidate.id === presetId);
@@ -814,6 +883,40 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         return undefined;
       }
       return updateGlobalSettings(colorsToSettings(preset));
+    },
+
+    applyWidgetPreset: (event, presetId) => {
+      const context = colorsScopeForEvent(event);
+      if (context?.scope !== 'widget' || !context.widgetId) {
+        return undefined;
+      }
+      const preset = COLOR_PRESETS.find((candidate) => candidate.id === presetId);
+      if (!preset) {
+        return undefined;
+      }
+      const updated = service.widgets.update(context.widgetId, {
+        ...colorsToWidgetPatch(preset),
+        followsDefault: false,
+      });
+      if (updated) {
+        broadcastWidget(updated);
+      }
+      return updated;
+    },
+
+    setWidgetFollowDefault: (event, followsDefault) => {
+      const context = colorsScopeForEvent(event);
+      if (context?.scope !== 'widget' || !context.widgetId) {
+        return undefined;
+      }
+      const patch = followsDefault
+        ? { ...colorsToWidgetPatch(settingsToColors(service.settings.ensure())), followsDefault: true }
+        : { followsDefault: false };
+      const updated = service.widgets.update(context.widgetId, patch);
+      if (updated) {
+        broadcastWidget(updated);
+      }
+      return updated;
     },
 
     getWidgetForEvent: (event) => {

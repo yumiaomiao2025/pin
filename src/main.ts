@@ -271,12 +271,25 @@ ipcMain.handle('colors:open-default', () => {
   getManager().openColors('default');
   return true;
 });
+ipcMain.handle('colors:open-widget', (event) => getManager().openWidgetColors(event));
 ipcMain.handle('colors:get-context', (event) => getManager().getColorContext(event) ?? null);
 ipcMain.handle('colors:apply-preset', (event, presetId: unknown) => {
   if (typeof presetId !== 'string') {
     throw new TypeError('preset id must be a string');
   }
-  return getManager().applyDefaultPreset(event, presetId) ?? null;
+  const context = getManager().getColorContext(event);
+  if (!context) {
+    return null;
+  }
+  return context.scope === 'widget'
+    ? getManager().applyWidgetPreset(event, presetId) ?? null
+    : getManager().applyDefaultPreset(event, presetId) ?? null;
+});
+ipcMain.handle('colors:set-widget-follow-default', (event, followsDefault: unknown) => {
+  if (typeof followsDefault !== 'boolean') {
+    throw new TypeError('followsDefault must be a boolean');
+  }
+  return getManager().setWidgetFollowDefault(event, followsDefault) ?? null;
 });
 ipcMain.handle('colors:hide', (event) => getManager().hideColors(event));
 ipcMain.handle('todo:list', (event) => getManager().getTodosForEvent(event) ?? null);

@@ -63,7 +63,7 @@ interface PinSettings {
 }
 
 interface PinColorContext {
-  scope: 'default';
+  scope: 'default' | 'widget';
   colors: {
     paper: string;
     ink: string;
@@ -73,6 +73,8 @@ interface PinColorContext {
     shadow: string;
   };
   activePresetId: string | null;
+  followsDefault?: boolean;
+  widgetTitle?: string;
 }
 
 type PinSettingsUpdate = Partial<Pick<
@@ -87,8 +89,10 @@ interface Window {
     updateSettings: (patch: PinSettingsUpdate) => Promise<PinSettings | null>;
     resetSettings: () => Promise<PinSettings | null>;
     openDefaultColors: () => Promise<boolean>;
+    openWidgetColors: () => Promise<boolean>;
     getColorContext: () => Promise<PinColorContext | null>;
-    applyColorPreset: (presetId: string) => Promise<PinSettings | null>;
+    applyColorPreset: (presetId: string) => Promise<PinSettings | PinWidget | null>;
+    setWidgetFollowDefault: (followsDefault: boolean) => Promise<PinWidget | null>;
     hideColors: () => Promise<boolean>;
     onSettingsChanged: (listener: (settings: PinSettings) => void) => () => void;
     onWidgetChanged: (listener: (widget: PinWidget) => void) => () => void;

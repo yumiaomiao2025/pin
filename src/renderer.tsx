@@ -12,6 +12,7 @@ function getWindowContext() {
   return {
     role: params.get('role') ?? 'unknown',
     id: params.get('id') ?? 'unknown',
+    scope: params.get('scope') ?? 'default',
   };
 }
 
@@ -285,6 +286,13 @@ function Manager() {
 
   useEffect(() => {
     void reload();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.pinApi.onWidgetChanged((updated) => {
+      setWidgets((current) => current.map((widget) => (widget.id === updated.id ? updated : widget)));
+    });
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -775,10 +783,10 @@ function SettingsPanel() {
   );
 }
 
-function ColorsTitleBar({ onHide }: { onHide: () => void }) {
+function ColorsTitleBar({ onHide, title }: { onHide: () => void; title: string }) {
   return (
     <header className="colors-titlebar">
-      <span className="type-label">COLORS · 默认</span>
+      <span className="type-label">COLORS · {title}</span>
       <button
         aria-label="关闭颜色面板"
         className="title-action title-action--icon"
@@ -799,9 +807,7 @@ function ColorsPanel() {
 
   const reload = async () => {
     const nextContext = await window.pinApi.getColorContext();
-    if (nextContext) {
-      setContext(nextContext);
-    }
+    setContext(nextContext);
   };
 
   useEffect(() => {
@@ -837,10 +843,25 @@ function ColorsPanel() {
     }
   };
 
+  const restoreDefault = async () => {
+    setBusy(true);
+    try {
+      const updated = await window.pinApi.setWidgetFollowDefault(true);
+      if (updated) {
+        await reload();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const currentColors = context?.colors;
+  const isWidgetScope = context?.scope === 'widget';
+  const windowContext = getWindowContext();
+  const title = isWidgetScope ? context?.widgetTitle ?? '窗口' : windowContext.scope === 'widget' ? '窗口' : '默认';
   return (
     <main className={theme === 'dark' ? 'app colors-app management-dark' : 'app colors-app'}>
-      <ColorsTitleBar onHide={() => void window.pinApi.hideColors()} />
+      <ColorsTitleBar onHide={() => void window.pinApi.hideColors()} title={title} />
       <section className="colors-section">
         <h2>套装</h2>
         {COLOR_PRESETS.map((preset) => (
@@ -861,7 +882,22 @@ function ColorsPanel() {
         </button>
       </section>
       <footer className="colors-footer">
-        <span>{currentColors ? '同步跟随默认的窗口' : '加载中…'}</span>
+        <span>
+          {currentColors
+            ? isWidgetScope && context?.followsDefault === false
+              ? '改动即时作用于本窗口'
+              : '同步跟随默认的窗口'
+            : '加载中…'}
+        </span>
+        {isWidgetScope && (
+          <button
+            disabled={busy || context?.followsDefault === true}
+            onClick={() => void restoreDefault()}
+            type="button"
+          >
+            恢复默认
+          </button>
+        )}
       </footer>
     </main>
   );
@@ -935,6 +971,7 @@ interface ContextMenuState {
   position: { left: number; top: number } | null;
   menuRef: React.RefObject<HTMLDivElement | null>;
   handleContextMenu: (event: React.MouseEvent<HTMLElement>) => void;
+  close: () => void;
 }
 
 function useContextMenu(enabled: boolean): ContextMenuState {
@@ -963,21 +1000,23 @@ function useContextMenu(enabled: boolean): ContextMenuState {
     event.stopPropagation();
     setPosition({
       left: Math.min(event.clientX, Math.max(8, window.innerWidth - 204)),
-      top: Math.min(event.clientY, Math.max(8, window.innerHeight - 94)),
+      top: Math.min(event.clientY, Math.max(8, window.innerHeight - 178)),
     });
   };
 
-  return { position, menuRef, handleContextMenu };
+  return { position, menuRef, handleContextMenu, close: () => setPosition(null) };
 }
 
 function OpacityContextMenu({
   menu,
   onChange,
   widget,
+  showOpacity,
 }: {
   menu: ContextMenuState;
   onChange: (value: number) => void;
   widget: PinWidget;
+  showOpacity: boolean;
 }) {
   if (!menu.position) {
     return null;
@@ -989,17 +1028,31 @@ function OpacityContextMenu({
       ref={menu.menuRef}
       style={menu.position}
     >
-      <label htmlFor="context-opacity">透明度</label>
-      <input
-        aria-label="窗口透明度"
-        id="context-opacity"
-        max="100"
-        min="35"
-        onChange={(event) => onChange(Number(event.target.value))}
-        type="range"
-        value={widget.opacity}
-      />
-      <output>{widget.opacity}%</output>
+      {showOpacity && (
+        <div className="window-context-menu-opacity">
+          <label htmlFor="context-opacity">透明度</label>
+          <input
+            aria-label="窗口透明度"
+            id="context-opacity"
+            max="100"
+            min="35"
+            onChange={(event) => onChange(Number(event.target.value))}
+            type="range"
+            value={widget.opacity}
+          />
+          <output>{widget.opacity}%</output>
+        </div>
+      )}
+      <button
+        className="window-context-menu-item"
+        onClick={() => {
+          menu.close();
+          void window.pinApi.openWidgetColors();
+        }}
+        type="button"
+      >
+        颜色…
+      </button>
     </div>
   );
 }
@@ -1556,7 +1609,7 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
           {!embedded && <ResizeHandle />}
         </>
       )}
-      {!embedded && !viewSettings.opacityBar && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} widget={widget} />}
+      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} showOpacity={!viewSettings.opacityBar} widget={widget} />}
     </main>
   );
 }
@@ -2023,7 +2076,7 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
           {!embedded && <ResizeHandle />}
         </>
       )}
-      {!embedded && !viewSettings.opacityBar && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} widget={widget} />}
+      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} showOpacity={!viewSettings.opacityBar} widget={widget} />}
     </main>
   );
 }
@@ -2118,7 +2171,7 @@ function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
           {!embedded && <ResizeHandle />}
         </>
       )}
-      {!embedded && !viewSettings.opacityBar && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} widget={widget} />}
+      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} showOpacity={!viewSettings.opacityBar} widget={widget} />}
     </main>
   );
 }
@@ -2214,7 +2267,7 @@ function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
           <ResizeHandle />
         </>
       )}
-      {!viewSettings.opacityBar && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} widget={widget} />}
+      <OpacityContextMenu menu={contextMenu} onChange={setOpacity} showOpacity={!viewSettings.opacityBar} widget={widget} />
     </main>
   );
 }
