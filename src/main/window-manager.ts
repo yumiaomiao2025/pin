@@ -9,13 +9,8 @@ import {
 import path from 'node:path';
 
 import type { AppDatabaseService } from './database/app-service';
-import type {
-  CreateWidgetInput,
-  UpdateClipItemInput,
-  UpdateSettingsInput,
-  UpdateTodoInput,
-} from './database/repositories';
-import { DEFAULT_COLORS, type ClipItem, type DeskTab, type Settings, type Todo, type Widget, type WidgetType } from './database/schema';
+import type { CreateWidgetInput, UpdateClipItemInput, UpdateSettingsInput, UpdateTodoInput } from './database/repositories';
+import { DEFAULT_COLORS, type ClipItem, type CustomKit, type DeskTab, type Settings, type Todo, type Widget, type WidgetType } from './database/schema';
 import type { ColorSet } from '../shared/colors';
 import { COLOR_PRESETS } from '../shared/colors';
 
@@ -69,6 +64,11 @@ export interface WindowManager {
   applyDefaultPreset(event: IpcMainInvokeEvent, presetId: string): Settings | undefined;
   applyWidgetPreset(event: IpcMainInvokeEvent, presetId: string): Widget | undefined;
   setWidgetFollowDefault(event: IpcMainInvokeEvent, followsDefault: boolean): Widget | undefined;
+  listColorKits(event: IpcMainInvokeEvent): CustomKit[] | undefined;
+  createColorKit(event: IpcMainInvokeEvent, name: string): CustomKit | undefined;
+  renameColorKit(event: IpcMainInvokeEvent, kitId: string, name: string): CustomKit | undefined;
+  deleteColorKit(event: IpcMainInvokeEvent, kitId: string): CustomKit | undefined;
+  applyColorKit(event: IpcMainInvokeEvent, kitId: string): Settings | Widget | undefined;
   getWidgetForEvent(event: IpcMainInvokeEvent): Widget | undefined;
   getWidgetsForEvent(event: IpcMainInvokeEvent): Widget[] | undefined;
   setWidgetHidden(event: IpcMainInvokeEvent, widgetId: string, hidden: boolean): Widget | undefined;
@@ -193,6 +193,28 @@ function colorsToWidgetPatch(colors: ColorSet) {
     accentColor: colors.accent,
     spineColor: colors.spine,
     shadowColor: colors.shadow,
+  };
+}
+
+function widgetToColors(widget: Widget): ColorSet {
+  return {
+    paper: widget.paperColor,
+    ink: widget.inkColor,
+    title: widget.titleColor,
+    accent: widget.accentColor,
+    spine: widget.spineColor,
+    shadow: widget.shadowColor,
+  };
+}
+
+function kitToColors(kit: CustomKit): ColorSet {
+  return {
+    paper: kit.paper,
+    ink: kit.ink,
+    title: kit.title,
+    accent: kit.accent,
+    spine: kit.spine,
+    shadow: kit.shadow,
   };
 }
 
@@ -852,14 +874,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         if (!widget) {
           return undefined;
         }
-        const colors = {
-          paper: widget.paperColor,
-          ink: widget.inkColor,
-          title: widget.titleColor,
-          accent: widget.accentColor,
-          spine: widget.spineColor,
-          shadow: widget.shadowColor,
-        } satisfies ColorSet;
+        const colors = widgetToColors(widget);
         const activePresetId = COLOR_PRESETS.find((preset) => colorsEqual(preset, colors))?.id ?? null;
         return {
           scope: 'widget' as const,
@@ -913,6 +928,91 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         ? { ...colorsToWidgetPatch(settingsToColors(service.settings.ensure())), followsDefault: true }
         : { followsDefault: false };
       const updated = service.widgets.update(context.widgetId, patch);
+      if (updated) {
+        broadcastWidget(updated);
+      }
+      return updated;
+    },
+
+    listColorKits: (event) => {
+      const context = colorsScopeForEvent(event);
+      return context?.scope === 'default' || context?.scope === 'widget'
+        ? service.customKits.list()
+        : undefined;
+    },
+
+    createColorKit: (event, name) => {
+      const context = colorsScopeForEvent(event);
+      if (context?.scope !== 'default' && context?.scope !== 'widget') {
+        return undefined;
+      }
+      const normalizedName = name.trim();
+      if (!normalizedName) {
+        return undefined;
+      }
+      let colors: ColorSet;
+      if (context.scope === 'default') {
+        colors = settingsToColors(service.settings.ensure());
+      } else if (context.widgetId) {
+        const widget = service.widgets.getById(context.widgetId);
+        if (!widget) {
+          return undefined;
+        }
+        colors = widgetToColors(widget);
+      } else {
+        return undefined;
+      }
+      return service.customKits.create({
+        name: normalizedName,
+        paper: colors.paper,
+        ink: colors.ink,
+        title: colors.title,
+        accent: colors.accent,
+        spine: colors.spine,
+        shadow: colors.shadow,
+      });
+    },
+
+    renameColorKit: (event, kitId, name) => {
+      const context = colorsScopeForEvent(event);
+      if ((context?.scope !== 'default' && context?.scope !== 'widget') || !name.trim()) {
+        return undefined;
+      }
+      return service.customKits.update(kitId, { name: name.trim() });
+    },
+
+    deleteColorKit: (event, kitId) => {
+      const context = colorsScopeForEvent(event);
+      if (context?.scope !== 'default' && context?.scope !== 'widget') {
+        return undefined;
+      }
+      const kit = service.customKits.getById(kitId);
+      if (!kit || !service.customKits.delete(kitId)) {
+        return undefined;
+      }
+      return kit;
+    },
+
+    applyColorKit: (event, kitId) => {
+      const context = colorsScopeForEvent(event);
+      if (context?.scope !== 'default' && context?.scope !== 'widget') {
+        return undefined;
+      }
+      const kit = service.customKits.getById(kitId);
+      if (!kit) {
+        return undefined;
+      }
+      const colors = kitToColors(kit);
+      if (context.scope === 'default') {
+        return updateGlobalSettings(colorsToSettings(colors));
+      }
+      if (!context.widgetId) {
+        return undefined;
+      }
+      const updated = service.widgets.update(context.widgetId, {
+        ...colorsToWidgetPatch(colors),
+        followsDefault: false,
+      });
       if (updated) {
         broadcastWidget(updated);
       }

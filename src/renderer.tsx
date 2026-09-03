@@ -802,6 +802,7 @@ function ColorsTitleBar({ onHide, title }: { onHide: () => void; title: string }
 
 function ColorsPanel() {
   const [context, setContext] = useState<PinColorContext | null>(null);
+  const [kits, setKits] = useState<PinCustomKit[]>([]);
   const [theme, setTheme] = useState<PinSettings['theme']>('light');
   const [busy, setBusy] = useState(false);
 
@@ -818,13 +819,18 @@ function ColorsPanel() {
         void reload();
       }
     });
-    void Promise.all([window.pinApi.getSettings(), window.pinApi.getColorContext()]).then(
-      ([settings, nextContext]) => {
+    void Promise.all([
+      window.pinApi.getSettings(),
+      window.pinApi.getColorContext(),
+      window.pinApi.listColorKits(),
+    ]).then(
+      ([settings, nextContext, nextKits]) => {
         if (!active) {
           return;
         }
         setTheme(settings.theme);
         setContext(nextContext);
+        setKits(nextKits ?? []);
       },
     );
     return () => {
@@ -838,6 +844,66 @@ function ColorsPanel() {
     try {
       await window.pinApi.applyColorPreset(presetId);
       await reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyKit = async (kitId: string) => {
+    setBusy(true);
+    try {
+      await window.pinApi.applyColorKit(kitId);
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveKit = async () => {
+    if (!context?.colors) {
+      return;
+    }
+    const name = window.prompt('套装名称', '我的套装')?.trim();
+    if (!name) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const created = await window.pinApi.createColorKit(name);
+      if (created) {
+        setKits((current) => [...current, created]);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const renameKit = async (kit: PinCustomKit) => {
+    const name = window.prompt('重命名套装', kit.name)?.trim();
+    if (!name || name === kit.name) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const updated = await window.pinApi.renameColorKit(kit.id, name);
+      if (updated) {
+        setKits((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteKit = async (kit: PinCustomKit) => {
+    if (!window.confirm(`删除配色套装“${kit.name}”？`)) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const deleted = await window.pinApi.deleteColorKit(kit.id);
+      if (deleted) {
+        setKits((current) => current.filter((item) => item.id !== deleted.id));
+      }
     } finally {
       setBusy(false);
     }
@@ -859,6 +925,7 @@ function ColorsPanel() {
   const isWidgetScope = context?.scope === 'widget';
   const windowContext = getWindowContext();
   const title = isWidgetScope ? context?.widgetTitle ?? '窗口' : windowContext.scope === 'widget' ? '窗口' : '默认';
+  const currentKitId = kits.find((kit) => currentColors && colorSetEquals(kit, currentColors))?.id;
   return (
     <main className={theme === 'dark' ? 'app colors-app management-dark' : 'app colors-app'}>
       <ColorsTitleBar onHide={() => void window.pinApi.hideColors()} title={title} />
@@ -877,7 +944,41 @@ function ColorsPanel() {
             {context?.activePresetId === preset.id && <span className="color-preset-current">当前</span>}
           </button>
         ))}
-        <button className="color-custom-placeholder" disabled type="button">
+        {kits.map((kit) => (
+          <div className={currentKitId === kit.id ? 'color-kit-row color-kit-row--active' : 'color-kit-row'} key={kit.id}>
+            <button
+              className="color-preset color-kit-apply"
+              disabled={busy}
+              onClick={() => void applyKit(kit.id)}
+              type="button"
+            >
+              <ColorSwatches colors={kit} />
+              <span>{kit.name}</span>
+              {currentKitId === kit.id && <span className="color-preset-current">当前</span>}
+            </button>
+            <button
+              aria-label={`重命名 ${kit.name}`}
+              className="color-kit-action"
+              disabled={busy}
+              onClick={() => void renameKit(kit)}
+              title="重命名套装"
+              type="button"
+            >
+              ✎
+            </button>
+            <button
+              aria-label={`删除 ${kit.name}`}
+              className="color-kit-action color-kit-action--delete"
+              disabled={busy}
+              onClick={() => void deleteKit(kit)}
+              title="删除套装"
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <button className="color-custom-placeholder" disabled={busy} onClick={() => void saveKit()} type="button">
           ＋ 自定义… ›
         </button>
       </section>

@@ -291,6 +291,38 @@ ipcMain.handle('colors:set-widget-follow-default', (event, followsDefault: unkno
   }
   return getManager().setWidgetFollowDefault(event, followsDefault) ?? null;
 });
+ipcMain.handle('colors:list-kits', (event) => getManager().listColorKits(event) ?? null);
+ipcMain.handle('colors:create-kit', (event, name: unknown) => {
+  if (typeof name !== 'string') {
+    throw new TypeError('kit name must be a string');
+  }
+  return getManager().createColorKit(event, name) ?? null;
+});
+ipcMain.handle('colors:rename-kit', (event, input: unknown) => {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    !('id' in input) ||
+    typeof input.id !== 'string' ||
+    !('name' in input) ||
+    typeof input.name !== 'string'
+  ) {
+    throw new TypeError('kit rename must contain id and name');
+  }
+  return getManager().renameColorKit(event, input.id, input.name) ?? null;
+});
+ipcMain.handle('colors:delete-kit', (event, kitId: unknown) => {
+  if (typeof kitId !== 'string') {
+    throw new TypeError('kit id must be a string');
+  }
+  return getManager().deleteColorKit(event, kitId) ?? null;
+});
+ipcMain.handle('colors:apply-kit', (event, kitId: unknown) => {
+  if (typeof kitId !== 'string') {
+    throw new TypeError('kit id must be a string');
+  }
+  return getManager().applyColorKit(event, kitId) ?? null;
+});
 ipcMain.handle('colors:hide', (event) => getManager().hideColors(event));
 ipcMain.handle('todo:list', (event) => getManager().getTodosForEvent(event) ?? null);
 ipcMain.handle('todo:create', (event, text: unknown) => {

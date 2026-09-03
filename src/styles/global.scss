@@ -1436,11 +1436,47 @@ button:disabled {
 .color-custom-placeholder {
   color: #6f6f6f;
   border-bottom: 0;
-  cursor: default;
+  cursor: pointer;
 }
 
 .color-custom-placeholder:disabled {
   opacity: 1;
+}
+
+.color-kit-row {
+  display: flex;
+  min-height: 42px;
+  align-items: stretch;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.color-kit-row--active {
+  background: #ffe566;
+  box-shadow: inset 3px 0 0 #111111;
+}
+
+.color-kit-apply {
+  min-width: 0;
+  flex: 1;
+  border-bottom: 0;
+}
+
+.color-kit-action {
+  width: 30px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid #d8d8d8;
+  background: transparent;
+  font-size: 13px;
+}
+
+.color-kit-action:hover {
+  background: #f4f4f1;
+}
+
+.color-kit-action--delete {
+  color: #6f6f6f;
 }
 
 .colors-footer {
@@ -1481,6 +1517,34 @@ button:disabled {
 
 .management-dark .color-preset-current {
   color: #111111;
+}
+
+.management-dark .color-kit-row {
+  border-color: #f2f2f2;
+}
+
+.management-dark .color-kit-row--active {
+  color: #0d0d0d;
+  background: #ffe566;
+  box-shadow: inset 3px 0 0 #f2f2f2;
+}
+
+.management-dark .color-kit-row--active .color-kit-apply {
+  color: #0d0d0d;
+}
+
+.management-dark .color-kit-action {
+  color: #f2f2f2;
+  border-color: #6f6f6f;
+}
+
+.management-dark .color-kit-row--active .color-kit-action {
+  color: #111111;
+}
+
+.management-dark .color-kit-action:hover {
+  color: #111111;
+  background: #f2f2f2;
 }
 
 .widget-themed {

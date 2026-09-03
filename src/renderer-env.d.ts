@@ -77,6 +77,19 @@ interface PinColorContext {
   widgetTitle?: string;
 }
 
+interface PinCustomKit {
+  id: string;
+  name: string;
+  paper: string;
+  ink: string;
+  title: string | null;
+  accent: string;
+  spine: string | null;
+  shadow: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 type PinSettingsUpdate = Partial<Pick<
   PinSettings,
   'theme' | 'autoTheme' | 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar' | 'defaultOpacity' | 'pinAll' | 'autostart' | 'snap'
@@ -93,6 +106,11 @@ interface Window {
     getColorContext: () => Promise<PinColorContext | null>;
     applyColorPreset: (presetId: string) => Promise<PinSettings | PinWidget | null>;
     setWidgetFollowDefault: (followsDefault: boolean) => Promise<PinWidget | null>;
+    listColorKits: () => Promise<PinCustomKit[] | null>;
+    createColorKit: (name: string) => Promise<PinCustomKit | null>;
+    renameColorKit: (id: string, name: string) => Promise<PinCustomKit | null>;
+    deleteColorKit: (id: string) => Promise<PinCustomKit | null>;
+    applyColorKit: (id: string) => Promise<PinSettings | PinWidget | null>;
     hideColors: () => Promise<boolean>;
     onSettingsChanged: (listener: (settings: PinSettings) => void) => () => void;
     onWidgetChanged: (listener: (widget: PinWidget) => void) => () => void;
