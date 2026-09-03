@@ -13,6 +13,8 @@ function getWindowContext() {
     role: params.get('role') ?? 'unknown',
     id: params.get('id') ?? 'unknown',
     scope: params.get('scope') ?? 'default',
+    renameId: params.get('renameId'),
+    widgetId: params.get('widgetId'),
   };
 }
 
@@ -281,6 +283,12 @@ function Manager() {
     const nextWidgets = await window.pinApi.listManagedWidgets();
     if (nextWidgets) {
       setWidgets(nextWidgets);
+      const renameId = getWindowContext().renameId;
+      const renameWidget = renameId ? nextWidgets.find((widget) => widget.id === renameId) : undefined;
+      if (renameWidget) {
+        setEditingId(renameWidget.id);
+        setRenameDraft(renameWidget.title);
+      }
     }
   };
 
@@ -292,7 +300,13 @@ function Manager() {
     const unsubscribe = window.pinApi.onWidgetChanged((updated) => {
       setWidgets((current) => current.map((widget) => (widget.id === updated.id ? updated : widget)));
     });
-    return unsubscribe;
+    const unsubscribeDeleted = window.pinApi.onWidgetDeleted((widgetId) => {
+      setWidgets((current) => current.filter((widget) => widget.id !== widgetId));
+    });
+    return () => {
+      unsubscribe();
+      unsubscribeDeleted();
+    };
   }, []);
 
   useEffect(() => {
@@ -859,6 +873,12 @@ function ColorsPanel() {
         void reload();
       }
     });
+    const unsubscribeDeleted = window.pinApi.onWidgetDeleted((widgetId) => {
+      const windowContext = getWindowContext();
+      if (windowContext.scope === 'widget' && windowContext.widgetId === widgetId) {
+        setContext(null);
+      }
+    });
     void Promise.all([
       window.pinApi.getSettings(),
       window.pinApi.getColorContext(),
@@ -876,6 +896,7 @@ function ColorsPanel() {
     return () => {
       active = false;
       unsubscribe();
+      unsubscribeDeleted();
     };
   }, []);
 
@@ -1270,7 +1291,7 @@ function useContextMenu(enabled: boolean): ContextMenuState {
     event.stopPropagation();
     setPosition({
       left: Math.min(event.clientX, Math.max(8, window.innerWidth - 204)),
-      top: Math.min(event.clientY, Math.max(8, window.innerHeight - 178)),
+      top: Math.min(event.clientY, Math.max(8, window.innerHeight - 292)),
     });
   };
 
@@ -1279,11 +1300,13 @@ function useContextMenu(enabled: boolean): ContextMenuState {
 
 function OpacityContextMenu({
   menu,
+  onPin,
   onChange,
   widget,
   showOpacity,
 }: {
   menu: ContextMenuState;
+  onPin: () => void;
   onChange: (value: number) => void;
   widget: PinWidget;
   showOpacity: boolean;
@@ -1317,11 +1340,64 @@ function OpacityContextMenu({
         className="window-context-menu-item"
         onClick={() => {
           menu.close();
+          void window.pinApi.createSameWidget();
+        }}
+        type="button"
+      >
+        再开一个同类
+      </button>
+      <button
+        className="window-context-menu-item"
+        onClick={() => {
+          menu.close();
+          onPin();
+        }}
+        type="button"
+      >
+        {widget.pin ? '取消置顶' : '置顶显示'}
+      </button>
+      <button
+        className="window-context-menu-item"
+        onClick={() => {
+          menu.close();
           void window.pinApi.openWidgetColors();
         }}
         type="button"
       >
         颜色…
+      </button>
+      <button
+        className="window-context-menu-item"
+        onClick={() => {
+          menu.close();
+          void window.pinApi.openManagerRename();
+        }}
+        type="button"
+      >
+        重命名…
+      </button>
+      <button
+        className="window-context-menu-item"
+        onClick={() => {
+          menu.close();
+          void window.pinApi.hideWindow();
+        }}
+        type="button"
+      >
+        隐藏（保留内容）
+      </button>
+      <button
+        className="window-context-menu-item window-context-menu-item--delete"
+        onClick={() => {
+          if (!window.confirm(`删除窗口“${widget.title.trim() || widget.type.toUpperCase()}”？`)) {
+            return;
+          }
+          menu.close();
+          void window.pinApi.deleteCurrentWidget();
+        }}
+        type="button"
+      >
+        删除
       </button>
     </div>
   );
@@ -1879,7 +1955,7 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
           {!embedded && <ResizeHandle />}
         </>
       )}
-      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} showOpacity={!viewSettings.opacityBar} widget={widget} />}
+      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} onPin={togglePin} showOpacity={!viewSettings.opacityBar} widget={widget} />}
     </main>
   );
 }
@@ -2346,7 +2422,7 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
           {!embedded && <ResizeHandle />}
         </>
       )}
-      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} showOpacity={!viewSettings.opacityBar} widget={widget} />}
+      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} onPin={togglePin} showOpacity={!viewSettings.opacityBar} widget={widget} />}
     </main>
   );
 }
@@ -2441,7 +2517,7 @@ function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
           {!embedded && <ResizeHandle />}
         </>
       )}
-      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} showOpacity={!viewSettings.opacityBar} widget={widget} />}
+      {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} onPin={togglePin} showOpacity={!viewSettings.opacityBar} widget={widget} />}
     </main>
   );
 }
@@ -2537,7 +2613,7 @@ function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
           <ResizeHandle />
         </>
       )}
-      <OpacityContextMenu menu={contextMenu} onChange={setOpacity} showOpacity={!viewSettings.opacityBar} widget={widget} />
+      <OpacityContextMenu menu={contextMenu} onChange={setOpacity} onPin={togglePin} showOpacity={!viewSettings.opacityBar} widget={widget} />
     </main>
   );
 }

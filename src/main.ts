@@ -476,6 +476,12 @@ ipcMain.handle('window:set-collapsed', (event, collapsed: unknown) => {
   }
   return getManager().setCollapsed(event, collapsed) ?? null;
 });
+ipcMain.handle('window:create-same', (event) => {
+  const widget = getManager().getWidgetForEvent(event);
+  return widget ? getManager().createWidget(widget.type) : null;
+});
+ipcMain.handle('window:open-manager-rename', (event) => getManager().openManagerForRename(event));
+ipcMain.handle('window:delete-current', (event) => getManager().deleteCurrentWidget(event) ?? null);
 ipcMain.handle('onboarding:create', (_event, type: unknown) => {
   if (typeof type !== 'string' || !WIDGET_TYPES.includes(type as WidgetType)) {
     throw new TypeError('Unknown widget type');

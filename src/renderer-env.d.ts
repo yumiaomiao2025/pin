@@ -118,6 +118,7 @@ interface Window {
     hideColors: () => Promise<boolean>;
     onSettingsChanged: (listener: (settings: PinSettings) => void) => () => void;
     onWidgetChanged: (listener: (widget: PinWidget) => void) => () => void;
+    onWidgetDeleted: (listener: (widgetId: string) => void) => () => void;
     getWidget: () => Promise<PinWidget | null>;
     openManager: () => Promise<boolean>;
     hideManager: () => Promise<boolean>;
@@ -151,6 +152,9 @@ interface Window {
     setOpacity: (opacity: number) => Promise<PinWidget | null>;
     setPin: (pin: boolean) => Promise<PinWidget | null>;
     setCollapsed: (collapsed: boolean) => Promise<PinWidget | null>;
+    createSameWidget: () => Promise<PinWidget | null>;
+    openManagerRename: () => Promise<boolean>;
+    deleteCurrentWidget: () => Promise<PinWidget | null>;
     createWidget: (type: PinWidget['type']) => Promise<PinWidget>;
   };
 }

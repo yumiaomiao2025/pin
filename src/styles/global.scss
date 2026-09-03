@@ -751,6 +751,10 @@ button:disabled {
   background: #ffe566;
 }
 
+.window-context-menu-item--delete {
+  background: #ffe566;
+}
+
 .onboarding {
   background: repeating-linear-gradient(45deg, #ffffff 0 8px, #f4f4f4 8px 16px);
 }
@@ -1849,5 +1853,9 @@ button:disabled {
 
 .widget-themed .window-context-menu-item:hover {
   color: var(--widget-ink);
+  background: var(--widget-accent);
+}
+
+.widget-themed .window-context-menu-item--delete {
   background: var(--widget-accent);
 }

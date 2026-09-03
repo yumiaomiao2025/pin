@@ -30,6 +30,11 @@ contextBridge.exposeInMainWorld('pinApi', {
     ipcRenderer.on('widget:changed', handler);
     return () => ipcRenderer.removeListener('widget:changed', handler);
   },
+  onWidgetDeleted: (listener: (widgetId: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, widgetId: unknown) => listener(widgetId);
+    ipcRenderer.on('widget:deleted', handler);
+    return () => ipcRenderer.removeListener('widget:deleted', handler);
+  },
   getWidget: () => ipcRenderer.invoke('widget:get'),
   openManager: () => ipcRenderer.invoke('manager:open'),
   hideManager: () => ipcRenderer.invoke('manager:hide'),
@@ -66,6 +71,9 @@ contextBridge.exposeInMainWorld('pinApi', {
   setOpacity: (opacity: number) => ipcRenderer.invoke('window:set-opacity', opacity),
   setPin: (pin: boolean) => ipcRenderer.invoke('window:set-pin', pin),
   setCollapsed: (collapsed: boolean) => ipcRenderer.invoke('window:set-collapsed', collapsed),
+  createSameWidget: () => ipcRenderer.invoke('window:create-same'),
+  openManagerRename: () => ipcRenderer.invoke('window:open-manager-rename'),
+  deleteCurrentWidget: () => ipcRenderer.invoke('window:delete-current'),
   createWidget: (type: 'note' | 'todo' | 'clip' | 'desk') =>
     ipcRenderer.invoke('onboarding:create', type),
 });

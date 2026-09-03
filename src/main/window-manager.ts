@@ -39,12 +39,14 @@ export interface WindowManager {
   showAllWidgets(): void;
   hideAllWidgets(): void;
   openWidget(widgetId: string): BrowserWindow | undefined;
-  openManager(): BrowserWindow;
+  openManager(renameWidgetId?: string): BrowserWindow;
+  openManagerForRename(event: IpcMainInvokeEvent): boolean;
   hideManager(event: IpcMainInvokeEvent): boolean;
   openSettings(): BrowserWindow;
   hideSettings(event: IpcMainInvokeEvent): boolean;
   openColors(scope: 'default' | 'widget', widgetId?: string): BrowserWindow;
   openWidgetColors(event: IpcMainInvokeEvent): boolean;
+  deleteCurrentWidget(event: IpcMainInvokeEvent): Widget | undefined;
   hideColors(event: IpcMainInvokeEvent): boolean;
   createWidget(type: WidgetType): Widget;
   createWidgetForEvent(event: IpcMainInvokeEvent, type: WidgetType): Widget | undefined;
@@ -296,6 +298,15 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     });
   };
 
+  const broadcastWidgetDeleted = (widgetId: string) => {
+    const recipients = [managerWindow, colorsWindow];
+    recipients.forEach((targetWindow) => {
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        targetWindow.webContents.send('widget:deleted', widgetId);
+      }
+    });
+  };
+
   const syncDefaultColors = (settings: Settings) => {
     const colors = settingsToColors(settings);
     service.widgets.list().filter((widget) => widget.followsDefault).forEach((widget) => {
@@ -400,8 +411,11 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     }
   };
 
-  const loadManager = (window: UtilityWindow) => {
-    const query = { role: 'manager', id: 'manager' };
+  const loadManager = (window: UtilityWindow, renameWidgetId?: string) => {
+    const query: Record<string, string> = { role: 'manager', id: 'manager' };
+    if (renameWidgetId) {
+      query.renameId = renameWidgetId;
+    }
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       void window.loadURL(
         `${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`,
@@ -530,8 +544,11 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     return window;
   };
 
-  const openManager = () => {
+  const openManager = (renameWidgetId?: string) => {
     if (managerWindow && !managerWindow.isDestroyed()) {
+      if (renameWidgetId) {
+        loadManager(managerWindow, renameWidgetId);
+      }
       managerWindow.show();
       managerWindow.focus();
       return managerWindow;
@@ -565,7 +582,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         managerWindow.show();
       }
     });
-    loadManager(managerWindow);
+    loadManager(managerWindow, renameWidgetId);
     return managerWindow;
   };
 
@@ -715,6 +732,40 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     });
   };
 
+  const deleteWidgetById = (widgetId: string) => {
+    const widget = service.widgets.getById(widgetId);
+    if (!widget) {
+      return undefined;
+    }
+
+    if (contentTrash) {
+      clearTimeout(contentTrash.timer);
+    }
+    const persistTimer = persistTimers.get(widgetId);
+    if (persistTimer) {
+      clearTimeout(persistTimer);
+      persistTimers.delete(widgetId);
+    }
+
+    const todos = service.todos.listByWidget(widgetId);
+    const clips = service.clipItems.listByWidget(widgetId);
+    const targetWindow = windows.get(widgetId);
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.destroy();
+    }
+    windows.delete(widgetId);
+    service.widgets.delete(widgetId);
+    broadcastWidgetDeleted(widgetId);
+
+    const timer = setTimeout(() => {
+      if (contentTrash?.kind === 'widget' && contentTrash.item.id === widget.id) {
+        contentTrash = undefined;
+      }
+    }, 5_000);
+    contentTrash = { kind: 'widget', item: widget, todos, clips, timer };
+    return widget;
+  };
+
   return {
     openVisibleWidgets: () => {
       service.widgets.list().filter((widget) => !widget.hidden).forEach((widget) => {
@@ -742,6 +793,15 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     openWidget,
 
     openManager,
+
+    openManagerForRename: (event) => {
+      const widgetId = widgetIdForEvent(event);
+      if (!widgetId || !service.widgets.getById(widgetId)) {
+        return false;
+      }
+      openManager(widgetId);
+      return true;
+    },
 
     hideManager: (event) => {
       if (!isManagerEvent(event) || !managerWindow || managerWindow.isDestroyed()) {
@@ -838,36 +898,12 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (!isManagerEvent(event)) {
         return undefined;
       }
-      const widget = service.widgets.getById(widgetId);
-      if (!widget) {
-        return undefined;
-      }
+      return deleteWidgetById(widgetId);
+    },
 
-      if (contentTrash) {
-        clearTimeout(contentTrash.timer);
-      }
-      const persistTimer = persistTimers.get(widgetId);
-      if (persistTimer) {
-        clearTimeout(persistTimer);
-        persistTimers.delete(widgetId);
-      }
-
-      const todos = service.todos.listByWidget(widgetId);
-      const clips = service.clipItems.listByWidget(widgetId);
-      const targetWindow = windows.get(widgetId);
-      if (targetWindow && !targetWindow.isDestroyed()) {
-        targetWindow.destroy();
-      }
-      windows.delete(widgetId);
-      service.widgets.delete(widgetId);
-
-      const timer = setTimeout(() => {
-        if (contentTrash?.kind === 'widget' && contentTrash.item.id === widget.id) {
-          contentTrash = undefined;
-        }
-      }, 5_000);
-      contentTrash = { kind: 'widget', item: widget, todos, clips, timer };
-      return widget;
+    deleteCurrentWidget: (event) => {
+      const widgetId = widgetIdForEvent(event);
+      return widgetId ? deleteWidgetById(widgetId) : undefined;
     },
 
     restoreWidget: (event) => {
