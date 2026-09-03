@@ -37,6 +37,10 @@ function widgetDisplayName(widget: PinWidget) {
   return widget.title.trim() || widget.type.toUpperCase();
 }
 
+function effectiveTheme(settings: PinSettings) {
+  return settings.effectiveTheme;
+}
+
 function widgetColorStyle(widget: PinWidget): React.CSSProperties {
   const colors = deriveColorVars({
     paper: widget.paperColor,
@@ -313,12 +317,12 @@ function Manager() {
     let active = true;
     const unsubscribe = window.pinApi.onSettingsChanged((settings) => {
       if (active) {
-        setTheme(settings.theme);
+        setTheme(settings.effectiveTheme);
       }
     });
     void window.pinApi.getSettings().then((settings) => {
       if (active) {
-        setTheme(settings.theme);
+        setTheme(settings.effectiveTheme);
       }
     });
     return () => {
@@ -553,6 +557,7 @@ function Manager() {
 const DEFAULT_SETTINGS: PinSettings = {
   theme: 'light',
   autoTheme: false,
+  effectiveTheme: 'light',
   defaultPaperColor: '#FFFFFF',
   defaultInkColor: '#111111',
   defaultTitleColor: '#FFE566',
@@ -737,7 +742,7 @@ function SettingsPanel() {
   };
 
   return (
-    <main className={settings.theme === 'dark' ? 'app settings-app management-dark' : 'app settings-app'}>
+    <main className={effectiveTheme(settings) === 'dark' ? 'app settings-app management-dark' : 'app settings-app'}>
       <SettingsTitleBar onHide={() => void window.pinApi.hideSettings()} />
       <div className="settings-scroll">
         <SettingsSection title="WINDOW">
@@ -749,9 +754,9 @@ function SettingsPanel() {
         <SettingsSection title="THEME">
           <SettingsSegmented
             disabled={busy}
-            onChange={(theme) => void updateSettings({ theme })}
-            options={[{ id: 'light', label: 'LIGHT' }, { id: 'dark', label: 'DARK' }]}
-            value={settings.theme}
+            onChange={(theme) => void updateSettings(theme === 'auto' ? { autoTheme: true } : { theme, autoTheme: false })}
+            options={[{ id: 'light', label: 'LIGHT' }, { id: 'dark', label: 'DARK' }, { id: 'auto', label: 'AUTO' }]}
+            value={settings.autoTheme ? 'auto' : settings.theme}
           />
         </SettingsSection>
         <SettingsSection title="DEFAULTS">
@@ -869,7 +874,7 @@ function ColorsPanel() {
     let active = true;
     const unsubscribe = window.pinApi.onSettingsChanged((settings) => {
       if (active) {
-        setTheme(settings.theme);
+        setTheme(settings.effectiveTheme);
         void reload();
       }
     });
@@ -888,7 +893,7 @@ function ColorsPanel() {
         if (!active) {
           return;
         }
-        setTheme(settings.theme);
+        setTheme(settings.effectiveTheme);
         setContext(nextContext);
         setKits(nextKits ?? []);
       },

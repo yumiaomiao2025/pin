@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   clipboard,
+  nativeTheme,
   screen,
   type IpcMainInvokeEvent,
   type Rectangle,
@@ -10,7 +11,7 @@ import path from 'node:path';
 
 import type { AppDatabaseService } from './database/app-service';
 import type { CreateWidgetInput, UpdateClipItemInput, UpdateSettingsInput, UpdateTodoInput } from './database/repositories';
-import { DEFAULT_COLORS, type ClipItem, type CustomKit, type DeskTab, type Settings, type Todo, type Widget, type WidgetType } from './database/schema';
+import { DEFAULT_COLORS, type ClipItem, type CustomKit, type DeskTab, type Settings, type Theme, type Todo, type Widget, type WidgetType } from './database/schema';
 import type { ColorSet } from '../shared/colors';
 import { COLOR_PRESETS, mixColor } from '../shared/colors';
 
@@ -53,9 +54,9 @@ export interface WindowManager {
   renameWidget(event: IpcMainInvokeEvent, widgetId: string, title: string): Widget | undefined;
   deleteWidget(event: IpcMainInvokeEvent, widgetId: string): Widget | undefined;
   restoreWidget(event: IpcMainInvokeEvent): Widget | undefined;
-  getSettings(): Settings;
-  updateSettings(event: IpcMainInvokeEvent, patch: UpdateSettingsInput): Settings | undefined;
-  resetSettings(event: IpcMainInvokeEvent): Settings | undefined;
+  getSettings(): Settings & { effectiveTheme: Theme };
+  updateSettings(event: IpcMainInvokeEvent, patch: UpdateSettingsInput): (Settings & { effectiveTheme: Theme }) | undefined;
+  resetSettings(event: IpcMainInvokeEvent): (Settings & { effectiveTheme: Theme }) | undefined;
   getColorContext(event: IpcMainInvokeEvent): {
     scope: 'default' | 'widget';
     colors: ColorSet;
@@ -237,6 +238,17 @@ function isHexColor(value: string) {
   return /^#[0-9A-Fa-f]{6}$/.test(value);
 }
 
+function settingsForRenderer(settings: Settings): Settings & { effectiveTheme: Theme } {
+  return {
+    ...settings,
+    effectiveTheme: settings.autoTheme
+      ? nativeTheme.shouldUseDarkColors
+        ? 'dark'
+        : 'light'
+      : settings.theme,
+  };
+}
+
 export function createWindowManager(service: AppDatabaseService): WindowManager {
   const windows = new Map<string, WidgetWindow>();
   let managerWindow: UtilityWindow | undefined;
@@ -280,12 +292,18 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
   };
 
   const broadcastSettings = (settings: Settings) => {
+    const rendererSettings = settingsForRenderer(settings);
     BrowserWindow.getAllWindows().forEach((window) => {
       if (!window.isDestroyed()) {
-        window.webContents.send('settings:changed', settings);
+        window.webContents.send('settings:changed', rendererSettings);
       }
     });
   };
+
+  const handleNativeThemeUpdated = () => {
+    broadcastSettings(service.settings.ensure());
+  };
+  nativeTheme.on('updated', handleNativeThemeUpdated);
 
   const broadcastWidget = (widget: Widget) => {
     const recipients = [windows.get(widget.id), managerWindow, colorsWindow];
@@ -922,20 +940,20 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return service.widgets.getById(widget.id);
     },
 
-    getSettings: () => service.settings.ensure(),
+    getSettings: () => settingsForRenderer(service.settings.ensure()),
 
     updateSettings: (event, patch) => {
       if (!isSettingsEvent(event)) {
         return undefined;
       }
-      return updateGlobalSettings(patch);
+      return settingsForRenderer(updateGlobalSettings(patch));
     },
 
     resetSettings: (event) => {
       if (!isSettingsEvent(event)) {
         return undefined;
       }
-      return updateGlobalSettings({
+      return settingsForRenderer(updateGlobalSettings({
         theme: 'light',
         autoTheme: false,
         defaultPaperColor: DEFAULT_COLORS.paper,
@@ -952,7 +970,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         pinAll: false,
         autostart: false,
         snap: true,
-      });
+      }));
     },
 
     getColorContext: (event) => {
@@ -1417,6 +1435,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
     prepareQuit: () => {
       quitting = true;
+      nativeTheme.removeListener('updated', handleNativeThemeUpdated);
       if (contentTrash) {
         clearTimeout(contentTrash.timer);
         contentTrash = undefined;

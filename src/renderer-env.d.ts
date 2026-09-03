@@ -46,6 +46,7 @@ interface PinClipItem {
 interface PinSettings {
   theme: 'light' | 'dark';
   autoTheme: boolean;
+  effectiveTheme: 'light' | 'dark';
   defaultPaperColor: string;
   defaultInkColor: string;
   defaultTitleColor: string | null;
