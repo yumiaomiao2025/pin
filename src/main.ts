@@ -60,28 +60,28 @@ const createTray = () => {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
+        label: '新建',
+        submenu: WIDGET_TYPES.map((type) => ({
+          label: WIDGET_OPTIONS_LABELS[type],
+          click: () => windowManager?.createWidget(type),
+        })),
+      },
+      { type: 'separator' },
+      {
         label: '管理面板…',
         click: () => windowManager?.openManager(),
       },
       {
-        label: '设置',
-        click: () => windowManager?.openSettings(),
+        label: '全部隐藏',
+        click: () => windowManager?.hideAllWidgets(),
       },
       {
         label: '全部显示',
         click: () => windowManager?.showAllWidgets(),
       },
       {
-        label: '全部隐藏',
-        click: () => windowManager?.hideAllWidgets(),
-      },
-      { type: 'separator' },
-      {
-        label: '新建',
-        submenu: WIDGET_TYPES.map((type) => ({
-          label: WIDGET_OPTIONS_LABELS[type],
-          click: () => windowManager?.createWidget(type),
-        })),
+        label: '设置',
+        click: () => windowManager?.openSettings(),
       },
       { type: 'separator' },
       { label: '退出', click: () => app.quit() },
