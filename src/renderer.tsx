@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import './styles/global.scss';
-import { COLOR_PRESETS, colorSetEquals, deriveColorVars } from './shared/colors';
+import { COLOR_PRESETS, colorSetEquals, deriveColorVars, mixColor } from './shared/colors';
 
 type WidgetType = PinWidget['type'];
 
@@ -647,6 +647,17 @@ function ColorSwatches({ colors }: { colors: { paper: string; accent: string; in
   );
 }
 
+type EditableColorPart = 'title' | 'accent' | 'spine' | 'paper' | 'shadow';
+
+const PRIMARY_COLORS = ['#FFE566', '#E5B64B', '#5E82AA', '#6E9C7B'] as const;
+const COLOR_PARTS: Array<{ id: EditableColorPart; label: string; nullable: boolean; options: Array<string | null> }> = [
+  { id: 'title', label: '标题栏底', nullable: true, options: [...PRIMARY_COLORS, null] },
+  { id: 'accent', label: '选中 · 拖拽行', nullable: false, options: [...PRIMARY_COLORS] },
+  { id: 'spine', label: '左色脊', nullable: true, options: [...PRIMARY_COLORS, null] },
+  { id: 'paper', label: '窗口底纸色', nullable: false, options: ['#FFFFFF', '#FFF9D6', '#EDF6EF', '#E8F1FB', '#0D0D0D'] },
+  { id: 'shadow', label: '硬阴影', nullable: false, options: ['#111111', '#F2F2F2', ...PRIMARY_COLORS] },
+];
+
 function SettingsPanel() {
   const [settings, setSettings] = useState<PinSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
@@ -783,10 +794,36 @@ function SettingsPanel() {
   );
 }
 
-function ColorsTitleBar({ onHide, title }: { onHide: () => void; title: string }) {
+function ColorsTitleBar({
+  onBack,
+  onHide,
+  onSave,
+  title,
+}: {
+  onBack?: () => void;
+  onHide: () => void;
+  onSave?: () => void;
+  title: string;
+}) {
   return (
     <header className="colors-titlebar">
+      {onBack && (
+        <button
+          aria-label="返回套装列表"
+          className="title-action title-action--icon"
+          onClick={onBack}
+          title="返回套装列表"
+          type="button"
+        >
+          ‹
+        </button>
+      )}
       <span className="type-label">COLORS · {title}</span>
+      {onSave && (
+        <button className="colors-save-action" onClick={onSave} type="button">
+          存为套装
+        </button>
+      )}
       <button
         aria-label="关闭颜色面板"
         className="title-action title-action--icon"
@@ -805,6 +842,9 @@ function ColorsPanel() {
   const [kits, setKits] = useState<PinCustomKit[]>([]);
   const [theme, setTheme] = useState<PinSettings['theme']>('light');
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<'kits' | 'custom'>('kits');
+  const [expandedPart, setExpandedPart] = useState<EditableColorPart | null>(null);
+  const [editorBaseColors, setEditorBaseColors] = useState<PinColorSet | null>(null);
 
   const reload = async () => {
     const nextContext = await window.pinApi.getColorContext();
@@ -921,81 +961,210 @@ function ColorsPanel() {
     }
   };
 
+  const openCustomEditor = () => {
+    if (!context?.colors) {
+      return;
+    }
+    setEditorBaseColors({ ...context.colors });
+    setExpandedPart(null);
+    setView('custom');
+  };
+
+  const updatePart = async (part: EditableColorPart, value: string | null) => {
+    setBusy(true);
+    try {
+      await window.pinApi.updateColorParts({ [part]: value });
+      await reload();
+      setExpandedPart(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyPrimary = async (color: string) => {
+    setBusy(true);
+    try {
+      await window.pinApi.applyPrimaryColor(color);
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restoreEditorBase = async () => {
+    if (!editorBaseColors) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await window.pinApi.updateColorParts(editorBaseColors);
+      await reload();
+      setExpandedPart(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const currentColors = context?.colors;
   const isWidgetScope = context?.scope === 'widget';
   const windowContext = getWindowContext();
   const title = isWidgetScope ? context?.widgetTitle ?? '窗口' : windowContext.scope === 'widget' ? '窗口' : '默认';
   const currentKitId = kits.find((kit) => currentColors && colorSetEquals(kit, currentColors))?.id;
+  const activePrimary = PRIMARY_COLORS.find((color) => (
+    currentColors?.title === color &&
+    currentColors.accent === color &&
+    currentColors.spine === color &&
+    currentColors.shadow === color &&
+    currentColors.paper === mixColor(color, '#FFFFFF', 0.88)
+  ));
   return (
     <main className={theme === 'dark' ? 'app colors-app management-dark' : 'app colors-app'}>
-      <ColorsTitleBar onHide={() => void window.pinApi.hideColors()} title={title} />
-      <section className="colors-section">
-        <h2>套装</h2>
-        {COLOR_PRESETS.map((preset) => (
-          <button
-            className={context?.activePresetId === preset.id ? 'color-preset color-preset--active' : 'color-preset'}
-            disabled={busy}
-            key={preset.id}
-            onClick={() => void applyPreset(preset.id)}
-            type="button"
-          >
-            <ColorSwatches colors={preset} />
-            <span>{preset.name}</span>
-            {context?.activePresetId === preset.id && <span className="color-preset-current">当前</span>}
+      <ColorsTitleBar
+        onBack={view === 'custom' ? () => setView('kits') : undefined}
+        onHide={() => void window.pinApi.hideColors()}
+        onSave={view === 'custom' ? () => void saveKit() : undefined}
+        title={title}
+      />
+      {view === 'kits' ? (
+        <section className="colors-section">
+          <h2>套装</h2>
+          {COLOR_PRESETS.map((preset) => (
+            <button
+              className={context?.activePresetId === preset.id ? 'color-preset color-preset--active' : 'color-preset'}
+              disabled={busy}
+              key={preset.id}
+              onClick={() => void applyPreset(preset.id)}
+              type="button"
+            >
+              <ColorSwatches colors={preset} />
+              <span>{preset.name}</span>
+              {context?.activePresetId === preset.id && <span className="color-preset-current">当前</span>}
+            </button>
+          ))}
+          {kits.map((kit) => (
+            <div className={currentKitId === kit.id ? 'color-kit-row color-kit-row--active' : 'color-kit-row'} key={kit.id}>
+              <button
+                className="color-preset color-kit-apply"
+                disabled={busy}
+                onClick={() => void applyKit(kit.id)}
+                type="button"
+              >
+                <ColorSwatches colors={kit} />
+                <span>{kit.name}</span>
+                {currentKitId === kit.id && <span className="color-preset-current">当前</span>}
+              </button>
+              <button
+                aria-label={`重命名 ${kit.name}`}
+                className="color-kit-action"
+                disabled={busy}
+                onClick={() => void renameKit(kit)}
+                title="重命名套装"
+                type="button"
+              >
+                ✎
+              </button>
+              <button
+                aria-label={`删除 ${kit.name}`}
+                className="color-kit-action color-kit-action--delete"
+                disabled={busy}
+                onClick={() => void deleteKit(kit)}
+                title="删除套装"
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button className="color-custom-placeholder" disabled={busy} onClick={openCustomEditor} type="button">
+            ＋ 自定义… ›
           </button>
-        ))}
-        {kits.map((kit) => (
-          <div className={currentKitId === kit.id ? 'color-kit-row color-kit-row--active' : 'color-kit-row'} key={kit.id}>
-            <button
-              className="color-preset color-kit-apply"
-              disabled={busy}
-              onClick={() => void applyKit(kit.id)}
-              type="button"
-            >
-              <ColorSwatches colors={kit} />
-              <span>{kit.name}</span>
-              {currentKitId === kit.id && <span className="color-preset-current">当前</span>}
-            </button>
-            <button
-              aria-label={`重命名 ${kit.name}`}
-              className="color-kit-action"
-              disabled={busy}
-              onClick={() => void renameKit(kit)}
-              title="重命名套装"
-              type="button"
-            >
-              ✎
-            </button>
-            <button
-              aria-label={`删除 ${kit.name}`}
-              className="color-kit-action color-kit-action--delete"
-              disabled={busy}
-              onClick={() => void deleteKit(kit)}
-              title="删除套装"
-              type="button"
-            >
-              ×
-            </button>
+        </section>
+      ) : (
+        <section className="colors-section colors-custom-section">
+          <h2>主色 · 一选五处同步</h2>
+          <div className="color-primary-grid">
+            {PRIMARY_COLORS.map((color) => (
+              <button
+                aria-label={`主色 ${color}`}
+                className={activePrimary === color ? 'color-primary color-primary--active' : 'color-primary'}
+                disabled={busy}
+                key={color}
+                onClick={() => void applyPrimary(color)}
+                style={{ background: color }}
+                title={color}
+                type="button"
+              />
+            ))}
           </div>
-        ))}
-        <button className="color-custom-placeholder" disabled={busy} onClick={() => void saveKit()} type="button">
-          ＋ 自定义… ›
-        </button>
-      </section>
+          <h2>五处 · 可各自改</h2>
+          <div className="color-parts-list">
+            {COLOR_PARTS.map((part) => {
+              const value = currentColors?.[part.id] ?? null;
+              const expanded = expandedPart === part.id;
+              return (
+                <div className="color-part" key={part.id}>
+                  <button
+                    aria-expanded={expanded}
+                    className="color-part-trigger"
+                    disabled={busy}
+                    onClick={() => setExpandedPart(expanded ? null : part.id)}
+                    type="button"
+                  >
+                    <span>{part.label}</span>
+                    <span className="color-part-value">
+                      <span className={value ? 'color-part-swatch' : 'color-part-swatch color-part-swatch--none'} style={value ? { background: value } : undefined} />
+                      <span>{value ?? '/'}</span>
+                      <span aria-hidden="true">▾</span>
+                    </span>
+                  </button>
+                  {expanded && (
+                    <div className="color-part-options">
+                      {part.options.map((option) => (
+                        <button
+                          aria-label={option ?? '无'}
+                          className={value === option ? 'color-part-option color-part-option--active' : 'color-part-option'}
+                          disabled={busy}
+                          key={option ?? 'none'}
+                          onClick={() => void updatePart(part.id, option)}
+                          style={option ? { background: option } : undefined}
+                          title={option ?? '无'}
+                          type="button"
+                        >
+                          {!option && '/'}
+                          {value === option && <span aria-hidden="true">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
       <footer className="colors-footer">
         <span>
-          {currentColors
-            ? isWidgetScope && context?.followsDefault === false
+          {view === 'custom'
+            ? isWidgetScope
               ? '改动即时作用于本窗口'
               : '同步跟随默认的窗口'
-            : '加载中…'}
+            : currentColors
+              ? isWidgetScope && context?.followsDefault === false
+                ? '改动即时作用于本窗口'
+                : '同步跟随默认的窗口'
+              : '加载中…'}
         </span>
-        {isWidgetScope && (
+        {view === 'kits' && isWidgetScope && (
           <button
             disabled={busy || context?.followsDefault === true}
             onClick={() => void restoreDefault()}
             type="button"
           >
+            恢复默认
+          </button>
+        )}
+        {view === 'custom' && (
+          <button disabled={busy || !editorBaseColors} onClick={() => void restoreEditorBase()} type="button">
             恢复默认
           </button>
         )}

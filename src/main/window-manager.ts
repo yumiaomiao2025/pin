@@ -12,7 +12,7 @@ import type { AppDatabaseService } from './database/app-service';
 import type { CreateWidgetInput, UpdateClipItemInput, UpdateSettingsInput, UpdateTodoInput } from './database/repositories';
 import { DEFAULT_COLORS, type ClipItem, type CustomKit, type DeskTab, type Settings, type Todo, type Widget, type WidgetType } from './database/schema';
 import type { ColorSet } from '../shared/colors';
-import { COLOR_PRESETS } from '../shared/colors';
+import { COLOR_PRESETS, mixColor } from '../shared/colors';
 
 const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
@@ -64,6 +64,8 @@ export interface WindowManager {
   applyDefaultPreset(event: IpcMainInvokeEvent, presetId: string): Settings | undefined;
   applyWidgetPreset(event: IpcMainInvokeEvent, presetId: string): Widget | undefined;
   setWidgetFollowDefault(event: IpcMainInvokeEvent, followsDefault: boolean): Widget | undefined;
+  updateColorParts(event: IpcMainInvokeEvent, patch: Partial<ColorSet>): Settings | Widget | undefined;
+  applyPrimaryColor(event: IpcMainInvokeEvent, color: string): Settings | Widget | undefined;
   listColorKits(event: IpcMainInvokeEvent): CustomKit[] | undefined;
   createColorKit(event: IpcMainInvokeEvent, name: string): CustomKit | undefined;
   renameColorKit(event: IpcMainInvokeEvent, kitId: string, name: string): CustomKit | undefined;
@@ -227,6 +229,10 @@ function colorsEqual(left: ColorSet, right: ColorSet) {
     left.spine === right.spine &&
     left.shadow === right.shadow
   );
+}
+
+function isHexColor(value: string) {
+  return /^#[0-9A-Fa-f]{6}$/.test(value);
 }
 
 export function createWindowManager(service: AppDatabaseService): WindowManager {
@@ -657,6 +663,58 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     return { widgetId, window: windows.get(widgetId) };
   };
 
+  const updateColorParts = (event: IpcMainInvokeEvent, patch: Partial<ColorSet>) => {
+    const context = colorsScopeForEvent(event);
+    if (context?.scope !== 'default' && context?.scope !== 'widget') {
+      return undefined;
+    }
+    const normalized = Object.fromEntries(
+      Object.entries(patch).map(([key, value]) => [
+        key,
+        typeof value === 'string' ? value.toUpperCase() : value,
+      ]),
+    ) as Partial<ColorSet>;
+    if (context.scope === 'default') {
+      return updateGlobalSettings({
+        ...(normalized.paper !== undefined ? { defaultPaperColor: normalized.paper } : {}),
+        ...(normalized.ink !== undefined ? { defaultInkColor: normalized.ink } : {}),
+        ...(normalized.title !== undefined ? { defaultTitleColor: normalized.title } : {}),
+        ...(normalized.accent !== undefined ? { defaultAccentColor: normalized.accent } : {}),
+        ...(normalized.spine !== undefined ? { defaultSpineColor: normalized.spine } : {}),
+        ...(normalized.shadow !== undefined ? { defaultShadowColor: normalized.shadow } : {}),
+      });
+    }
+    if (!context.widgetId) {
+      return undefined;
+    }
+    const updated = service.widgets.update(context.widgetId, {
+      ...(normalized.paper !== undefined ? { paperColor: normalized.paper } : {}),
+      ...(normalized.ink !== undefined ? { inkColor: normalized.ink } : {}),
+      ...(normalized.title !== undefined ? { titleColor: normalized.title } : {}),
+      ...(normalized.accent !== undefined ? { accentColor: normalized.accent } : {}),
+      ...(normalized.spine !== undefined ? { spineColor: normalized.spine } : {}),
+      ...(normalized.shadow !== undefined ? { shadowColor: normalized.shadow } : {}),
+      followsDefault: false,
+    });
+    if (updated) {
+      broadcastWidget(updated);
+    }
+    return updated;
+  };
+
+  const applyPrimaryColor = (event: IpcMainInvokeEvent, color: string) => {
+    if (!isHexColor(color)) {
+      return undefined;
+    }
+    return updateColorParts(event, {
+      paper: mixColor(color, '#FFFFFF', 0.88),
+      title: color,
+      accent: color,
+      spine: color,
+      shadow: color,
+    });
+  };
+
   return {
     openVisibleWidgets: () => {
       service.widgets.list().filter((widget) => !widget.hidden).forEach((widget) => {
@@ -933,6 +991,10 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       }
       return updated;
     },
+
+    updateColorParts,
+
+    applyPrimaryColor,
 
     listColorKits: (event) => {
       const context = colorsScopeForEvent(event);

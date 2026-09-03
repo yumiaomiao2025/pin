@@ -77,6 +77,8 @@ interface PinColorContext {
   widgetTitle?: string;
 }
 
+type PinColorSet = PinColorContext['colors'];
+
 interface PinCustomKit {
   id: string;
   name: string;
@@ -106,6 +108,8 @@ interface Window {
     getColorContext: () => Promise<PinColorContext | null>;
     applyColorPreset: (presetId: string) => Promise<PinSettings | PinWidget | null>;
     setWidgetFollowDefault: (followsDefault: boolean) => Promise<PinWidget | null>;
+    updateColorParts: (patch: Partial<PinColorSet>) => Promise<PinSettings | PinWidget | null>;
+    applyPrimaryColor: (color: string) => Promise<PinSettings | PinWidget | null>;
     listColorKits: () => Promise<PinCustomKit[] | null>;
     createColorKit: (name: string) => Promise<PinCustomKit | null>;
     renameColorKit: (id: string, name: string) => Promise<PinCustomKit | null>;
