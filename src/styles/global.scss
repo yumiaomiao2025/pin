@@ -194,6 +194,10 @@ button:disabled {
   overflow-y: auto;
 }
 
+.todo-list {
+  overflow-x: hidden;
+}
+
 .clip-row {
   display: flex;
   min-height: 40px;

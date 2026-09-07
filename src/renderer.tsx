@@ -2158,7 +2158,7 @@ function TodoRow({
       ref={setNodeRef}
       style={{
         position: isDragging ? 'relative' : undefined,
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform ? { ...transform, x: 0 } : null),
         transition: transition ? 'transform 120ms linear' : undefined,
         zIndex: isDragging ? 2 : undefined,
       }}
