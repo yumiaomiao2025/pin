@@ -1,6 +1,23 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import './styles/global.scss';
 import { COLOR_PRESETS, colorSetEquals, deriveColorVars, mixColor } from './shared/colors';
@@ -2070,12 +2087,6 @@ function TodoRow({
   onToggle,
   onDelete,
   onUpdate,
-  dragging,
-  dragOver,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
   maxLines,
   hoverFull,
   completing,
@@ -2084,12 +2095,6 @@ function TodoRow({
   onToggle: () => void;
   onDelete: () => void;
   onUpdate: (text: string) => void;
-  dragging: boolean;
-  dragOver: boolean;
-  onDragStart: () => void;
-  onDragOver: () => void;
-  onDrop: () => void;
-  onDragEnd: () => void;
   maxLines: number;
   hoverFull: boolean;
   completing: boolean;
@@ -2098,6 +2103,14 @@ function TodoRow({
   const [draft, setDraft] = useState(todo.text);
   const composing = useRef(false);
   const suppressBlur = useRef(false);
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: todo.id, disabled: editing || completing });
 
   useEffect(() => {
     if (!editing) {
@@ -2141,15 +2154,13 @@ function TodoRow({
 
   return (
     <div
-      className={`${todo.done ? 'todo-row todo-row--done' : 'todo-row'}${completing ? ' todo-row--completing' : ''}${dragging ? ' todo-row--dragging' : ''}${dragOver ? ' todo-row--drag-over' : ''}`}
-      onDragEnd={onDragEnd}
-      onDragOver={(event) => {
-        event.preventDefault();
-        onDragOver();
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        onDrop();
+      className={`${todo.done ? 'todo-row todo-row--done' : 'todo-row'}${completing ? ' todo-row--completing' : ''}${isDragging ? ' todo-row--dragging' : ''}`}
+      ref={setNodeRef}
+      style={{
+        position: isDragging ? 'relative' : undefined,
+        transform: CSS.Transform.toString(transform),
+        transition: transition ? 'transform 120ms linear' : undefined,
+        zIndex: isDragging ? 2 : undefined,
       }}
     >
       <button
@@ -2189,17 +2200,17 @@ function TodoRow({
           text={todo.text}
         />
       )}
-      <span
-        aria-hidden="true"
+      <button
+        {...attributes}
+        {...listeners}
+        aria-label={`拖动「${todo.text}」排序`}
         className="todo-drag-handle"
-        draggable
-        onDragStart={(event) => {
-          event.dataTransfer.effectAllowed = 'move';
-          onDragStart();
-        }}
+        disabled={editing || completing}
+        title="拖动排序"
+        type="button"
       >
         ⠿
-      </span>
+      </button>
       <button
         aria-label="删除待办"
         className="todo-delete"
@@ -2220,8 +2231,6 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   const contextMenu = useContextMenu(!embedded);
   const [draft, setDraft] = useState('');
   const [deletedTodo, setDeletedTodo] = useState<PinTodo | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(() => new Set());
   const viewSettings = useWindowDisplaySettings();
   const [listHovered, setListHovered] = useState(false);
@@ -2232,6 +2241,10 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   const completionQueue = useRef<string[]>([]);
   const completingTodoIds = useRef(new Set<string>());
   const processingCompletion = useRef(false);
+  const dragSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     todosRef.current = todos;
@@ -2406,38 +2419,29 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
 
   const openTodos = todos.filter((todo) => !todo.done);
   const completedTodos = todos.filter((todo) => todo.done);
-  const displayedTodos = [...openTodos, ...completedTodos];
   const scrollbarMode = windowWidth < 300 ? 'overlay' : viewSettings.scrollbar;
   const listClassName = `todo-list todo-list--${scrollbarMode}${listHovered ? ' todo-list--hovered' : ''}`;
 
-  const reorderTodos = (targetId: string) => {
-    if (!dragId || dragId === targetId) {
-      setDragId(null);
-      setDragOverId(null);
+  const reorderTodos = (group: PinTodo[], event: DragEndEvent) => {
+    if (!event.over || event.active.id === event.over.id) {
       return;
     }
-    const orderedIds = displayedTodos.map((todo) => todo.id);
-    const sourceIndex = orderedIds.indexOf(dragId);
-    const targetIndex = orderedIds.indexOf(targetId);
+    const sourceIndex = group.findIndex((todo) => todo.id === event.active.id);
+    const targetIndex = group.findIndex((todo) => todo.id === event.over?.id);
     if (sourceIndex < 0 || targetIndex < 0) {
-      setDragId(null);
-      setDragOverId(null);
       return;
     }
-    orderedIds.splice(sourceIndex, 1);
-    orderedIds.splice(orderedIds.indexOf(targetId), 0, dragId);
-    setDragId(null);
-    setDragOverId(null);
+    const reorderedGroup = arrayMove(group, sourceIndex, targetIndex);
+    const reorderedTodos = group[0]?.done
+      ? [...openTodos, ...reorderedGroup]
+      : [...reorderedGroup, ...completedTodos];
+    const orderedIds = reorderedTodos.map((todo) => todo.id);
+    setTodos(reorderedTodos);
     void window.pinApi.reorderTodos(orderedIds).then((updated) => {
       if (updated) {
         setTodos(updated);
       }
     });
-  };
-
-  const clearDrag = () => {
-    setDragId(null);
-    setDragOverId(null);
   };
 
   return (
@@ -2455,45 +2459,59 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
             onMouseLeave={() => setListHovered(false)}
           >
             {!loaded && <p className="app--loading">加载中…</p>}
-            {loaded && openTodos.map((todo) => (
-              <TodoRow
-                dragOver={dragOverId === todo.id}
-                dragging={dragId === todo.id}
-                completing={completingIds.has(todo.id)}
-                hoverFull={viewSettings.hoverFull}
-                key={todo.id}
-                maxLines={viewSettings.maxLines}
-                onDragEnd={clearDrag}
-                onDragOver={() => setDragOverId(todo.id)}
-                onDragStart={() => setDragId(todo.id)}
-                onDrop={() => reorderTodos(todo.id)}
-                onDelete={() => deleteTodo(todo.id)}
-                onToggle={() => toggleTodo(todo)}
-                onUpdate={(text) => updateTodo(todo.id, { text })}
-                todo={todo}
-              />
-            ))}
+            {loaded && (
+              <DndContext
+                autoScroll
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => reorderTodos(openTodos, event)}
+                sensors={dragSensors}
+              >
+                <SortableContext
+                  items={openTodos.map((todo) => todo.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {openTodos.map((todo) => (
+                    <TodoRow
+                      completing={completingIds.has(todo.id)}
+                      hoverFull={viewSettings.hoverFull}
+                      key={todo.id}
+                      maxLines={viewSettings.maxLines}
+                      onDelete={() => deleteTodo(todo.id)}
+                      onToggle={() => toggleTodo(todo)}
+                      onUpdate={(text) => updateTodo(todo.id, { text })}
+                      todo={todo}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            )}
             {loaded && completedTodos.length > 0 && (
               <>
                 <div className="todo-completed-heading">已完成 {completedTodos.length}</div>
-                {completedTodos.map((todo) => (
-                  <TodoRow
-                    dragOver={dragOverId === todo.id}
-                    dragging={dragId === todo.id}
-                    completing={completingIds.has(todo.id)}
-                    hoverFull={viewSettings.hoverFull}
-                    key={todo.id}
-                    maxLines={viewSettings.maxLines}
-                    onDragEnd={clearDrag}
-                    onDragOver={() => setDragOverId(todo.id)}
-                    onDragStart={() => setDragId(todo.id)}
-                    onDrop={() => reorderTodos(todo.id)}
-                    onDelete={() => deleteTodo(todo.id)}
-                    onToggle={() => toggleTodo(todo)}
-                    onUpdate={(text) => updateTodo(todo.id, { text })}
-                    todo={todo}
-                  />
-                ))}
+                <DndContext
+                  autoScroll
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => reorderTodos(completedTodos, event)}
+                  sensors={dragSensors}
+                >
+                  <SortableContext
+                    items={completedTodos.map((todo) => todo.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {completedTodos.map((todo) => (
+                      <TodoRow
+                        completing={completingIds.has(todo.id)}
+                        hoverFull={viewSettings.hoverFull}
+                        key={todo.id}
+                        maxLines={viewSettings.maxLines}
+                        onDelete={() => deleteTodo(todo.id)}
+                        onToggle={() => toggleTodo(todo)}
+                        onUpdate={(text) => updateTodo(todo.id, { text })}
+                        todo={todo}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               </>
             )}
             {deletedTodo && (

@@ -485,8 +485,18 @@ button:disabled {
 }
 
 .todo-drag-handle {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   cursor: grab;
   -webkit-app-region: no-drag;
+  touch-action: none;
+}
+
+.todo-drag-handle:active {
+  cursor: grabbing;
 }
 
 .todo-delete {
