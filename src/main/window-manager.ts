@@ -759,18 +759,26 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     window.setAlwaysOnTop(Boolean(widget.pin || service.settings.ensure().pinAll));
 
     let snapping = false;
+    window.on('will-move', (event, proposedBounds) => {
+      if (snapping || window.isDestroyed() || !service.settings.ensure().snap) {
+        return;
+      }
+      const nextBounds = snapBounds(proposedBounds);
+      if (nextBounds.x === proposedBounds.x && nextBounds.y === proposedBounds.y) {
+        return;
+      }
+      event.preventDefault();
+      snapping = true;
+      window.setPosition(nextBounds.x, nextBounds.y);
+      snapping = false;
+      schedulePersistBounds(widgetId, window, nextBounds);
+    });
     window.on('move', () => {
       if (snapping || window.isDestroyed()) {
         return;
       }
       const currentBounds = window.getBounds();
-      const nextBounds = service.settings.ensure().snap ? snapBounds(currentBounds) : currentBounds;
-      if (nextBounds.x !== currentBounds.x || nextBounds.y !== currentBounds.y) {
-        snapping = true;
-        window.setPosition(nextBounds.x, nextBounds.y);
-        snapping = false;
-      }
-      schedulePersistBounds(widgetId, window, nextBounds);
+      schedulePersistBounds(widgetId, window, currentBounds);
     });
     window.on('resize', () => {
       if (!window.isDestroyed()) {

@@ -296,7 +296,7 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 
 - `window-manager.ts` 管理独立 BrowserWindow、单实例窗口映射、隐藏/恢复、置顶、折叠和退出生命周期。
 - 窗口使用无边框模式；标题栏通过 Electron `app-region` 拖动，控制按钮使用 `no-drag`。
-- 移动和 resize 事件写回绝对坐标、尺寸、所属显示器和展开高度；距离工作区边缘 12px 内硬吸附。
+- 窗口移动通过 Electron `will-move` 在原生拖动提交前进行吸附判断，避免在 `move` 后反复改写拖动位置；距离工作区边缘 12px 内硬吸附，`move` / resize 事件负责写回绝对坐标、尺寸、所属显示器和展开高度。
 - NOTE renderer 通过 preload IPC 读取正文，并以 250ms 去抖保存到对应 widget。
 - 首次无窗口时显示引导，创建四种窗口类型之一；当前仅 NOTE 有完整内容编辑界面，其他类型保留窗口外壳占位。
 - `pnpm start` 和 `pnpm package` 均完成主进程、preload、renderer 编译；生产 `app.asar` 启动后可创建数据库和引导窗口。
