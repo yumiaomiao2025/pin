@@ -127,7 +127,12 @@ button:disabled {
   padding: 0 6px 0 12px;
   border-bottom: 1.5px solid #111111;
   user-select: none;
-  -webkit-app-region: drag;
+}
+
+.titlebar {
+  cursor: move;
+  -webkit-app-region: no-drag;
+  touch-action: none;
 }
 
 .type-label {

@@ -317,7 +317,9 @@ export interface WindowManager {
   copyClip(event: IpcMainInvokeEvent, clipId: string): ClipItem | undefined;
   saveNote(event: IpcMainInvokeEvent, noteText: string): Widget | undefined;
   hide(event: IpcMainInvokeEvent): boolean;
+  getBounds(event: IpcMainInvokeEvent): Rectangle | undefined;
   setSize(event: IpcMainInvokeEvent, width: number, height: number): Widget | undefined;
+  setPosition(event: IpcMainInvokeEvent, x: number, y: number): Widget | undefined;
   setOpacity(event: IpcMainInvokeEvent, opacity: number): Widget | undefined;
   setPin(event: IpcMainInvokeEvent, pin: boolean): Widget | undefined;
   setCollapsed(event: IpcMainInvokeEvent, collapsed: boolean): Widget | undefined;
@@ -758,23 +760,8 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     window.setOpacity(widget.opacity / 100);
     window.setAlwaysOnTop(Boolean(widget.pin || service.settings.ensure().pinAll));
 
-    let snapping = false;
-    window.on('will-move', (event, proposedBounds) => {
-      if (snapping || window.isDestroyed() || !service.settings.ensure().snap) {
-        return;
-      }
-      const nextBounds = snapBounds(proposedBounds);
-      if (nextBounds.x === proposedBounds.x && nextBounds.y === proposedBounds.y) {
-        return;
-      }
-      event.preventDefault();
-      snapping = true;
-      window.setPosition(nextBounds.x, nextBounds.y);
-      snapping = false;
-      schedulePersistBounds(widgetId, window, nextBounds);
-    });
     window.on('move', () => {
-      if (snapping || window.isDestroyed()) {
+      if (window.isDestroyed()) {
         return;
       }
       const currentBounds = window.getBounds();
@@ -1771,6 +1758,11 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return true;
     },
 
+    getBounds: (event) => {
+      const target = showWidgetForEvent(event);
+      return target?.window && !target.window.isDestroyed() ? target.window.getBounds() : undefined;
+    },
+
     setSize: (event, width, height) => {
       const target = showWidgetForEvent(event);
       if (!target?.window || target.window.isDestroyed()) {
@@ -1788,6 +1780,25 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         height: clamp(Math.round(height), MIN_HEIGHT, display.workArea.height),
       };
       target.window.setBounds(nextBounds);
+      persistBounds(target.widgetId, target.window, nextBounds);
+      return service.widgets.getById(target.widgetId);
+    },
+
+    setPosition: (event, x, y) => {
+      const target = showWidgetForEvent(event);
+      if (!target?.window || target.window.isDestroyed()) {
+        return undefined;
+      }
+      const bounds = target.window.getBounds();
+      const proposedBounds = {
+        ...bounds,
+        x: Math.round(x),
+        y: Math.round(y),
+      };
+      const nextBounds = service.settings.ensure().snap
+        ? snapBounds(proposedBounds)
+        : proposedBounds;
+      target.window.setPosition(nextBounds.x, nextBounds.y);
       persistBounds(target.widgetId, target.window, nextBounds);
       return service.widgets.getById(target.widgetId);
     },

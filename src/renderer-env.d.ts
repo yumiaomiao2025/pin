@@ -149,6 +149,8 @@ interface Window {
     copyClip: (id: string) => Promise<PinClipItem | null>;
     saveNote: (noteText: string) => Promise<PinWidget | null>;
     hideWindow: () => Promise<boolean>;
+    getWindowBounds: () => Promise<{ x: number; y: number; width: number; height: number } | null>;
+    setPosition: (x: number, y: number) => Promise<PinWidget | null>;
     setSize: (width: number, height: number) => Promise<PinWidget | null>;
     setOpacity: (opacity: number) => Promise<PinWidget | null>;
     setPin: (pin: boolean) => Promise<PinWidget | null>;

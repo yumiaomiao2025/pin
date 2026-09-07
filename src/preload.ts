@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld('pinApi', {
   copyClip: (id: string) => ipcRenderer.invoke('clip:copy', id),
   saveNote: (noteText: string) => ipcRenderer.invoke('widget:save-note', noteText),
   hideWindow: () => ipcRenderer.invoke('window:hide'),
+  getWindowBounds: () => ipcRenderer.invoke('window:get-bounds'),
+  setPosition: (x: number, y: number) => ipcRenderer.invoke('window:set-position', { x, y }),
   setSize: (width: number, height: number) => ipcRenderer.invoke('window:set-size', { width, height }),
   setOpacity: (opacity: number) => ipcRenderer.invoke('window:set-opacity', opacity),
   setPin: (pin: boolean) => ipcRenderer.invoke('window:set-pin', pin),

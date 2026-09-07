@@ -458,6 +458,24 @@ ipcMain.handle('window:set-size', (event, size: unknown) => {
   }
   return getManager().setSize(event, size.width, size.height) ?? null;
 });
+ipcMain.handle('window:get-bounds', (event) => {
+  return getManager().getBounds(event) ?? null;
+});
+ipcMain.handle('window:set-position', (event, position: unknown) => {
+  if (
+    !position ||
+    typeof position !== 'object' ||
+    !('x' in position) ||
+    !('y' in position) ||
+    typeof position.x !== 'number' ||
+    typeof position.y !== 'number' ||
+    !Number.isFinite(position.x) ||
+    !Number.isFinite(position.y)
+  ) {
+    throw new TypeError('position must contain finite x and y numbers');
+  }
+  return getManager().setPosition(event, position.x, position.y) ?? null;
+});
 ipcMain.handle('window:set-opacity', (event, opacity: unknown) => {
   if (typeof opacity !== 'number' || !Number.isFinite(opacity)) {
     throw new TypeError('opacity must be a finite number');
