@@ -4,11 +4,13 @@ import { createRoot } from 'react-dom/client';
 import {
   closestCenter,
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type Modifier,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -89,6 +91,15 @@ const DEFAULT_TODO_SETTINGS: WindowDisplaySettings = {
   hoverFull: true,
   scrollbar: 'overlay',
   opacityBar: true,
+};
+
+const TODO_DRAG_MODIFIERS: Modifier[] = [
+  ({ transform }) => ({ ...transform, x: 0 }),
+];
+
+const TODO_SORT_TRANSITION = {
+  duration: 120,
+  easing: 'linear',
 };
 
 function useWindowDisplaySettings() {
@@ -2110,7 +2121,12 @@ function TodoRow({
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: todo.id, disabled: editing || completing });
+  } = useSortable({
+    id: todo.id,
+    disabled: editing || completing,
+    animateLayoutChanges: () => false,
+    transition: TODO_SORT_TRANSITION,
+  });
 
   useEffect(() => {
     if (!editing) {
@@ -2159,7 +2175,7 @@ function TodoRow({
       style={{
         position: isDragging ? 'relative' : undefined,
         transform: CSS.Translate.toString(transform ? { ...transform, x: 0 } : null),
-        transition: transition ? 'transform 120ms linear' : undefined,
+        transition,
         zIndex: isDragging ? 2 : undefined,
       }}
     >
@@ -2224,6 +2240,45 @@ function TodoRow({
   );
 }
 
+function TodoDragPreview({
+  todo,
+  maxLines,
+  widget,
+}: {
+  todo: PinTodo;
+  maxLines: number;
+  widget: PinWidget;
+}) {
+  const textClass = maxLines > 0
+    ? 'todo-text todo-text--clamp'
+    : 'todo-text todo-text--unlimited';
+
+  return (
+    <div
+      aria-hidden="true"
+      className={`${todo.done ? 'todo-row todo-row--done' : 'todo-row'} todo-row--drag-overlay`}
+      style={{
+        ...widgetColorStyle(widget),
+        background: 'var(--widget-accent)',
+        borderColor: 'var(--widget-soft)',
+        boxShadow: 'inset 3px 0 0 var(--widget-ink)',
+      }}
+    >
+      <span className={todo.done ? 'todo-check todo-check--done' : 'todo-check'}>
+        {todo.done && <span className="todo-check-mark">✓</span>}
+      </span>
+      <span
+        className={textClass}
+        style={maxLines > 0 ? { WebkitLineClamp: maxLines } : undefined}
+      >
+        {todo.text}
+      </span>
+      <span className="todo-drag-handle">⠿</span>
+      <span className="todo-delete">×</span>
+    </div>
+  );
+}
+
 function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);
   useWidgetUpdates(setWidget);
@@ -2236,6 +2291,7 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   const [listHovered, setListHovered] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.outerWidth);
   const [loaded, setLoaded] = useState(false);
+  const [activeTodoId, setActiveTodoId] = useState<string | null>(null);
   const composing = useRef(false);
   const todosRef = useRef(todos);
   const completionQueue = useRef<string[]>([]);
@@ -2419,6 +2475,7 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
 
   const openTodos = todos.filter((todo) => !todo.done);
   const completedTodos = todos.filter((todo) => todo.done);
+  const activeTodo = todos.find((todo) => todo.id === activeTodoId) ?? null;
   const scrollbarMode = windowWidth < 300 ? 'overlay' : viewSettings.scrollbar;
   const listClassName = `todo-list todo-list--${scrollbarMode}${listHovered ? ' todo-list--hovered' : ''}`;
 
@@ -2444,6 +2501,11 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     });
   };
 
+  const finishTodoDrag = (group: PinTodo[], event: DragEndEvent) => {
+    setActiveTodoId(null);
+    reorderTodos(group, event);
+  };
+
   return (
     <main
       className={embedded ? 'desk-panel widget-themed' : 'app widget-themed'}
@@ -2463,7 +2525,10 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
               <DndContext
                 autoScroll
                 collisionDetection={closestCenter}
-                onDragEnd={(event) => reorderTodos(openTodos, event)}
+                modifiers={TODO_DRAG_MODIFIERS}
+                onDragCancel={() => setActiveTodoId(null)}
+                onDragEnd={(event) => finishTodoDrag(openTodos, event)}
+                onDragStart={(event) => setActiveTodoId(String(event.active.id))}
                 sensors={dragSensors}
               >
                 <SortableContext
@@ -2483,6 +2548,11 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
                     />
                   ))}
                 </SortableContext>
+                <DragOverlay adjustScale={false} dropAnimation={null}>
+                  {activeTodo && !activeTodo.done
+                    ? <TodoDragPreview maxLines={viewSettings.maxLines} todo={activeTodo} widget={widget} />
+                    : null}
+                </DragOverlay>
               </DndContext>
             )}
             {loaded && completedTodos.length > 0 && (
@@ -2491,7 +2561,10 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
                 <DndContext
                   autoScroll
                   collisionDetection={closestCenter}
-                  onDragEnd={(event) => reorderTodos(completedTodos, event)}
+                  modifiers={TODO_DRAG_MODIFIERS}
+                  onDragCancel={() => setActiveTodoId(null)}
+                  onDragEnd={(event) => finishTodoDrag(completedTodos, event)}
+                  onDragStart={(event) => setActiveTodoId(String(event.active.id))}
                   sensors={dragSensors}
                 >
                   <SortableContext
@@ -2511,6 +2584,11 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
                       />
                     ))}
                   </SortableContext>
+                  <DragOverlay adjustScale={false} dropAnimation={null}>
+                    {activeTodo?.done
+                      ? <TodoDragPreview maxLines={viewSettings.maxLines} todo={activeTodo} widget={widget} />
+                      : null}
+                  </DragOverlay>
                 </DndContext>
               </>
             )}

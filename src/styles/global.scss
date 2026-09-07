@@ -355,9 +355,37 @@ button:disabled {
 }
 
 .todo-row--dragging {
-  background: #ffe566;
-  box-shadow: inset 3px 0 0 #111111;
-  transform: translateX(2px);
+  opacity: 0;
+}
+
+.todo-row--drag-overlay {
+  width: 100%;
+  pointer-events: none;
+}
+
+.todo-row--drag-overlay .todo-check,
+.todo-row--drag-overlay .todo-drag-handle,
+.todo-row--drag-overlay .todo-delete {
+  display: block;
+}
+
+.todo-row--drag-overlay .todo-check {
+  border-color: var(--widget-ink);
+}
+
+.todo-row--drag-overlay .todo-check--done {
+  color: var(--widget-paper);
+  background: var(--widget-ink);
+}
+
+.todo-row--drag-overlay .todo-text {
+  color: var(--widget-ink);
+}
+
+.todo-row--drag-overlay .todo-drag-handle,
+.todo-row--drag-overlay .todo-delete,
+.todo-row--drag-overlay.todo-row--done .todo-text {
+  color: var(--widget-sub);
 }
 
 .todo-row--drag-over {
