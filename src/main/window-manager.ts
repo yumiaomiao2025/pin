@@ -818,11 +818,19 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (targetWindow && !targetWindow.isDestroyed()) {
         targetWindow.hide();
       }
-      return service.widgets.update(widgetId, { hidden: true });
+      const updated = service.widgets.update(widgetId, { hidden: true });
+      if (updated) {
+        broadcastWidget(updated);
+      }
+      return updated;
     }
     service.widgets.update(widgetId, { hidden: false });
     openWidget(widgetId);
-    return service.widgets.getById(widgetId);
+    const updated = service.widgets.getById(widgetId);
+    if (updated) {
+      broadcastWidget(updated);
+    }
+    return updated;
   };
 
   function widgetIsOnFullscreenDisplay(
