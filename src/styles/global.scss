@@ -1,4 +1,6 @@
 :root {
+  --window-shadow-offset: 8px;
+  font-size: 13px;
   font-family: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
   color: #111111;
   background: transparent;
@@ -38,6 +40,14 @@ button {
   cursor: pointer;
 }
 
+.ui-icon {
+  display: block;
+  flex: none;
+  pointer-events: none;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
 button:disabled {
   cursor: wait;
   opacity: 0.6;
@@ -46,14 +56,15 @@ button:disabled {
 .app {
   position: relative;
   display: flex;
-  width: 100%;
-  height: 100%;
-  min-width: 240px;
-  min-height: 160px;
+  width: calc(100% - var(--window-shadow-offset));
+  height: calc(100% - var(--window-shadow-offset));
+  min-width: calc(240px - var(--window-shadow-offset));
+  min-height: calc(160px - var(--window-shadow-offset));
   flex-direction: column;
   overflow: hidden;
   border: 1.5px solid #111111;
   background: #ffffff;
+  box-shadow: var(--window-shadow-offset) var(--window-shadow-offset) 0 #111111;
 }
 
 .desk-panel,
@@ -84,7 +95,7 @@ button:disabled {
   padding: 9px 0;
   border: 0;
   border-right: 1.5px solid #111111;
-  font-size: 11px;
+  font-size: 0.846154rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   line-height: 1;
@@ -106,13 +117,8 @@ button:disabled {
   width: 18px;
   height: 18px;
   cursor: nwse-resize;
-  background: repeating-linear-gradient(
-    -45deg,
-    #111111 0 1.5px,
-    transparent 1.5px 5px
-  );
-  border-top: 1.5px solid #111111;
-  border-left: 1.5px solid #111111;
+  background: transparent;
+  border: 0;
   -webkit-app-region: no-drag;
   touch-action: none;
 }
@@ -140,7 +146,7 @@ button:disabled {
   flex: 1;
   overflow: hidden;
   color: #111111;
-  font-size: 11px;
+  font-size: 0.846154rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   line-height: 1;
@@ -148,25 +154,99 @@ button:disabled {
   white-space: nowrap;
 }
 
+.titlebar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
 .title-action {
   min-width: 22px;
   height: 20px;
   padding: 1px 5px;
   border: 1px solid #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
   line-height: 1;
   -webkit-app-region: no-drag;
 }
 
 .title-action--icon {
+  width: 22px;
+  min-width: 22px;
   padding: 0;
+  border: 0;
   border-color: transparent;
   font-size: 14px;
 }
 
 .title-action--active {
-  color: #ffffff;
-  background: #111111;
+  color: #111111;
+  background: transparent;
+  box-shadow: inset 0 -3px 0 #111111;
+}
+
+.range-control {
+  min-width: 0;
+  height: 18px;
+  flex: 1;
+  margin-inline: -4px;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+}
+
+.range-control:focus-visible {
+  outline: 1.5px solid var(--range-fill, #111111);
+  outline-offset: 3px;
+}
+
+.range-control::-webkit-slider-runnable-track {
+  height: 10px;
+  border: 1.5px solid var(--range-fill, #111111);
+  border-radius: 0;
+  background: linear-gradient(
+    to right,
+    var(--range-fill, #111111) 0 var(--range-progress, 0%),
+    var(--range-empty, #ffffff) var(--range-progress, 0%) 100%
+  );
+}
+
+.range-control::-webkit-slider-thumb {
+  width: 16px;
+  height: 10px;
+  margin-top: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--range-fill, #111111);
+}
+
+.range-control::-moz-range-track {
+  height: 10px;
+  border: 1.5px solid var(--range-fill, #111111);
+  border-radius: 0;
+  background: var(--range-empty, #ffffff);
+}
+
+.range-control::-moz-range-progress {
+  height: 10px;
+  background: var(--range-fill, #111111);
+}
+
+.range-control::-moz-range-thumb {
+  width: 16px;
+  height: 10px;
+  border: 0;
+  border-radius: 0;
+  background: var(--range-fill, #111111);
+}
+
+.range-control:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .note-editor {
@@ -179,7 +259,7 @@ button:disabled {
   outline: 0;
   color: #111111;
   background: transparent;
-  font-size: 13px;
+  font-size: 1rem;
   line-height: 1.85;
 }
 
@@ -227,8 +307,8 @@ button:disabled {
   width: 20px;
   flex: none;
   color: #6f6f6f;
-  font-size: 11px;
-  line-height: 18px;
+  font-size: 0.846154rem;
+  line-height: 1.384615rem;
 }
 
 .clip-text {
@@ -241,7 +321,7 @@ button:disabled {
   border: 0;
   color: #111111;
   background: transparent;
-  font-size: 12px;
+  font-size: 0.923077rem;
   line-height: 1.5;
   text-align: left;
   text-overflow: ellipsis;
@@ -278,6 +358,9 @@ button:disabled {
 }
 
 .clip-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border: 0;
   line-height: 18px;
@@ -295,9 +378,11 @@ button:disabled {
 }
 
 .clip-input-symbol {
+  display: inline-flex;
+  align-items: center;
   flex: none;
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 1rem;
+  line-height: 1.538462rem;
 }
 
 .clip-input {
@@ -310,7 +395,7 @@ button:disabled {
   outline: 0;
   color: #111111;
   background: transparent;
-  font-size: 13px;
+  font-size: 1rem;
   line-height: 1.5;
 }
 
@@ -326,7 +411,7 @@ button:disabled {
   padding: 7px 12px;
   color: #6f6f6f;
   background: #f4f4f4;
-  font-size: 11px;
+  font-size: 0.846154rem;
 }
 
 .clip-undo-text {
@@ -341,7 +426,7 @@ button:disabled {
   flex: none;
   padding: 2px 6px;
   border: 1px solid #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
   line-height: 1.2;
 }
 
@@ -477,7 +562,7 @@ button:disabled {
   border: 0;
   color: #111111;
   background: transparent;
-  font-size: 13px;
+  font-size: 1rem;
   line-height: 1.5;
   text-align: left;
   white-space: pre-wrap;
@@ -517,8 +602,11 @@ button:disabled {
 }
 
 .todo-drag-handle {
+  display: inline-flex;
   width: 16px;
   height: 16px;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border: 0;
   background: transparent;
@@ -532,6 +620,9 @@ button:disabled {
 }
 
 .todo-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border: 0;
   line-height: 16px;
@@ -542,7 +633,7 @@ button:disabled {
   padding: 7px 12px;
   color: #6f6f6f;
   background: #f4f4f4;
-  font-size: 10px;
+  font-size: 0.769231rem;
   font-weight: 700;
   letter-spacing: 0.14em;
 }
@@ -558,9 +649,11 @@ button:disabled {
 }
 
 .todo-input-symbol {
+  display: inline-flex;
+  align-items: center;
   flex: none;
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 1rem;
+  line-height: 1.538462rem;
 }
 
 .todo-input {
@@ -573,7 +666,7 @@ button:disabled {
   outline: 0;
   color: #111111;
   background: transparent;
-  font-size: 13px;
+  font-size: 1rem;
   line-height: 1.5;
 }
 
@@ -592,7 +685,7 @@ button:disabled {
   background: #111111;
   border: 1.5px solid #111111;
   box-shadow: 5px 5px 0 #ffe566;
-  font-size: 12px;
+  font-size: 0.923077rem;
   line-height: 1.65;
   white-space: pre-wrap;
 }
@@ -690,7 +783,7 @@ button:disabled {
   padding: 7px 12px;
   color: #6f6f6f;
   background: #f4f4f4;
-  font-size: 11px;
+  font-size: 0.846154rem;
 }
 
 .todo-undo-text {
@@ -705,7 +798,7 @@ button:disabled {
   flex: none;
   padding: 2px 6px;
   border: 1px solid #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
   line-height: 1.2;
 }
 
@@ -717,19 +810,12 @@ button:disabled {
   gap: 10px;
   padding: 0 12px;
   border-top: 1.5px solid #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
   letter-spacing: 0.1em;
 }
 
 .opacity-bar label {
   flex: none;
-}
-
-.opacity-bar input[type='range'] {
-  min-width: 0;
-  flex: 1;
-  accent-color: #111111;
-  cursor: pointer;
 }
 
 .opacity-bar output {
@@ -750,7 +836,7 @@ button:disabled {
   border: 1.5px solid #111111;
   background: #ffffff;
   box-shadow: 5px 5px 0 #111111;
-  font-size: 11px;
+  font-size: 0.846154rem;
 }
 
 .window-context-menu-opacity {
@@ -766,16 +852,10 @@ button:disabled {
   flex: none;
 }
 
-.window-context-menu-opacity input[type='range'] {
-  min-width: 0;
-  flex: 1;
-  accent-color: #111111;
-}
-
 .window-context-menu-opacity output {
   width: 30px;
   flex: none;
-  font-size: 10px;
+  font-size: 0.769231rem;
   text-align: right;
 }
 
@@ -785,7 +865,7 @@ button:disabled {
   border: 0;
   border-bottom: 1px solid #d8d8d8;
   background: transparent;
-  font-size: 12px;
+  font-size: 0.923077rem;
   text-align: left;
 }
 
@@ -821,7 +901,7 @@ button:disabled {
 .onboarding__eyebrow {
   margin: 0 0 10px;
   color: #6f6f6f;
-  font-size: 10px;
+  font-size: 0.769231rem;
   font-weight: 700;
   letter-spacing: 0.14em;
 }
@@ -829,7 +909,7 @@ button:disabled {
 .onboarding h1 {
   max-width: 34ch;
   margin: 0 0 18px;
-  font-size: 16px;
+  font-size: 1.230769rem;
   line-height: 1.5;
 }
 
@@ -845,7 +925,7 @@ button:disabled {
   align-items: center;
   gap: 7px;
   padding: 5px 9px;
-  font-size: 11px;
+  font-size: 0.846154rem;
 }
 
 .onboarding__option:first-child {
@@ -873,7 +953,7 @@ button:disabled {
   margin: auto;
   padding: 24px;
   color: #6f6f6f;
-  font-size: 12px;
+  font-size: 0.923077rem;
   text-align: center;
 }
 
@@ -908,7 +988,7 @@ button:disabled {
   flex: 1;
   padding: 5px 2px;
   border-color: transparent;
-  font-size: 10px;
+  font-size: 0.769231rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1;
@@ -943,7 +1023,7 @@ button:disabled {
   flex: none;
   padding: 2px 4px;
   border: 1px solid #111111;
-  font-size: 9px;
+  font-size: 0.692308rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1;
@@ -962,7 +1042,7 @@ button:disabled {
   min-width: 0;
   flex: 1;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 0.923077rem;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -974,7 +1054,7 @@ button:disabled {
   padding: 2px 0;
   overflow: hidden;
   border: 0;
-  font-size: 12px;
+  font-size: 0.923077rem;
   line-height: 1.2;
   text-align: left;
   text-overflow: ellipsis;
@@ -990,7 +1070,7 @@ button:disabled {
   outline: 0;
   color: #111111;
   background: #ffffff;
-  font-size: 12px;
+  font-size: 0.923077rem;
 }
 
 .manager-action {
@@ -999,14 +1079,15 @@ button:disabled {
   flex: none;
   padding: 1px 4px;
   border: 1px solid #111111;
-  font-size: 9px;
+  font-size: 0.692308rem;
   line-height: 1;
   -webkit-app-region: no-drag;
 }
 
 .manager-action--active {
-  color: #ffffff;
-  background: #111111;
+  color: #111111;
+  background: transparent;
+  box-shadow: inset 0 -3px 0 #111111;
 }
 
 .manager-action--icon {
@@ -1024,7 +1105,7 @@ button:disabled {
   margin: 0;
   padding: 28px 12px;
   color: #6f6f6f;
-  font-size: 11px;
+  font-size: 0.846154rem;
   text-align: center;
 }
 
@@ -1036,7 +1117,7 @@ button:disabled {
   padding: 7px 12px;
   color: #6f6f6f;
   background: #f4f4f1;
-  font-size: 11px;
+  font-size: 0.846154rem;
 }
 
 .manager-undo-text {
@@ -1051,7 +1132,7 @@ button:disabled {
   flex: none;
   padding: 2px 6px;
   border: 1px solid #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
   line-height: 1.2;
 }
 
@@ -1075,10 +1156,13 @@ button:disabled {
 }
 
 .manager-visibility-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 0;
   border: 0;
   color: #6f6f6f;
-  font-size: 10px;
+  font-size: 0.769231rem;
   white-space: nowrap;
 }
 
@@ -1088,12 +1172,15 @@ button:disabled {
 }
 
 .manager-new-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   min-height: 28px;
   padding: 4px 8px;
   color: #ffffff;
   background: #111111;
   border-color: #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
   letter-spacing: 0.1em;
   line-height: 1;
 }
@@ -1118,7 +1205,7 @@ button:disabled {
   padding: 10px 12px;
   border: 0;
   border-bottom: 1px solid #d8d8d8;
-  font-size: 11px;
+  font-size: 0.846154rem;
   text-align: left;
 }
 
@@ -1147,14 +1234,14 @@ button:disabled {
 
 .manager-confirm h2 {
   margin: 0 0 10px;
-  font-size: 14px;
+  font-size: 1.076923rem;
   line-height: 1.3;
 }
 
 .manager-confirm p {
   margin: 0 0 16px;
   color: #6f6f6f;
-  font-size: 11px;
+  font-size: 0.846154rem;
   line-height: 1.6;
 }
 
@@ -1167,7 +1254,7 @@ button:disabled {
 .manager-confirm-actions button {
   min-width: 52px;
   padding: 4px 8px;
-  font-size: 10px;
+  font-size: 0.769231rem;
 }
 
 .manager-confirm-delete {
@@ -1207,7 +1294,7 @@ button:disabled {
   padding: 6px 12px;
   color: #6f6f6f;
   background: #f4f4f1;
-  font-size: 10px;
+  font-size: 0.769231rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   line-height: 1.2;
@@ -1221,7 +1308,7 @@ button:disabled {
   gap: 10px;
   padding: 8px 12px;
   border-bottom: 1px solid #d8d8d8;
-  font-size: 12px;
+  font-size: 0.923077rem;
 }
 
 .settings-row:last-child {
@@ -1264,7 +1351,7 @@ button:disabled {
   min-width: 0;
   padding: 3px 7px;
   border-color: transparent;
-  font-size: 11px;
+  font-size: 0.846154rem;
   line-height: 1.1;
   white-space: nowrap;
 }
@@ -1274,24 +1361,20 @@ button:disabled {
   background: #111111;
 }
 
-.settings-range-row input[type='range'] {
-  min-width: 0;
-  flex: 1;
-  accent-color: #111111;
-}
-
 .settings-range-row output {
   width: 34px;
   flex: none;
-  font-size: 10px;
+  font-size: 0.769231rem;
   text-align: right;
 }
 
 .settings-choice-row {
   align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .settings-choice-row > span {
+  flex: none;
   padding-top: 5px;
 }
 
@@ -1299,7 +1382,7 @@ button:disabled {
   margin: 0;
   padding: 0 12px 9px;
   color: #6f6f6f;
-  font-size: 10px;
+  font-size: 0.769231rem;
   line-height: 1.6;
 }
 
@@ -1312,13 +1395,13 @@ button:disabled {
   border-top: 1.5px solid #111111;
   color: #6f6f6f;
   background: #f4f4f1;
-  font-size: 10px;
+  font-size: 0.769231rem;
 }
 
 .settings-footer button {
   padding: 2px 7px;
   border: 1px solid #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
 }
 
 .management-dark {
@@ -1343,6 +1426,10 @@ button:disabled {
   background: #1a1a18;
 }
 
+.management-dark .title-action--icon {
+  border-color: transparent;
+}
+
 .management-dark .manager-filters,
 .management-dark .manager-row,
 .management-dark .settings-section,
@@ -1351,12 +1438,17 @@ button:disabled {
 }
 
 .management-dark .manager-filter--active,
-.management-dark .manager-action--active,
 .management-dark .settings-segment--active,
 .management-dark .settings-toggle--on,
 .management-dark .manager-confirm-delete {
   color: #0d0d0d;
   background: #f2f2f2;
+}
+
+.management-dark .manager-action--active {
+  color: #f2f2f2;
+  background: transparent;
+  box-shadow: inset 0 -3px 0 #f2f2f2;
 }
 
 .management-dark .manager-type--desk {
@@ -1386,8 +1478,9 @@ button:disabled {
   background: #ffe566;
 }
 
-.management-dark .settings-range-row input[type='range'] {
-  accent-color: #f2f2f2;
+.management-dark .range-control {
+  --range-fill: #f2f2f2;
+  --range-empty: #0d0d0d;
 }
 
 .management-dark .settings-hint,
@@ -1402,6 +1495,10 @@ button:disabled {
   background: #0d0d0d;
   border-color: #f2f2f2;
   box-shadow: 5px 5px 0 #f2f2f2;
+}
+
+.app.management-dark {
+  box-shadow: var(--window-shadow-offset) var(--window-shadow-offset) 0 #f2f2f2;
 }
 
 .management-dark .manager-new-menu button {
@@ -1429,7 +1526,7 @@ button:disabled {
   min-height: 20px;
   padding: 1px 5px;
   border: 1px solid #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
   line-height: 1;
   -webkit-app-region: no-drag;
 }
@@ -1445,7 +1542,7 @@ button:disabled {
   padding: 6px 12px;
   color: #6f6f6f;
   background: #f4f4f1;
-  font-size: 10px;
+  font-size: 0.769231rem;
   font-weight: 700;
   letter-spacing: 0.16em;
 }
@@ -1460,7 +1557,7 @@ button:disabled {
   padding: 9px 12px;
   border: 0;
   border-bottom: 1px solid #d8d8d8;
-  font-size: 12px;
+  font-size: 0.923077rem;
   text-align: left;
 }
 
@@ -1490,10 +1587,11 @@ button:disabled {
 .color-preset-current {
   margin-left: auto;
   color: #111111;
-  font-size: 10px;
+  font-size: 0.769231rem;
 }
 
 .color-custom-placeholder {
+  gap: 6px;
   color: #6f6f6f;
   border-bottom: 0;
   cursor: pointer;
@@ -1551,7 +1649,7 @@ button:disabled {
   gap: 8px;
   padding: 8px 12px;
   border: 0;
-  font-size: 12px;
+  font-size: 0.923077rem;
   text-align: left;
 }
 
@@ -1561,7 +1659,7 @@ button:disabled {
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  font-size: 10px;
+  font-size: 0.769231rem;
 }
 
 .color-part-swatch {
@@ -1588,7 +1686,7 @@ button:disabled {
   min-width: 0;
   padding: 0;
   border: 1px solid #111111;
-  font-size: 11px;
+  font-size: 0.846154rem;
   line-height: 1;
   text-shadow: 0 0 2px #ffffff;
 }
@@ -1597,7 +1695,7 @@ button:disabled {
   box-shadow: inset 0 0 0 2px #ffffff;
 }
 
-.color-part-option > span {
+.color-part-option > .ui-icon {
   position: absolute;
   right: 2px;
   bottom: 1px;
@@ -1624,6 +1722,9 @@ button:disabled {
 }
 
 .color-kit-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 30px;
   flex: none;
   padding: 0;
@@ -1649,7 +1750,7 @@ button:disabled {
   border-top: 1.5px solid #111111;
   color: #6f6f6f;
   background: #f4f4f1;
-  font-size: 10px;
+  font-size: 0.769231rem;
 }
 
 .management-dark .colors-titlebar {
@@ -1759,10 +1860,15 @@ button:disabled {
   color: #111111;
 }
 
+.widget-themed .titlebar .title-action--icon {
+  border-color: transparent;
+}
+
 .widget-themed .title-action--active {
-  color: var(--widget-title);
-  background: #111111;
+  color: #111111;
+  background: transparent;
   border-color: #111111;
+  box-shadow: inset 0 -3px 0 #111111;
 }
 
 .widget-themed .note-editor,
@@ -1858,17 +1964,14 @@ button:disabled {
   border-color: var(--widget-ink);
 }
 
-.widget-themed .opacity-bar input[type='range'] {
-  accent-color: var(--widget-ink);
+.widget-themed .range-control {
+  --range-fill: var(--widget-ink);
+  --range-empty: var(--widget-paper);
 }
 
 .widget-themed .resize-handle {
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--widget-ink) 0 1.5px,
-    transparent 1.5px 5px
-  );
-  border-color: var(--widget-ink);
+  background: transparent;
+  border: 0;
 }
 
 .widget-themed .overflow-tooltip {
@@ -1887,10 +1990,6 @@ button:disabled {
 
 .widget-themed .window-context-menu-opacity {
   border-color: var(--widget-soft);
-}
-
-.widget-themed .window-context-menu-opacity input[type='range'] {
-  accent-color: var(--widget-ink);
 }
 
 .widget-themed .window-context-menu-item {

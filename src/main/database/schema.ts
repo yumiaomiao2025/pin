@@ -46,6 +46,7 @@ export const settings = sqliteTable(
     defaultAccentColor: text('default_accent_color').notNull().default(DEFAULT_COLORS.accent),
     defaultSpineColor: text('default_spine_color'),
     defaultShadowColor: text('default_shadow_color').notNull().default(DEFAULT_COLORS.shadow),
+    fontSize: integer('font_size').notNull().default(13),
     scrollbar: text('scrollbar', { enum: SCROLLBAR_MODES }).notNull().default('overlay'),
     maxLines: integer('max_lines').notNull().default(0),
     hoverFull: integer('hover_full', { mode: 'boolean' }).notNull().default(true),
@@ -63,6 +64,7 @@ export const settings = sqliteTable(
       sql`${table.scrollbar} in ('always', 'overlay', 'hidden')`,
     ),
     check('settings_max_lines_check', sql`${table.maxLines} between 0 and 3`),
+    check('settings_font_size_check', sql`${table.fontSize} between 11 and 18`),
     check('settings_opacity_check', sql`${table.defaultOpacity} between 35 and 100`),
   ],
 );

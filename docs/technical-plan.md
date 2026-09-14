@@ -19,6 +19,7 @@
 ### 产品形态
 
 - 应用是 Windows 常驻桌面工具。
+- Win11 无边框窗口显式关闭系统圆角，所有窗口保持方角。
 - 窗口类型有四种：NOTE、TODO、CLIP、DESK。
 - 每个窗口都是独立的 Electron BrowserWindow。
 - 标题栏的 × 只隐藏窗口，不删除数据。
@@ -117,6 +118,7 @@
     default_accent_color
     default_spine_color
     default_shadow_color
+    font_size
     scrollbar
     max_lines
     hover_full
@@ -431,7 +433,8 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 阶段 7.3 实际验证结果：
 
 - 新增独立 `role=settings` 设置窗口，可从托盘或 WIDGETS 管理器标题栏打开。
-- SETTINGS 支持全部始终置顶、开机自启、吸附屏幕边缘、溢出悬停显示全文、LIGHT/DARK 主题、默认透明度、窗口内透明度条、最大显示行数和滚动条模式。
+- SETTINGS 支持全部始终置顶、开机自启、吸附屏幕边缘、溢出悬停显示全文、LIGHT/DARK 主题、默认透明度、窗口内透明度条、全局基础字号、最大显示行数和滚动条模式。
+- 全局基础字号以 px 明确显示，可在 11–18px 间按 1px 调整，默认 13px；各级界面文字按原有比例同步缩放，并即时广播到所有已打开窗口。
 - 设置修改通过 `settings:changed` 广播到现有 renderer；内容窗口即时更新显示行为，管理器和设置窗口即时切换浅深主题。
 - 新建窗口读取 `settings.default_opacity`；`pin_all` 和 `snap` 在主进程窗口行为中生效；开机自启使用 Electron 登录项设置接口。
 - 关闭窗口内透明度条后，内容窗口右键可使用最小透明度滑块；完整右键菜单项留在后续批次扩展。
@@ -482,6 +485,15 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 - 右键菜单位置按视口底部边界钳制，菜单项和删除项使用当前窗口主题颜色。
 - 新增内容窗口到主进程的创建同类、打开重命名和删除 IPC，并保持窗口身份校验。
 - `pnpm typecheck`、`pnpm lint`、`pnpm test:db`（11/11）、`pnpm db:check`、`git diff --check` 和 `pnpm package` 通过。
+
+阶段 7.9 实际验证结果：
+
+- 引入 `lucide-react`，统一替换设置、显隐、关闭、删除、复制、拖动、完成、折叠/展开、返回、下拉和新建等操作图标。
+- 图标统一使用 `14px` 左右尺寸、`2px` 线宽，并通过 CSS 使用方形线帽和连接，贴合直角窗口主题。
+- PIN 继续保留文字按钮；置顶激活态改为按钮底部黑色横线，避免黑色整块背景压过标题栏。
+- 设置与管理器中的显隐图标按动作显示为 `Eye / EyeOff`；关闭使用 `X`，删除使用 `Trash2`，颜色套装编辑操作使用 `Pencil` 和 `Trash2`。
+- 新增图标预览参考页 `docs/lucide-icon-options-preview.html`；正式界面的操作按钮不再依赖 Unicode 图标字符，PIN 继续保留文字，待办和剪贴板输入行保留约定的 `[+]` 文本前缀。
+- `pnpm typecheck`、`pnpm lint` 和 `git diff --check` 通过。
 
 ### 阶段 8：Windows 系统能力和发布
 

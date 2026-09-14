@@ -45,10 +45,12 @@ test('initializes and updates the singleton settings row', () => {
   const initial = repositories.settings.ensure();
   assert.equal(initial.id, 1);
   assert.equal(initial.theme, 'light');
+  assert.equal(initial.fontSize, 13);
   assert.equal(initial.defaultOpacity, 100);
 
-  const updated = repositories.settings.update({ theme: 'dark', defaultOpacity: 80 });
+  const updated = repositories.settings.update({ theme: 'dark', fontSize: 16, defaultOpacity: 80 });
   assert.equal(updated.theme, 'dark');
+  assert.equal(updated.fontSize, 16);
   assert.equal(updated.defaultOpacity, 80);
   assert.equal(repositories.settings.ensure().theme, 'dark');
 });

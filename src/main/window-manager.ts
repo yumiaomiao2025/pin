@@ -18,7 +18,7 @@ import { COLOR_PRESETS, mixColor } from '../shared/colors';
 
 const MIN_WIDTH = 240;
 const MIN_HEIGHT = 160;
-const COLLAPSED_HEIGHT = 32;
+const COLLAPSED_HEIGHT = 40;
 const SNAP_DISTANCE = 12;
 const SYSTEM_STATE_POLL_MS = 600;
 
@@ -747,6 +747,10 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       minWidth: MIN_WIDTH,
       minHeight: MIN_HEIGHT,
       frame: false,
+      roundedCorners: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      hasShadow: false,
       show: false,
       resizable: !widget.collapsed,
       webPreferences: {
@@ -990,6 +994,10 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       minWidth: 240,
       minHeight: 160,
       frame: false,
+      roundedCorners: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      hasShadow: false,
       show: false,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
@@ -1029,6 +1037,10 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       minWidth: 240,
       minHeight: 160,
       frame: false,
+      roundedCorners: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      hasShadow: false,
       show: false,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
@@ -1074,6 +1086,10 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       minWidth: 240,
       minHeight: 160,
       frame: false,
+      roundedCorners: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      hasShadow: false,
       show: false,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
@@ -1376,6 +1392,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         defaultAccentColor: DEFAULT_COLORS.accent,
         defaultSpineColor: DEFAULT_COLORS.spine,
         defaultShadowColor: DEFAULT_COLORS.shadow,
+        fontSize: 13,
         scrollbar: 'overlay',
         maxLines: 0,
         hoverFull: true,

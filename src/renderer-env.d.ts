@@ -53,6 +53,7 @@ interface PinSettings {
   defaultAccentColor: string;
   defaultSpineColor: string | null;
   defaultShadowColor: string;
+  fontSize: number;
   maxLines: number;
   hoverFull: boolean;
   scrollbar: 'always' | 'overlay' | 'hidden';
@@ -95,7 +96,7 @@ interface PinCustomKit {
 
 type PinSettingsUpdate = Partial<Pick<
   PinSettings,
-  'theme' | 'autoTheme' | 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar' | 'defaultOpacity' | 'pinAll' | 'autostart' | 'snap'
+  'theme' | 'autoTheme' | 'fontSize' | 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar' | 'defaultOpacity' | 'pinAll' | 'autostart' | 'snap'
 >>;
 
 interface Window {

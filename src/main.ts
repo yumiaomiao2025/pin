@@ -116,6 +116,10 @@ const createOnboardingWindow = () => {
     minWidth: 320,
     minHeight: 200,
     frame: false,
+    roundedCorners: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -247,6 +251,12 @@ ipcMain.handle('settings:update', (event, input: unknown) => {
       throw new TypeError('maxLines must be an integer from 0 to 3');
     }
     patch.maxLines = values.maxLines;
+  }
+  if ('fontSize' in values && values.fontSize !== undefined) {
+    if (typeof values.fontSize !== 'number' || !Number.isInteger(values.fontSize) || values.fontSize < 11 || values.fontSize > 18) {
+      throw new TypeError('fontSize must be an integer from 11 to 18');
+    }
+    patch.fontSize = values.fontSize;
   }
   if ('defaultOpacity' in values && values.defaultOpacity !== undefined) {
     if (typeof values.defaultOpacity !== 'number' || !Number.isInteger(values.defaultOpacity) || values.defaultOpacity < 35 || values.defaultOpacity > 100) {

@@ -8,6 +8,13 @@
       "when": 1788243706783,
       "tag": "0000_silly_captain_cross",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788779820307,
+      "tag": "0001_next_centennial",
+      "breakpoints": true
     }
   ]
 }

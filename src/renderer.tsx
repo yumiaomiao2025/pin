@@ -20,6 +20,24 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Copy,
+  Eye,
+  EyeOff,
+  GripVertical,
+  PanelTopClose,
+  PanelTopOpen,
+  Pencil,
+  Plus,
+  Settings,
+  Trash2,
+  X,
+} from 'lucide-react';
 
 import './styles/global.scss';
 import { COLOR_PRESETS, colorSetEquals, deriveColorVars, mixColor } from './shared/colors';
@@ -82,6 +100,51 @@ function widgetColorStyle(widget: PinWidget): React.CSSProperties {
       ? `inset 8px 0 0 ${colors.spine}, 8px 8px 0 ${colors.shadow}`
       : `8px 8px 0 ${colors.shadow}`,
   } as React.CSSProperties;
+}
+
+function rangeControlStyle(value: number, minimum: number, maximum: number): React.CSSProperties {
+  const progress = ((value - minimum) / (maximum - minimum)) * 100;
+  return {
+    '--range-progress': `${Math.min(100, Math.max(0, progress))}%`,
+  } as React.CSSProperties;
+}
+
+type RangeControlProps = {
+  'aria-label': string;
+  disabled?: boolean;
+  id?: string;
+  maximum: number;
+  minimum: number;
+  onChange: (value: number) => void;
+  step?: number;
+  value: number;
+};
+
+function RangeControl({
+  maximum,
+  minimum,
+  onChange,
+  step = 1,
+  value,
+  'aria-label': ariaLabel,
+  disabled = false,
+  id,
+}: RangeControlProps) {
+  return (
+    <input
+      aria-label={ariaLabel}
+      className="range-control"
+      disabled={disabled}
+      id={id}
+      max={maximum}
+      min={minimum}
+      onChange={(event) => onChange(Number(event.target.value))}
+      style={rangeControlStyle(value, minimum, maximum)}
+      step={step}
+      type="range"
+      value={value}
+    />
+  );
 }
 
 type WindowDisplaySettings = Pick<PinSettings, 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar'>;
@@ -186,24 +249,26 @@ function ManagerTitleBar({ count, onHide, onSettings }: { count: number; onHide:
   return (
     <header className="manager-titlebar">
       <span className="type-label">WIDGETS · {count}</span>
-      <button
-        aria-label="打开设置"
-        className="title-action title-action--icon"
-        onClick={onSettings}
-        title="设置"
-        type="button"
-      >
-        ⚙
-      </button>
-      <button
-        aria-label="关闭管理面板"
-        className="title-action title-action--icon"
-        onClick={onHide}
-        title="关闭管理面板"
-        type="button"
-      >
-        ×
-      </button>
+      <span className="titlebar-actions">
+        <button
+          aria-label="打开设置"
+          className="title-action title-action--icon"
+          onClick={onSettings}
+          title="设置"
+          type="button"
+        >
+          <Settings aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        </button>
+        <button
+          aria-label="关闭管理面板"
+          className="title-action title-action--icon"
+          onClick={onHide}
+          title="关闭管理面板"
+          type="button"
+        >
+          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        </button>
+      </span>
     </header>
   );
 }
@@ -284,7 +349,11 @@ function ManagerWidgetRow({
         title={widget.hidden ? '显示窗口' : '隐藏窗口'}
         type="button"
       >
-        {widget.hidden ? '○' : '◉'}
+        {widget.hidden ? (
+          <Eye aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        ) : (
+          <EyeOff aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        )}
       </button>
       <button
         aria-label={`删除 ${widgetDisplayName(widget)}`}
@@ -294,7 +363,7 @@ function ManagerWidgetRow({
         title="删除窗口"
         type="button"
       >
-        ×
+        <Trash2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
       </button>
     </div>
   );
@@ -541,8 +610,14 @@ function Manager() {
       </section>
       <footer className="manager-footer">
         <div className="manager-visibility-actions">
-          <button disabled={busy} onClick={() => void setAllHidden(false)} type="button">◉ 全部显示</button>
-          <button disabled={busy} onClick={() => void setAllHidden(true)} type="button">○ 全部隐藏</button>
+          <button disabled={busy} onClick={() => void setAllHidden(false)} type="button">
+            <Eye aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />
+            全部显示
+          </button>
+          <button disabled={busy} onClick={() => void setAllHidden(true)} type="button">
+            <EyeOff aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />
+            全部隐藏
+          </button>
         </div>
         <div className="manager-new-wrap">
           {newMenuOpen && (
@@ -562,7 +637,13 @@ function Manager() {
             onClick={() => setNewMenuOpen((open) => !open)}
             type="button"
           >
-            + NEW {newMenuOpen ? '▴' : '▾'}
+            <Plus aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />
+            NEW
+            {newMenuOpen ? (
+              <ChevronUp aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />
+            ) : (
+              <ChevronDown aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />
+            )}
           </button>
         </div>
       </footer>
@@ -592,6 +673,7 @@ const DEFAULT_SETTINGS: PinSettings = {
   defaultAccentColor: '#FFE566',
   defaultSpineColor: null,
   defaultShadowColor: '#111111',
+  fontSize: 13,
   maxLines: 0,
   hoverFull: true,
   scrollbar: 'overlay',
@@ -606,15 +688,17 @@ function SettingsTitleBar({ onHide }: { onHide: () => void }) {
   return (
     <header className="settings-titlebar">
       <span className="type-label">SETTINGS</span>
-      <button
-        aria-label="关闭设置"
-        className="title-action title-action--icon"
-        onClick={onHide}
-        title="关闭设置"
-        type="button"
-      >
-        ×
-      </button>
+      <span className="titlebar-actions">
+        <button
+          aria-label="关闭设置"
+          className="title-action title-action--icon"
+          onClick={onHide}
+          title="关闭设置"
+          type="button"
+        >
+          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        </button>
+      </span>
     </header>
   );
 }
@@ -769,6 +853,15 @@ function SettingsPanel() {
     });
   };
 
+  const updateFontSize = (fontSize: number) => {
+    setSettings((current) => ({ ...current, fontSize }));
+    void window.pinApi.updateSettings({ fontSize }).then((updated) => {
+      if (updated) {
+        setSettings(updated);
+      }
+    });
+  };
+
   return (
     <main className={effectiveTheme(settings) === 'dark' ? 'app settings-app management-dark' : 'app settings-app'}>
       <SettingsTitleBar onHide={() => void window.pinApi.hideSettings()} />
@@ -792,19 +885,19 @@ function SettingsPanel() {
             <span>配色套装</span>
             <span className="settings-kit-value">
               <ColorSwatches colors={{ paper: settings.defaultPaperColor, accent: settings.defaultAccentColor, ink: settings.defaultInkColor }} />
-              {currentPreset?.name ?? '自定义'} <span aria-hidden="true">›</span>
+              {currentPreset?.name ?? '自定义'}
+              <ChevronRight aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
             </span>
           </button>
           <div className="settings-row settings-range-row">
             <label htmlFor="default-opacity">新窗口透明度</label>
-            <input
+            <RangeControl
               aria-label="新窗口透明度"
               disabled={busy}
               id="default-opacity"
-              max="100"
-              min="35"
-              onChange={(event) => updateDefaultOpacity(Number(event.target.value))}
-              type="range"
+              maximum={100}
+              minimum={35}
+              onChange={updateDefaultOpacity}
               value={settings.defaultOpacity}
             />
             <output>{settings.defaultOpacity}%</output>
@@ -813,6 +906,20 @@ function SettingsPanel() {
           <p className="settings-hint">关掉透明度条后，它会出现在窗口右键菜单里</p>
         </SettingsSection>
         <SettingsSection title="TEXT">
+          <div className="settings-row settings-range-row">
+            <label htmlFor="font-size">字体大小</label>
+            <RangeControl
+              aria-label="字体大小"
+              disabled={busy}
+              id="font-size"
+              maximum={18}
+              minimum={11}
+              onChange={updateFontSize}
+              step={1}
+              value={settings.fontSize}
+            />
+            <output>{settings.fontSize}px</output>
+          </div>
           <div className="settings-row settings-choice-row">
             <span>条目最多显示</span>
             <SettingsSegmented
@@ -862,24 +969,26 @@ function ColorsTitleBar({
           title="返回套装列表"
           type="button"
         >
-          ‹
+          <ChevronLeft aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
         </button>
       )}
       <span className="type-label">COLORS · {title}</span>
-      {onSave && (
-        <button className="colors-save-action" onClick={onSave} type="button">
-          存为套装
+      <span className="titlebar-actions">
+        {onSave && (
+          <button className="colors-save-action" onClick={onSave} type="button">
+            存为套装
+          </button>
+        )}
+        <button
+          aria-label="关闭颜色面板"
+          className="title-action title-action--icon"
+          onClick={onHide}
+          title="关闭颜色面板"
+          type="button"
+        >
+          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
         </button>
-      )}
-      <button
-        aria-label="关闭颜色面板"
-        className="title-action title-action--icon"
-        onClick={onHide}
-        title="关闭颜色面板"
-        type="button"
-      >
-        ×
-      </button>
+      </span>
     </header>
   );
 }
@@ -1115,7 +1224,7 @@ function ColorsPanel() {
                 title="重命名套装"
                 type="button"
               >
-                ✎
+                <Pencil aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
               </button>
               <button
                 aria-label={`删除 ${kit.name}`}
@@ -1125,12 +1234,14 @@ function ColorsPanel() {
                 title="删除套装"
                 type="button"
               >
-                ×
+                <Trash2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
               </button>
             </div>
           ))}
           <button className="color-custom-placeholder" disabled={busy} onClick={openCustomEditor} type="button">
-            ＋ 自定义… ›
+            <Plus aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+            自定义…
+            <ChevronRight aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
           </button>
         </section>
       ) : (
@@ -1168,7 +1279,7 @@ function ColorsPanel() {
                     <span className="color-part-value">
                       <span className={value ? 'color-part-swatch' : 'color-part-swatch color-part-swatch--none'} style={value ? { background: value } : undefined} />
                       <span>{value ?? '/'}</span>
-                      <span aria-hidden="true">▾</span>
+                      <ChevronDown aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
                     </span>
                   </button>
                   {expanded && (
@@ -1185,7 +1296,7 @@ function ColorsPanel() {
                           type="button"
                         >
                           {!option && '/'}
-                          {value === option && <span aria-hidden="true">✓</span>}
+                          {value === option && <Check aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />}
                         </button>
                       ))}
                     </div>
@@ -1339,36 +1450,42 @@ function TitleBar({ widget, onHide, onPin, onCollapse }: {
       onPointerUp={finishDrag}
     >
       <span className="type-label">{widget.type.toUpperCase()}</span>
-      <button
-        aria-pressed={widget.pin}
-        className={widget.pin ? 'title-action title-action--active' : 'title-action'}
-        onClick={onPin}
-        onDoubleClick={(event) => event.stopPropagation()}
-        title={widget.pin ? '取消置顶' : '置顶'}
-        type="button"
-      >
-        PIN
-      </button>
-      <button
-        aria-label={widget.collapsed ? '展开' : '折叠'}
-        className="title-action title-action--icon"
-        onClick={onCollapse}
-        onDoubleClick={(event) => event.stopPropagation()}
-        title={widget.collapsed ? '展开' : '折叠'}
-        type="button"
-      >
-        {widget.collapsed ? '▣' : '–'}
-      </button>
-      <button
-        aria-label="隐藏窗口"
-        className="title-action title-action--icon"
-        onClick={onHide}
-        onDoubleClick={(event) => event.stopPropagation()}
-        title="隐藏窗口"
-        type="button"
-      >
-        ×
-      </button>
+      <span className="titlebar-actions">
+        <button
+          aria-pressed={widget.pin}
+          className={widget.pin ? 'title-action title-action--active' : 'title-action'}
+          onClick={onPin}
+          onDoubleClick={(event) => event.stopPropagation()}
+          title={widget.pin ? '取消置顶' : '置顶'}
+          type="button"
+        >
+          PIN
+        </button>
+        <button
+          aria-label={widget.collapsed ? '展开' : '折叠'}
+          className="title-action title-action--icon"
+          onClick={onCollapse}
+          onDoubleClick={(event) => event.stopPropagation()}
+          title={widget.collapsed ? '展开' : '折叠'}
+          type="button"
+        >
+          {widget.collapsed ? (
+            <PanelTopOpen aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+          ) : (
+            <PanelTopClose aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+          )}
+        </button>
+        <button
+          aria-label="隐藏窗口"
+          className="title-action title-action--icon"
+          onClick={onHide}
+          onDoubleClick={(event) => event.stopPropagation()}
+          title="隐藏窗口"
+          type="button"
+        >
+          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        </button>
+      </span>
     </header>
   );
 }
@@ -1377,13 +1494,12 @@ function OpacityBar({ widget, onChange }: { widget: PinWidget; onChange: (value:
   return (
     <footer className="opacity-bar">
       <label htmlFor="opacity">OPACITY</label>
-      <input
+      <RangeControl
         aria-label="窗口透明度"
         id="opacity"
-        max="100"
-        min="35"
-        onChange={(event) => onChange(Number(event.target.value))}
-        type="range"
+        maximum={100}
+        minimum={35}
+        onChange={onChange}
         value={widget.opacity}
       />
       <output>{widget.opacity}%</output>
@@ -1457,13 +1573,12 @@ function OpacityContextMenu({
       {showOpacity && (
         <div className="window-context-menu-opacity">
           <label htmlFor="context-opacity">透明度</label>
-          <input
+          <RangeControl
             aria-label="窗口透明度"
             id="context-opacity"
-            max="100"
-            min="35"
-            onChange={(event) => onChange(Number(event.target.value))}
-            type="range"
+            maximum={100}
+            minimum={35}
+            onChange={onChange}
             value={widget.opacity}
           />
           <output>{widget.opacity}%</output>
@@ -1826,7 +1941,9 @@ function ClipRow({
           text={item.text}
         />
       )}
-      <span aria-hidden="true" className="clip-copy-mark">⧉</span>
+      <span aria-hidden="true" className="clip-copy-mark">
+        <Copy className="ui-icon" size={13} strokeWidth={2} />
+      </span>
       <span
         aria-hidden="true"
         className="clip-drag-handle"
@@ -1836,7 +1953,7 @@ function ClipRow({
           onDragStart();
         }}
       >
-        ⠿
+        <GripVertical aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
       </span>
       <button
         aria-label="删除剪贴文本"
@@ -1848,7 +1965,7 @@ function ClipRow({
         title="删除剪贴文本"
         type="button"
       >
-        ×
+        <Trash2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
       </button>
     </div>
   );
@@ -2187,7 +2304,7 @@ function TodoRow({
         title={todo.done ? '取消完成' : '标记完成'}
         type="button"
       >
-        {(todo.done || completing) && <span className="todo-check-mark">✓</span>}
+        {(todo.done || completing) && <Check aria-hidden="true" className="todo-check-mark ui-icon" size={12} strokeWidth={2} />}
       </button>
       {editing ? (
         <textarea
@@ -2225,7 +2342,7 @@ function TodoRow({
         title="拖动排序"
         type="button"
       >
-        ⠿
+        <GripVertical aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
       </button>
       <button
         aria-label="删除待办"
@@ -2234,7 +2351,7 @@ function TodoRow({
         title="删除待办"
         type="button"
       >
-        ×
+        <Trash2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
       </button>
     </div>
   );
@@ -2265,7 +2382,7 @@ function TodoDragPreview({
       }}
     >
       <span className={todo.done ? 'todo-check todo-check--done' : 'todo-check'}>
-        {todo.done && <span className="todo-check-mark">✓</span>}
+        {todo.done && <Check aria-hidden="true" className="todo-check-mark ui-icon" size={12} strokeWidth={2} />}
       </span>
       <span
         className={textClass}
@@ -2273,8 +2390,8 @@ function TodoDragPreview({
       >
         {todo.text}
       </span>
-      <span className="todo-drag-handle">⠿</span>
-      <span className="todo-delete">×</span>
+      <span className="todo-drag-handle"><GripVertical aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} /></span>
+      <span className="todo-delete"><Trash2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} /></span>
     </div>
   );
 }
@@ -2882,6 +2999,21 @@ function WidgetApp() {
 }
 
 function App() {
+  useEffect(() => {
+    let active = true;
+    const applyFontSize = (settings: PinSettings) => {
+      if (active) {
+        document.documentElement.style.fontSize = `${settings.fontSize}px`;
+      }
+    };
+    const unsubscribe = window.pinApi.onSettingsChanged(applyFontSize);
+    void window.pinApi.getSettings().then(applyFontSize);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
   const context = getWindowContext();
   if (context.role === 'onboarding') {
     return <Onboarding />;
