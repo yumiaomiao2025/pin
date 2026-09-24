@@ -44,6 +44,27 @@ let windowManager: WindowManager | undefined;
 let onboardingWindow: BrowserWindow | undefined;
 let tray: Tray | undefined;
 
+const installDevToolsShortcut = () => {
+  if (!MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    return;
+  }
+  app.on('browser-window-created', (_event, window) => {
+    window.webContents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown' || input.key !== 'F12') {
+        return;
+      }
+      event.preventDefault();
+      if (window.webContents.isDevToolsOpened()) {
+        window.webContents.closeDevTools();
+      } else {
+        window.webContents.openDevTools({ mode: 'detach' });
+      }
+    });
+  });
+};
+
+installDevToolsShortcut();
+
 const createTray = () => {
   if (tray) {
     return;

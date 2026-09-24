@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import {
@@ -131,19 +131,23 @@ function RangeControl({
   id,
 }: RangeControlProps) {
   return (
-    <input
-      aria-label={ariaLabel}
-      className="range-control"
-      disabled={disabled}
-      id={id}
-      max={maximum}
-      min={minimum}
-      onChange={(event) => onChange(Number(event.target.value))}
+    <span
+      className={disabled ? 'range-control-shell range-control-shell--disabled' : 'range-control-shell'}
       style={rangeControlStyle(value, minimum, maximum)}
-      step={step}
-      type="range"
-      value={value}
-    />
+    >
+      <input
+        aria-label={ariaLabel}
+        className="range-control"
+        disabled={disabled}
+        id={id}
+        max={maximum}
+        min={minimum}
+        onChange={(event) => onChange(Number(event.target.value))}
+        step={step}
+        type="range"
+        value={value}
+      />
+    </span>
   );
 }
 
@@ -198,6 +202,38 @@ function useWidgetUpdates(setWidget: React.Dispatch<React.SetStateAction<PinWidg
   }, [setWidget]);
 }
 
+function useOpacityControl(setWidget: React.Dispatch<React.SetStateAction<PinWidget>>) {
+  const pendingOpacity = useRef<number | undefined>(undefined);
+  const persistTimer = useRef<number | undefined>(undefined);
+  const setWidgetRef = useRef(setWidget);
+  setWidgetRef.current = setWidget;
+
+  const flush = useCallback(() => {
+    persistTimer.current = undefined;
+    const opacity = pendingOpacity.current;
+    pendingOpacity.current = undefined;
+    if (opacity !== undefined) {
+      void window.pinApi.setOpacity(opacity);
+    }
+  }, []);
+
+  useEffect(() => () => {
+    if (persistTimer.current !== undefined) {
+      window.clearTimeout(persistTimer.current);
+    }
+    flush();
+  }, [flush]);
+
+  return useCallback((value: number) => {
+    const opacity = Math.min(100, Math.max(35, Math.round(value)));
+    setWidgetRef.current((current) => ({ ...current, opacity }));
+    pendingOpacity.current = opacity;
+    if (persistTimer.current === undefined) {
+      persistTimer.current = window.setTimeout(flush, 32);
+    }
+  }, [flush]);
+}
+
 function compareTodos(left: PinTodo, right: PinTodo) {
   return left.sortOrder - right.sortOrder || left.createdAt - right.createdAt || left.id.localeCompare(right.id);
 }
@@ -249,26 +285,24 @@ function ManagerTitleBar({ count, onHide, onSettings }: { count: number; onHide:
   return (
     <header className="manager-titlebar">
       <span className="type-label">WIDGETS · {count}</span>
-      <span className="titlebar-actions">
-        <button
-          aria-label="打开设置"
-          className="title-action title-action--icon"
-          onClick={onSettings}
-          title="设置"
-          type="button"
-        >
-          <Settings aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-        </button>
-        <button
-          aria-label="关闭管理面板"
-          className="title-action title-action--icon"
-          onClick={onHide}
-          title="关闭管理面板"
-          type="button"
-        >
-          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-        </button>
-      </span>
+      <button
+        aria-label="打开设置"
+        className="title-action title-action--icon"
+        onClick={onSettings}
+        title="设置"
+        type="button"
+      >
+        <Settings aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+      </button>
+      <button
+        aria-label="关闭管理面板"
+        className="title-action title-action--icon"
+        onClick={onHide}
+        title="关闭管理面板"
+        type="button"
+      >
+        <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+      </button>
     </header>
   );
 }
@@ -688,17 +722,15 @@ function SettingsTitleBar({ onHide }: { onHide: () => void }) {
   return (
     <header className="settings-titlebar">
       <span className="type-label">SETTINGS</span>
-      <span className="titlebar-actions">
-        <button
-          aria-label="关闭设置"
-          className="title-action title-action--icon"
-          onClick={onHide}
-          title="关闭设置"
-          type="button"
-        >
-          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-        </button>
-      </span>
+      <button
+        aria-label="关闭设置"
+        className="title-action title-action--icon"
+        onClick={onHide}
+        title="关闭设置"
+        type="button"
+      >
+        <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+      </button>
     </header>
   );
 }
@@ -973,22 +1005,20 @@ function ColorsTitleBar({
         </button>
       )}
       <span className="type-label">COLORS · {title}</span>
-      <span className="titlebar-actions">
-        {onSave && (
-          <button className="colors-save-action" onClick={onSave} type="button">
-            存为套装
-          </button>
-        )}
-        <button
-          aria-label="关闭颜色面板"
-          className="title-action title-action--icon"
-          onClick={onHide}
-          title="关闭颜色面板"
-          type="button"
-        >
-          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+      {onSave && (
+        <button className="colors-save-action" onClick={onSave} type="button">
+          存为套装
         </button>
-      </span>
+      )}
+      <button
+        aria-label="关闭颜色面板"
+        className="title-action title-action--icon"
+        onClick={onHide}
+        title="关闭颜色面板"
+        type="button"
+      >
+        <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+      </button>
     </header>
   );
 }
@@ -1450,42 +1480,40 @@ function TitleBar({ widget, onHide, onPin, onCollapse }: {
       onPointerUp={finishDrag}
     >
       <span className="type-label">{widget.type.toUpperCase()}</span>
-      <span className="titlebar-actions">
-        <button
-          aria-pressed={widget.pin}
-          className={widget.pin ? 'title-action title-action--active' : 'title-action'}
-          onClick={onPin}
-          onDoubleClick={(event) => event.stopPropagation()}
-          title={widget.pin ? '取消置顶' : '置顶'}
-          type="button"
-        >
-          PIN
-        </button>
-        <button
-          aria-label={widget.collapsed ? '展开' : '折叠'}
-          className="title-action title-action--icon"
-          onClick={onCollapse}
-          onDoubleClick={(event) => event.stopPropagation()}
-          title={widget.collapsed ? '展开' : '折叠'}
-          type="button"
-        >
-          {widget.collapsed ? (
-            <PanelTopOpen aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-          ) : (
-            <PanelTopClose aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-          )}
-        </button>
-        <button
-          aria-label="隐藏窗口"
-          className="title-action title-action--icon"
-          onClick={onHide}
-          onDoubleClick={(event) => event.stopPropagation()}
-          title="隐藏窗口"
-          type="button"
-        >
-          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-        </button>
-      </span>
+      <button
+        aria-pressed={widget.pin}
+        className={widget.pin ? 'title-action title-action--pin title-action--active' : 'title-action title-action--pin'}
+        onClick={onPin}
+        onDoubleClick={(event) => event.stopPropagation()}
+        title={widget.pin ? '取消置顶' : '置顶'}
+        type="button"
+      >
+        PIN
+      </button>
+      <button
+        aria-label={widget.collapsed ? '展开' : '折叠'}
+        className="title-action title-action--icon"
+        onClick={onCollapse}
+        onDoubleClick={(event) => event.stopPropagation()}
+        title={widget.collapsed ? '展开' : '折叠'}
+        type="button"
+      >
+        {widget.collapsed ? (
+          <PanelTopOpen aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        ) : (
+          <PanelTopClose aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        )}
+      </button>
+      <button
+        aria-label="隐藏窗口"
+        className="title-action title-action--icon"
+        onClick={onHide}
+        onDoubleClick={(event) => event.stopPropagation()}
+        title="隐藏窗口"
+        type="button"
+      >
+        <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+      </button>
     </header>
   );
 }
@@ -1900,7 +1928,7 @@ function ClipRow({
 
   return (
     <div
-      className={`${copied ? 'clip-row clip-row--copied' : 'clip-row'}${dragging ? ' clip-row--dragging' : ''}${dragOver ? ' clip-row--drag-over' : ''}`}
+      className={`clip-row${dragging ? ' clip-row--dragging' : ''}${dragOver ? ' clip-row--drag-over' : ''}`}
       onClick={onCopy}
       onDragEnd={onDragEnd}
       onDragOver={(event) => {
@@ -1941,9 +1969,22 @@ function ClipRow({
           text={item.text}
         />
       )}
-      <span aria-hidden="true" className="clip-copy-mark">
-        <Copy className="ui-icon" size={13} strokeWidth={2} />
-      </span>
+      <button
+        aria-label={copied ? '已复制' : '复制剪贴文本'}
+        className={copied ? 'clip-copy-mark clip-copy-mark--copied' : 'clip-copy-mark'}
+        onClick={(event) => {
+          event.stopPropagation();
+          onCopy();
+        }}
+        title={copied ? '已复制' : '复制剪贴文本'}
+        type="button"
+      >
+        {copied ? (
+          <Check aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />
+        ) : (
+          <Copy aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />
+        )}
+      </button>
       <span
         aria-hidden="true"
         className="clip-drag-handle"
@@ -2045,13 +2086,7 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     });
   };
 
-  const setOpacity = (opacity: number) => {
-    void window.pinApi.setOpacity(opacity).then((updated) => {
-      if (updated) {
-        setWidget(updated);
-      }
-    });
-  };
+  const setOpacity = useOpacityControl(setWidget);
 
   const addClip = () => {
     if (draft.trim() === '') {
@@ -2473,13 +2508,7 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     });
   };
 
-  const setOpacity = (opacity: number) => {
-    void window.pinApi.setOpacity(opacity).then((updated) => {
-      if (updated) {
-        setWidget(updated);
-      }
-    });
-  };
+  const setOpacity = useOpacityControl(setWidget);
 
   const addTodo = () => {
     if (draft.trim() === '') {
@@ -2807,13 +2836,7 @@ function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     });
   };
 
-  const setOpacity = (opacity: number) => {
-    void window.pinApi.setOpacity(opacity).then((updated) => {
-      if (updated) {
-        setWidget(updated);
-      }
-    });
-  };
+  const setOpacity = useOpacityControl(setWidget);
 
   return (
     <main
@@ -2884,13 +2907,7 @@ function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
     });
   };
 
-  const setOpacity = (opacity: number) => {
-    void window.pinApi.setOpacity(opacity).then((updated) => {
-      if (updated) {
-        setWidget(updated);
-      }
-    });
-  };
+  const setOpacity = useOpacityControl(setWidget);
 
   const selectTab = (activeTab: PinWidget['activeTab']) => {
     if (activeTab === widget.activeTab) {
