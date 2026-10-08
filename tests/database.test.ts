@@ -10,7 +10,7 @@ import {
 } from '../src/main/database/app-service';
 import { openDatabase, type DatabaseHandle } from '../src/main/database/database';
 import { createRepositories, type AppRepositories } from '../src/main/database/repositories';
-import { COLOR_PRESETS, deriveColorVars } from '../src/shared/colors';
+import { COLOR_PRESETS, deriveColorVars, normalizeKitColors } from '../src/shared/colors';
 
 const migrationsFolder = path.resolve('drizzle');
 
@@ -65,7 +65,7 @@ test('persists opacity from 5 to 100 and rejects values outside the range', () =
   }
 });
 
-for (const lastMigration of [1, 2, 3, 4, 5]) {
+for (const lastMigration of [1, 2, 3, 4, 5, 6]) {
   test('upgrades settings from migration ' + lastMigration + ' without losing content or colors', () => {
     const oldMigrations = path.join(temporaryDirectory, 'old-migrations');
     fs.mkdirSync(path.join(oldMigrations, 'meta'), { recursive: true });
@@ -81,32 +81,39 @@ for (const lastMigration of [1, 2, 3, 4, 5]) {
     handle = openDatabase(databasePath, oldMigrations);
     const old = createRepositories(handle.db);
     const previousOpacity = lastMigration === 3 ? 1 : lastMigration === 2 ? 5 : 72;
-    old.settings.update({ fontSize: 17, defaultOpacity: previousOpacity });
+    handle.sqlite.prepare('INSERT INTO settings (id, font_size, default_opacity) VALUES (1, 17, ?)').run(previousOpacity);
     if (lastMigration <= 4) {
       handle.sqlite.exec("UPDATE settings SET theme = 'dark', auto_theme = 1");
     }
-    const previousSettings = old.settings.get() as Record<string, unknown>;
-    const kit = old.customKits.create({ ...COLOR_PRESETS[4], name: 'Keep dark kit' });
-    const widget = old.widgets.create({
-      type: 'desk', noteText: 'keep note', opacity: previousOpacity,
-      paperColor: kit.paper, inkColor: kit.ink, followsDefault: false,
+    const previousSettings = handle.sqlite.prepare('SELECT * FROM settings').get() as Record<string, unknown>;
+    const kit = old.customKits.create({
+      name: 'Keep dark kit', paper: '#0D0D0D', ink: '#F2F2F2',
+      title: '#FFE566', accent: '#FFE566', spine: null, shadow: '#F2F2F2',
     });
+    handle.sqlite.prepare(`INSERT INTO widgets
+      (id, type, note_text, opacity, paper_color, ink_color, follows_default)
+      VALUES ('legacy-widget', 'desk', 'keep note', ?, ?, ?, 0)`).run(previousOpacity, kit.paper, kit.ink);
+    const widget = handle.sqlite.prepare('SELECT * FROM widgets').get() as Record<string, unknown> & { id: string };
     const todo = old.todos.create({ widgetId: widget.id, text: 'keep todo', done: true });
     const clip = old.clipItems.create({ widgetId: widget.id, text: 'keep clip' });
-    assert.throws(() => old.widgets.update(widget.id, { opacity: 0 }), /widgets_opacity_check/);
+    assert.throws(() => handle.sqlite.prepare('UPDATE widgets SET opacity = 0 WHERE id = ?').run(widget.id), /widgets_opacity_check/);
     handle.close();
 
     handle = openDatabase(databasePath, migrationsFolder);
     const upgraded = createRepositories(handle.db);
-    assert.deepEqual(upgraded.widgets.getById(widget.id), { ...widget, opacity: Math.max(5, previousOpacity) });
+    assert.deepEqual(handle.sqlite.prepare('SELECT * FROM widgets').get(), {
+      ...widget, opacity: Math.max(5, previousOpacity), color_kit_id: null,
+    });
     assert.deepEqual(upgraded.todos.getById(todo.id), todo);
     assert.deepEqual(upgraded.clipItems.getById(clip.id), clip);
     assert.deepEqual(upgraded.customKits.getById(kit.id), kit);
     const settingsWithoutRemovedFields = { ...previousSettings };
     delete settingsWithoutRemovedFields.theme;
-    delete settingsWithoutRemovedFields.autoTheme;
+    delete settingsWithoutRemovedFields.auto_theme;
     delete settingsWithoutRemovedFields.scrollbar;
-    assert.deepEqual(upgraded.settings.get(), { ...settingsWithoutRemovedFields, defaultOpacity: Math.max(5, previousOpacity) });
+    assert.deepEqual(handle.sqlite.prepare('SELECT * FROM settings').get(), {
+      ...settingsWithoutRemovedFields, default_opacity: Math.max(5, previousOpacity), default_color_kit_id: null,
+    });
     const columns = handle.sqlite.pragma('table_info(settings)') as Array<{ name: string }>;
     assert.equal(columns.some(({ name }) => name === 'theme' || name === 'auto_theme'), false);
     assert.equal(upgraded.settings.get()?.fontSize, 17);
@@ -148,15 +155,58 @@ test('persists the global window and text settings', () => {
 });
 
 test('provides stable color presets and derived display colors', () => {
-  const invert = COLOR_PRESETS.find((preset) => preset.id === 'invert');
-  assert.ok(invert);
-  assert.equal(invert.paper, '#0D0D0D');
-  assert.equal(invert.ink, '#F2F2F2');
-
-  const derived = deriveColorVars(invert);
+  assert.deepEqual(COLOR_PRESETS.map((preset) => preset.id), ['plain', 'kraft', 'blueprint', 'grass']);
+  assert.equal(COLOR_PRESETS[0].name, '经典黄');
+  const derived = deriveColorVars(COLOR_PRESETS[0]);
   assert.equal(derived.title, '#FFE566');
-  assert.equal(derived.sub, '#808080');
-  assert.equal(derived.soft, '#1B1B1B');
+  assert.equal(derived.sub, '#888888');
+  assert.equal(derived.soft, '#F1F1F1');
+});
+
+test('saves and edits named custom kits independently from built-in colors', () => {
+  const preset = { ...COLOR_PRESETS[0] };
+  const colors = normalizeKitColors({ paper: '#dceedd', accent: '#e44d70', ink: '#222222' });
+  const created = repositories.customKits.create({ name: '我的套装', ...colors });
+  assert.equal(created.title, '#E44D70');
+  assert.equal(created.shadow, '#222222');
+  assert.equal(created.spine, null);
+  const updated = repositories.customKits.update(created.id, {
+    name: '修改后的套装', ...normalizeKitColors({ ...colors, accent: '#77bbcc' }),
+  });
+  assert.equal(updated?.name, '修改后的套装');
+  assert.equal(updated?.title, '#77BBCC');
+  assert.equal(updated?.accent, '#77BBCC');
+  assert.deepEqual(COLOR_PRESETS[0], preset);
+});
+
+test('persists selected kit identity when named kits share the same colors', () => {
+  const colors = normalizeKitColors(COLOR_PRESETS[0]);
+  const first = repositories.customKits.create({ name: '套装一', ...colors });
+  const second = repositories.customKits.create({ name: '套装二', ...colors });
+  repositories.settings.update({ defaultColorKitId: second.id });
+  const widget = repositories.widgets.create({ type: 'note', colorKitId: first.id });
+  handle.close();
+  handle = openDatabase(path.join(temporaryDirectory, 'test.sqlite'), migrationsFolder);
+  repositories = createRepositories(handle.db);
+  assert.equal(repositories.settings.get()?.defaultColorKitId, second.id);
+  assert.equal(repositories.widgets.getById(widget.id)?.colorKitId, first.id);
+  assert.equal(repositories.customKits.getById(second.id)?.name, '套装二');
+});
+
+test('preserves chosen text colors even when the background has low contrast', () => {
+  const preset = COLOR_PRESETS[0];
+  for (const [paper, ink] of [
+    ['#2770C4', '#292C2E'],
+    ['#FFFFFF', '#CCCCCC'],
+    ['#292C2E', '#292C2E'],
+  ]) {
+    const colors = deriveColorVars({ ...preset, paper, ink, accent: '#4F81BA', title: '#4F81BA', shadow: ink });
+    assert.equal(colors.paper, paper);
+    assert.equal(colors.ink, ink);
+    assert.equal(colors.accent, '#4F81BA');
+    assert.equal(colors.title, '#4F81BA');
+    assert.equal(colors.shadow, ink);
+  }
 });
 
 test('creates, updates, and deletes widgets with cascading content', () => {

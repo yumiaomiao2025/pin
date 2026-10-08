@@ -16,7 +16,7 @@ import {
   registerDisplayRecovery,
   type WindowManager,
 } from './main/window-manager';
-import type { ColorSet } from './shared/colors';
+import { normalizeKitColors, type ColorSet } from './shared/colors';
 
 const WIDGET_OPTIONS_LABELS: Record<WidgetType, string> = {
   note: '新便签',
@@ -333,11 +333,40 @@ ipcMain.handle('colors:apply-primary', (event, color: unknown) => {
   return getManager().applyPrimaryColor(event, color) ?? null;
 });
 ipcMain.handle('colors:list-kits', (event) => getManager().listColorKits(event) ?? null);
-ipcMain.handle('colors:create-kit', (event, name: unknown) => {
-  if (typeof name !== 'string') {
-    throw new TypeError('kit name must be a string');
+function parseColorKitInput(input: unknown) {
+  if (!input || typeof input !== 'object' || !('name' in input) || typeof input.name !== 'string' || !input.name.trim()) {
+    throw new TypeError('kit must contain a nonempty name');
   }
-  return getManager().createColorKit(event, name) ?? null;
+  if (!('colors' in input) || !input.colors || typeof input.colors !== 'object') {
+    throw new TypeError('kit must contain colors');
+  }
+  return { name: input.name.trim(), colors: parseColorKitColors(input.colors) };
+}
+function parseColorKitColors(input: object) {
+  const colors = input as Record<string, unknown>;
+  for (const part of ['paper', 'accent', 'ink']) {
+    if (typeof colors[part] !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(colors[part] as string)) {
+      throw new TypeError(`${part} must be a six-digit hex color`);
+    }
+  }
+  return normalizeKitColors(colors as unknown as ColorSet);
+}
+ipcMain.handle('colors:preview', (event, input: unknown) => {
+  if (!input || typeof input !== 'object') throw new TypeError('preview must contain colors');
+  return getManager().previewColorKit(event, parseColorKitColors(input));
+});
+ipcMain.handle('colors:end-preview', (event) => getManager().endColorPreview(event));
+ipcMain.handle('colors:get-preview', () => getManager().getColorPreview());
+ipcMain.handle('colors:create-kit', (event, input: unknown) => {
+  const { name, colors } = parseColorKitInput(input);
+  return getManager().createColorKit(event, name, colors) ?? null;
+});
+ipcMain.handle('colors:update-kit', (event, input: unknown) => {
+  const { name, colors } = parseColorKitInput(input);
+  if (!input || typeof input !== 'object' || !('id' in input) || typeof input.id !== 'string') {
+    throw new TypeError('kit update must contain an id');
+  }
+  return getManager().updateColorKit(event, input.id, name, colors) ?? null;
 });
 ipcMain.handle('colors:rename-kit', (event, input: unknown) => {
   if (

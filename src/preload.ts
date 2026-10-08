@@ -8,6 +8,14 @@ contextBridge.exposeInMainWorld('pinApi', {
   openDefaultColors: () => ipcRenderer.invoke('colors:open-default'),
   openWidgetColors: () => ipcRenderer.invoke('colors:open-widget'),
   getColorContext: () => ipcRenderer.invoke('colors:get-context'),
+  previewColorKit: (colors: Record<string, string | null>) => ipcRenderer.invoke('colors:preview', colors),
+  endColorPreview: () => ipcRenderer.invoke('colors:end-preview'),
+  getColorPreview: () => ipcRenderer.invoke('colors:get-preview'),
+  onColorPreviewChanged: (listener: (preview: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, preview: unknown) => listener(preview);
+    ipcRenderer.on('colors:preview-changed', handler);
+    return () => ipcRenderer.removeListener('colors:preview-changed', handler);
+  },
   applyColorPreset: (presetId: string) => ipcRenderer.invoke('colors:apply-preset', presetId),
   setWidgetFollowDefault: (followsDefault: boolean) =>
     ipcRenderer.invoke('colors:set-widget-follow-default', followsDefault),
@@ -15,7 +23,8 @@ contextBridge.exposeInMainWorld('pinApi', {
     ipcRenderer.invoke('colors:update-parts', patch),
   applyPrimaryColor: (color: string) => ipcRenderer.invoke('colors:apply-primary', color),
   listColorKits: () => ipcRenderer.invoke('colors:list-kits'),
-  createColorKit: (name: string) => ipcRenderer.invoke('colors:create-kit', name),
+  createColorKit: (name: string, colors: Record<string, string | null>) => ipcRenderer.invoke('colors:create-kit', { name, colors }),
+  updateColorKit: (id: string, name: string, colors: Record<string, string | null>) => ipcRenderer.invoke('colors:update-kit', { id, name, colors }),
   renameColorKit: (id: string, name: string) => ipcRenderer.invoke('colors:rename-kit', { id, name }),
   deleteColorKit: (id: string) => ipcRenderer.invoke('colors:delete-kit', id),
   applyColorKit: (id: string) => ipcRenderer.invoke('colors:apply-kit', id),

@@ -4,6 +4,7 @@ interface PinPingResult {
 }
 
 interface PinWidget {
+  colorKitId: string | null;
   id: string;
   type: 'note' | 'todo' | 'clip' | 'desk';
   title: string;
@@ -44,6 +45,7 @@ interface PinClipItem {
 }
 
 interface PinSettings {
+  defaultColorKitId: string | null;
   defaultPaperColor: string;
   defaultInkColor: string;
   defaultTitleColor: string | null;
@@ -71,6 +73,8 @@ interface PinColorContext {
     shadow: string;
   };
   activePresetId: string | null;
+  activeKitId: string | null;
+  appliedWindowCount: number;
   followsDefault?: boolean;
   widgetTitle?: string;
 }
@@ -104,12 +108,17 @@ interface Window {
     openDefaultColors: () => Promise<boolean>;
     openWidgetColors: () => Promise<boolean>;
     getColorContext: () => Promise<PinColorContext | null>;
+    previewColorKit: (colors: PinColorSet) => Promise<boolean>;
+    endColorPreview: () => Promise<boolean>;
+    getColorPreview: () => Promise<import('./shared/colors').ColorPreview | null>;
+    onColorPreviewChanged: (listener: (preview: import('./shared/colors').ColorPreview | null) => void) => () => void;
     applyColorPreset: (presetId: string) => Promise<PinSettings | PinWidget | null>;
     setWidgetFollowDefault: (followsDefault: boolean) => Promise<PinWidget | null>;
     updateColorParts: (patch: Partial<PinColorSet>) => Promise<PinSettings | PinWidget | null>;
     applyPrimaryColor: (color: string) => Promise<PinSettings | PinWidget | null>;
     listColorKits: () => Promise<PinCustomKit[] | null>;
-    createColorKit: (name: string) => Promise<PinCustomKit | null>;
+    createColorKit: (name: string, colors: PinColorSet) => Promise<PinCustomKit | null>;
+    updateColorKit: (id: string, name: string, colors: PinColorSet) => Promise<PinCustomKit | null>;
     renameColorKit: (id: string, name: string) => Promise<PinCustomKit | null>;
     deleteColorKit: (id: string) => Promise<PinCustomKit | null>;
     applyColorKit: (id: string) => Promise<PinSettings | PinWidget | null>;

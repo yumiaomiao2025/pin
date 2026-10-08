@@ -40,6 +40,7 @@ export const settings = sqliteTable(
     defaultAccentColor: text('default_accent_color').notNull().default(DEFAULT_COLORS.accent),
     defaultSpineColor: text('default_spine_color'),
     defaultShadowColor: text('default_shadow_color').notNull().default(DEFAULT_COLORS.shadow),
+    defaultColorKitId: text('default_color_kit_id'),
     fontSize: integer('font_size').notNull().default(13),
     maxLines: integer('max_lines').notNull().default(0),
     hoverFull: integer('hover_full', { mode: 'boolean' }).notNull().default(true),
@@ -81,6 +82,7 @@ export const widgets = sqliteTable(
     accentColor: text('accent_color').notNull().default(DEFAULT_COLORS.accent),
     spineColor: text('spine_color'),
     shadowColor: text('shadow_color').notNull().default(DEFAULT_COLORS.shadow),
+    colorKitId: text('color_kit_id'),
     followsDefault: integer('follows_default', { mode: 'boolean' }).notNull().default(true),
   },
   (table) => [

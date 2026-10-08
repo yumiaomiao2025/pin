@@ -12,10 +12,16 @@ export interface ColorPreset extends ColorSet {
   name: string;
 }
 
+export interface ColorPreview {
+  scope: 'default' | 'widget';
+  widgetId?: string;
+  colors: ColorSet;
+}
+
 export const COLOR_PRESETS: readonly ColorPreset[] = [
   {
     id: 'plain',
-    name: '黄标 · 白纸',
+    name: '经典黄',
     paper: '#FFFFFF',
     ink: '#111111',
     title: '#FFE566',
@@ -53,17 +59,14 @@ export const COLOR_PRESETS: readonly ColorPreset[] = [
     spine: null,
     shadow: '#20321F',
   },
-  {
-    id: 'invert',
-    name: '反相黑',
-    paper: '#0D0D0D',
-    ink: '#F2F2F2',
-    title: '#FFE566',
-    accent: '#FFE566',
-    spine: null,
-    shadow: '#F2F2F2',
-  },
 ];
+
+export function normalizeKitColors(colors: Pick<ColorSet, 'paper' | 'accent' | 'ink'>): ColorSet {
+  const paper = colors.paper.toUpperCase();
+  const accent = colors.accent.toUpperCase();
+  const ink = colors.ink.toUpperCase();
+  return { paper, accent, ink, title: accent, shadow: ink, spine: null };
+}
 
 export function colorSetEquals(left: ColorSet, right: ColorSet) {
   return (
@@ -96,11 +99,7 @@ export function luminance(hex: string) {
 
 export function deriveColorVars(colors: ColorSet) {
   const title = colors.title ?? colors.paper;
-  const ink = Math.abs(luminance(colors.paper) - luminance(colors.ink)) < 0.35
-    ? luminance(colors.paper) > 0.5
-      ? '#111111'
-      : '#F2F2F2'
-    : colors.ink;
+  const ink = colors.ink;
   const sub = mixColor(ink, colors.paper, 0.5);
   const soft = mixColor(colors.paper, ink, 0.06);
   return {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import {
@@ -34,6 +34,7 @@ import {
   PanelTopOpen,
   Pencil,
   Plus,
+  Save,
   Settings,
   Trash2,
   X,
@@ -41,7 +42,10 @@ import {
 
 import './styles/global.scss';
 import { OverlayScrollArea, OverlayTextarea } from './components/overlay-scroll-area';
-import { COLOR_PRESETS, colorSetEquals, deriveColorVars, mixColor } from './shared/colors';
+import { COLOR_PRESETS, colorSetEquals, deriveColorVars, normalizeKitColors } from './shared/colors';
+import type { ColorPreview } from './shared/colors';
+
+const ColorPreviewContext = createContext<ColorPreview | null>(null);
 
 type WidgetType = PinWidget['type'];
 
@@ -49,6 +53,7 @@ function getWindowContext() {
   const params = new URLSearchParams(window.location.search);
   return {
     role: params.get('role') ?? 'unknown',
+    page: params.get('page') ?? 'manager',
     id: params.get('id') ?? 'unknown',
     scope: params.get('scope') ?? 'default',
     renameId: params.get('renameId'),
@@ -75,15 +80,19 @@ function widgetDisplayName(widget: PinWidget) {
   return widget.title.trim() || widget.type.toUpperCase();
 }
 
-function widgetColorStyle(widget: PinWidget): React.CSSProperties {
-  const colors = deriveColorVars({
-    paper: widget.paperColor,
-    ink: widget.inkColor,
-    title: widget.titleColor,
-    accent: widget.accentColor,
-    spine: widget.spineColor,
-    shadow: widget.shadowColor,
-  });
+function settingsToColorSet(settings: PinSettings): PinColorSet {
+  return {
+    paper: settings.defaultPaperColor,
+    ink: settings.defaultInkColor,
+    title: settings.defaultTitleColor,
+    accent: settings.defaultAccentColor,
+    spine: settings.defaultSpineColor,
+    shadow: settings.defaultShadowColor,
+  };
+}
+
+function colorSetStyle(colorSet: PinColorSet): React.CSSProperties {
+  const colors = deriveColorVars(colorSet);
   return {
     '--widget-paper': colors.paper,
     '--widget-ink': colors.ink,
@@ -93,6 +102,24 @@ function widgetColorStyle(widget: PinWidget): React.CSSProperties {
     '--widget-shadow': colors.shadow,
     '--widget-sub': colors.sub,
     '--widget-soft': colors.soft,
+  } as React.CSSProperties;
+}
+
+function useWidgetColorStyle(widget: PinWidget): React.CSSProperties {
+  const preview = useContext(ColorPreviewContext);
+  const matchesPreview = preview?.scope === 'default'
+    ? widget.followsDefault
+    : preview?.scope === 'widget' && preview.widgetId === widget.id;
+  const colors: PinColorSet = matchesPreview && preview ? preview.colors : {
+    paper: widget.paperColor,
+    ink: widget.inkColor,
+    title: widget.titleColor,
+    accent: widget.accentColor,
+    spine: widget.spineColor,
+    shadow: widget.shadowColor,
+  };
+  return {
+    ...colorSetStyle(colors),
     boxShadow: colors.spine
       ? `inset 8px 0 0 ${colors.spine}, 8px 8px 0 ${colors.shadow}`
       : `8px 8px 0 ${colors.shadow}`,
@@ -782,6 +809,7 @@ function Manager() {
 }
 
 const DEFAULT_SETTINGS: PinSettings = {
+  defaultColorKitId: null,
   defaultPaperColor: '#FFFFFF',
   defaultInkColor: '#111111',
   defaultTitleColor: '#FFE566',
@@ -798,18 +826,18 @@ const DEFAULT_SETTINGS: PinSettings = {
   snap: true,
 };
 
-function SettingsTitleBar({ onHide }: { onHide: () => void }) {
+function SettingsTitleBar({ onBack }: { onBack: () => void }) {
   return (
     <header className="settings-titlebar">
       <span className="type-label">SETTINGS</span>
       <button
-        aria-label="关闭设置"
+        aria-label="返回窗口管理"
         className="title-action title-action--icon"
-        onClick={onHide}
-        title="关闭设置"
+        onClick={onBack}
+        title="返回窗口管理"
         type="button"
       >
-        <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        <ChevronLeft aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
       </button>
     </header>
   );
@@ -890,19 +918,17 @@ function ColorSwatches({ colors }: { colors: { paper: string; accent: string; in
   );
 }
 
-type EditableColorPart = 'title' | 'accent' | 'spine' | 'paper' | 'shadow';
+type EditableColorPart = 'paper' | 'accent' | 'ink';
 
-const PRIMARY_COLORS = ['#FFE566', '#E5B64B', '#5E82AA', '#6E9C7B'] as const;
-const COLOR_PARTS: Array<{ id: EditableColorPart; label: string; nullable: boolean; options: Array<string | null> }> = [
-  { id: 'title', label: '标题栏底', nullable: true, options: [...PRIMARY_COLORS, null] },
-  { id: 'accent', label: '选中 · 拖拽行', nullable: false, options: [...PRIMARY_COLORS] },
-  { id: 'spine', label: '左色脊', nullable: true, options: [...PRIMARY_COLORS, null] },
-  { id: 'paper', label: '窗口底纸色', nullable: false, options: ['#FFFFFF', '#FFF9D6', '#EDF6EF', '#E8F1FB', '#0D0D0D'] },
-  { id: 'shadow', label: '硬阴影', nullable: false, options: ['#111111', '#F2F2F2', ...PRIMARY_COLORS] },
+const COLOR_PARTS: Array<{ id: EditableColorPart; label: string }> = [
+  { id: 'paper', label: '背景色' },
+  { id: 'accent', label: '强调色' },
+  { id: 'ink', label: '文字色' },
 ];
 
 function SettingsPanel() {
   const [settings, setSettings] = useState<PinSettings>(DEFAULT_SETTINGS);
+  const [kits, setKits] = useState<PinCustomKit[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -916,6 +942,9 @@ function SettingsPanel() {
       if (active) {
         setSettings(nextSettings);
       }
+    });
+    void window.pinApi.listColorKits().then((nextKits) => {
+      if (active) setKits(nextKits ?? []);
     });
     return () => {
       active = false;
@@ -955,6 +984,7 @@ function SettingsPanel() {
     spine: settings.defaultSpineColor,
     shadow: settings.defaultShadowColor,
   }));
+  const currentKit = kits.find((kit) => kit.id === settings.defaultColorKitId);
 
   const updateDefaultOpacity = (defaultOpacity: number) => {
     setSettings((current) => ({ ...current, defaultOpacity }));
@@ -976,7 +1006,7 @@ function SettingsPanel() {
 
   return (
     <main className="app settings-app">
-      <SettingsTitleBar onHide={() => void window.pinApi.hideSettings()} />
+      <SettingsTitleBar onBack={() => void window.pinApi.openManager()} />
       <OverlayScrollArea className="settings-scroll">
         <SettingsSection title="WINDOW">
           <SettingsToggle checked={settings.pinAll} disabled={busy} label="全部始终置顶" onChange={(pinAll) => void updateSettings({ pinAll })} />
@@ -988,7 +1018,7 @@ function SettingsPanel() {
             <span>配色套装</span>
             <span className="settings-kit-value">
               <ColorSwatches colors={{ paper: settings.defaultPaperColor, accent: settings.defaultAccentColor, ink: settings.defaultInkColor }} />
-              <span>{currentPreset?.name ?? '自定义'}</span>
+              <span>{currentKit?.name ?? currentPreset?.name ?? '自定义'}</span>
               <ChevronRight aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
             </span>
           </button>
@@ -1047,21 +1077,21 @@ function SettingsPanel() {
 
 function ColorsTitleBar({
   onBack,
-  onHide,
-  onSave,
   title,
+  disabled = false,
 }: {
   onBack?: () => void;
-  onHide: () => void;
-  onSave?: () => void;
   title: string;
+  disabled?: boolean;
 }) {
   return (
     <header className="colors-titlebar">
+      <span className="type-label">COLORS · {title}</span>
       {onBack && (
         <button
           aria-label="返回套装列表"
           className="title-action title-action--icon"
+          disabled={disabled}
           onClick={onBack}
           title="返回套装列表"
           type="button"
@@ -1069,22 +1099,42 @@ function ColorsTitleBar({
           <ChevronLeft aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
         </button>
       )}
-      <span className="type-label">COLORS · {title}</span>
-      {onSave && (
-        <button className="colors-save-action" onClick={onSave} type="button">
-          存为套装
-        </button>
-      )}
-      <button
-        aria-label="关闭颜色面板"
-        className="title-action title-action--icon"
-        onClick={onHide}
-        title="关闭颜色面板"
-        type="button"
-      >
-        <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-      </button>
     </header>
+  );
+}
+
+function ColorKitDeleteDialog({ kit, busy, error, onCancel, onConfirm }: {
+  kit: PinCustomKit;
+  busy: boolean;
+  error: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    dialog?.showModal();
+    return () => { dialog?.close(); };
+  }, []);
+
+  return (
+    <dialog
+      aria-describedby="color-kit-delete-description"
+      aria-labelledby="color-kit-delete-title"
+      className="manager-confirm color-kit-confirm"
+      onCancel={(event) => { event.preventDefault(); if (!busy) onCancel(); }}
+      ref={dialogRef}
+    >
+      <h2 id="color-kit-delete-title">删除配色套装？</h2>
+      <p id="color-kit-delete-description">确定删除“{kit.name}”？</p>
+      {error && <p className="color-kit-delete-error" role="alert">{error}</p>}
+      <div className="manager-confirm-actions">
+        <button autoFocus disabled={busy} onClick={onCancel} type="button">取消</button>
+        <button className="manager-confirm-delete" disabled={busy} onClick={onConfirm} type="button">
+          {busy ? '删除中…' : '删除'}
+        </button>
+      </div>
+    </dialog>
   );
 }
 
@@ -1093,8 +1143,24 @@ function ColorsPanel() {
   const [kits, setKits] = useState<PinCustomKit[]>([]);
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<'kits' | 'custom'>('kits');
-  const [expandedPart, setExpandedPart] = useState<EditableColorPart | null>(null);
   const [editorBaseColors, setEditorBaseColors] = useState<PinColorSet | null>(null);
+  const [draftColors, setDraftColors] = useState<PinColorSet | null>(null);
+  const [kitName, setKitName] = useState('');
+  const [editingKitId, setEditingKitId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState('');
+  const [pendingDeleteKit, setPendingDeleteKit] = useState<PinCustomKit | null>(null);
+  const [deleteError, setDeleteError] = useState('');
+
+  useEffect(() => {
+    if (view === 'custom' && draftColors) {
+      void window.pinApi.previewColorKit(draftColors).catch(() => setSaveError('预览失败，请重试'));
+    }
+  }, [view, draftColors]);
+
+  useEffect(() => {
+    if (view !== 'custom') return;
+    return () => { void window.pinApi.endColorPreview().catch((): void => undefined); };
+  }, [view]);
 
   const reload = async () => {
     const nextContext = await window.pinApi.getColorContext();
@@ -1109,10 +1175,17 @@ function ColorsPanel() {
       }
     });
     const unsubscribeDeleted = window.pinApi.onWidgetDeleted((widgetId) => {
+      if (!active) return;
       const windowContext = getWindowContext();
       if (windowContext.scope === 'widget' && windowContext.widgetId === widgetId) {
         setContext(null);
+        setView('kits');
+      } else {
+        void reload();
       }
+    });
+    const unsubscribeWidget = window.pinApi.onWidgetChanged(() => {
+      if (active) void reload();
     });
     void Promise.all([
       window.pinApi.getColorContext(),
@@ -1130,6 +1203,7 @@ function ColorsPanel() {
       active = false;
       unsubscribe();
       unsubscribeDeleted();
+      unsubscribeWidget();
     };
   }, []);
 
@@ -1154,50 +1228,58 @@ function ColorsPanel() {
   };
 
   const saveKit = async () => {
-    if (!context?.colors) {
+    if (!draftColors || busy) {
       return;
     }
-    const name = window.prompt('套装名称', '我的套装')?.trim();
+    const name = kitName.trim();
     if (!name) {
+      setSaveError('请输入套装名称');
       return;
     }
     setBusy(true);
+    setSaveError('');
     try {
-      const created = await window.pinApi.createColorKit(name);
-      if (created) {
-        setKits((current) => [...current, created]);
+      const saved = editingKitId
+        ? await window.pinApi.updateColorKit(editingKitId, name, draftColors)
+        : await window.pinApi.createColorKit(name, draftColors);
+      if (!saved) {
+        setSaveError('保存失败，请重试');
+        return;
       }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const renameKit = async (kit: PinCustomKit) => {
-    const name = window.prompt('重命名套装', kit.name)?.trim();
-    if (!name || name === kit.name) {
-      return;
-    }
-    setBusy(true);
-    try {
-      const updated = await window.pinApi.renameColorKit(kit.id, name);
-      if (updated) {
-        setKits((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setKits((current) => current.some((kit) => kit.id === saved.id)
+        ? current.map((kit) => kit.id === saved.id ? saved : kit)
+        : [...current, saved]);
+      setEditingKitId(saved.id);
+      const applied = await window.pinApi.applyColorKit(saved.id);
+      if (!applied) {
+        setSaveError('套装已保存，应用失败，请重试');
+        return;
       }
+      await window.pinApi.endColorPreview();
+      await reload();
+      setView('kits');
+    } catch {
+      setSaveError('保存失败，请重试');
     } finally {
       setBusy(false);
     }
   };
 
   const deleteKit = async (kit: PinCustomKit) => {
-    if (!window.confirm(`删除配色套装“${kit.name}”？`)) {
-      return;
-    }
+    if (busy) return;
     setBusy(true);
+    setDeleteError('');
     try {
       const deleted = await window.pinApi.deleteColorKit(kit.id);
       if (deleted) {
         setKits((current) => current.filter((item) => item.id !== deleted.id));
+        setPendingDeleteKit(null);
+        await reload();
+      } else {
+        setDeleteError('删除失败，请重试');
       }
+    } catch {
+      setDeleteError('删除失败，请重试');
     } finally {
       setBusy(false);
     }
@@ -1215,68 +1297,34 @@ function ColorsPanel() {
     }
   };
 
-  const openCustomEditor = () => {
-    if (!context?.colors) {
+  const openCustomEditor = (kit?: PinCustomKit) => {
+    const colors = kit ?? context?.colors;
+    if (!colors) {
       return;
     }
-    setEditorBaseColors({ ...context.colors });
-    setExpandedPart(null);
+    setEditorBaseColors(normalizeKitColors(colors));
+    setDraftColors(normalizeKitColors(colors));
+    setKitName(kit?.name ?? '');
+    setEditingKitId(kit?.id ?? null);
+    setSaveError('');
     setView('custom');
   };
 
-  const updatePart = async (part: EditableColorPart, value: string | null) => {
-    setBusy(true);
-    try {
-      await window.pinApi.updateColorParts({ [part]: value });
-      await reload();
-      setExpandedPart(null);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const applyPrimary = async (color: string) => {
-    setBusy(true);
-    try {
-      await window.pinApi.applyPrimaryColor(color);
-      await reload();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const restoreEditorBase = async () => {
-    if (!editorBaseColors) {
-      return;
-    }
-    setBusy(true);
-    try {
-      await window.pinApi.updateColorParts(editorBaseColors);
-      await reload();
-      setExpandedPart(null);
-    } finally {
-      setBusy(false);
-    }
+  const updatePart = (part: EditableColorPart, value: string) => {
+    setDraftColors((colors) => colors ? normalizeKitColors({ ...colors, [part]: value }) : colors);
   };
 
   const currentColors = context?.colors;
   const isWidgetScope = context?.scope === 'widget';
-  const windowContext = getWindowContext();
-  const title = isWidgetScope ? context?.widgetTitle ?? '窗口' : windowContext.scope === 'widget' ? '窗口' : '默认';
-  const currentKitId = kits.find((kit) => currentColors && colorSetEquals(kit, currentColors))?.id;
-  const activePrimary = PRIMARY_COLORS.find((color) => (
-    currentColors?.title === color &&
-    currentColors.accent === color &&
-    currentColors.spine === color &&
-    currentColors.shadow === color &&
-    currentColors.paper === mixColor(color, '#FFFFFF', 0.88)
-  ));
+  const currentKitId = context?.activeKitId;
+  const currentKit = kits.find((kit) => kit.id === currentKitId);
+  const currentPreset = COLOR_PRESETS.find((preset) => preset.id === context?.activePresetId);
+  const title = currentKit?.name ?? currentPreset?.name ?? '自定义';
   return (
     <main className="app colors-app">
       <ColorsTitleBar
-        onBack={view === 'custom' ? () => setView('kits') : undefined}
-        onHide={() => void window.pinApi.hideColors()}
-        onSave={view === 'custom' ? () => void saveKit() : undefined}
+        disabled={busy}
+        onBack={view === 'custom' ? () => setView('kits') : () => void window.pinApi.openSettings()}
         title={title}
       />
       {view === 'kits' ? (
@@ -1291,7 +1339,7 @@ function ColorsPanel() {
               type="button"
             >
               <ColorSwatches colors={preset} />
-              <span>{preset.name}</span>
+              <span className="color-preset-name" title={preset.name}>{preset.name}</span>
               {context?.activePresetId === preset.id && <span className="color-preset-current">当前</span>}
             </button>
           ))}
@@ -1304,15 +1352,15 @@ function ColorsPanel() {
                 type="button"
               >
                 <ColorSwatches colors={kit} />
-                <span>{kit.name}</span>
+                <span className="color-preset-name" title={kit.name}>{kit.name}</span>
                 {currentKitId === kit.id && <span className="color-preset-current">当前</span>}
               </button>
               <button
-                aria-label={`重命名 ${kit.name}`}
+                aria-label={`编辑 ${kit.name}`}
                 className="color-kit-action"
                 disabled={busy}
-                onClick={() => void renameKit(kit)}
-                title="重命名套装"
+                onClick={() => openCustomEditor(kit)}
+                title="编辑套装"
                 type="button"
               >
                 <Pencil aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
@@ -1321,7 +1369,7 @@ function ColorsPanel() {
                 aria-label={`删除 ${kit.name}`}
                 className="color-kit-action color-kit-action--delete"
                 disabled={busy}
-                onClick={() => void deleteKit(kit)}
+                onClick={() => { setDeleteError(''); setPendingDeleteKit(kit); }}
                 title="删除套装"
                 type="button"
               >
@@ -1329,86 +1377,69 @@ function ColorsPanel() {
               </button>
             </div>
           ))}
-          <button className="color-custom-placeholder" disabled={busy} onClick={openCustomEditor} type="button">
+          <button className="color-custom-placeholder" disabled={busy || !currentColors} onClick={() => openCustomEditor()} type="button">
             <Plus aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-            自定义…
-            <ChevronRight aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+            自定义
           </button>
         </OverlayScrollArea>
       ) : (
         <OverlayScrollArea className="colors-section colors-custom-section">
-          <h2>主色 · 一选五处同步</h2>
-          <div className="color-primary-grid">
-            {PRIMARY_COLORS.map((color) => (
-              <button
-                aria-label={`主色 ${color}`}
-                className={activePrimary === color ? 'color-primary color-primary--active' : 'color-primary'}
-                disabled={busy}
-                key={color}
-                onClick={() => void applyPrimary(color)}
-                style={{ background: color }}
-                title={color}
-                type="button"
-              />
-            ))}
-          </div>
-          <h2>五处 · 可各自改</h2>
+          <h2>{editingKitId ? '编辑套装' : '新建套装'}</h2>
           <div className="color-parts-list">
             {COLOR_PARTS.map((part) => {
-              const value = currentColors?.[part.id] ?? null;
-              const expanded = expandedPart === part.id;
+              const value = draftColors?.[part.id] ?? '#111111';
               return (
-                <div className="color-part" key={part.id}>
-                  <button
-                    aria-expanded={expanded}
-                    className="color-part-trigger"
-                    disabled={busy}
-                    onClick={() => setExpandedPart(expanded ? null : part.id)}
-                    type="button"
-                  >
-                    <span>{part.label}</span>
-                    <span className="color-part-value">
-                      <span className={value ? 'color-part-swatch' : 'color-part-swatch color-part-swatch--none'} style={value ? { background: value } : undefined} />
-                      <span>{value ?? '/'}</span>
-                      <ChevronDown aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-                    </span>
-                  </button>
-                  {expanded && (
-                    <div className="color-part-options">
-                      {part.options.map((option) => (
-                        <button
-                          aria-label={option ?? '无'}
-                          className={value === option ? 'color-part-option color-part-option--active' : 'color-part-option'}
-                          disabled={busy}
-                          key={option ?? 'none'}
-                          onClick={() => void updatePart(part.id, option)}
-                          style={option ? { background: option } : undefined}
-                          title={option ?? '无'}
-                          type="button"
-                        >
-                          {!option && '/'}
-                          {value === option && <Check aria-hidden="true" className="ui-icon" size={13} strokeWidth={2} />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <label className="color-part" key={part.id}>
+                  <span>{part.label}</span>
+                  <span className="color-part-value">
+                    <input
+                      aria-label={part.label}
+                      className="color-part-picker"
+                      disabled={busy || !draftColors}
+                      onChange={(event) => updatePart(part.id, event.target.value)}
+                      title={part.label}
+                      type="color"
+                      value={value}
+                    />
+                    <span>{value.toUpperCase()}</span>
+                  </span>
+                </label>
               );
             })}
           </div>
+          <form className="color-kit-form" onSubmit={(event) => { event.preventDefault(); void saveKit(); }}>
+            <label htmlFor="color-kit-name">套装名称</label>
+            <input
+              aria-describedby={saveError ? 'color-kit-error' : undefined}
+              aria-invalid={Boolean(saveError)}
+              autoComplete="off"
+              disabled={busy}
+              id="color-kit-name"
+              maxLength={80}
+              onChange={(event) => { setKitName(event.target.value); setSaveError(''); }}
+              placeholder="我的套装"
+              value={kitName}
+            />
+            {saveError && <p className="color-kit-error" id="color-kit-error" role="alert">{saveError}</p>}
+            <div className="color-kit-form-actions">
+              <button disabled={busy || !editorBaseColors} onClick={() => setDraftColors(editorBaseColors)} type="button">还原</button>
+              <button className="color-kit-save" disabled={busy || !draftColors} type="submit">
+                <Save aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+                {busy ? '保存中…' : '保存套装'}
+              </button>
+            </div>
+          </form>
         </OverlayScrollArea>
       )}
       <footer className="colors-footer">
         <span>
-          {view === 'custom'
-            ? isWidgetScope
-              ? '改动即时作用于本窗口'
-              : '同步跟随默认的窗口'
-            : currentColors
-              ? isWidgetScope && context?.followsDefault === false
-                ? '改动即时作用于本窗口'
-                : '同步跟随默认的窗口'
-              : '加载中…'}
+          {currentColors
+            ? view === 'custom'
+              ? '预览中 · 尚未保存'
+              : Number.isFinite(context.appliedWindowCount)
+                ? `已应用到 ${context.appliedWindowCount} 个窗口`
+                : '已应用'
+            : '加载中…'}
         </span>
         {view === 'kits' && isWidgetScope && (
           <button
@@ -1419,12 +1450,16 @@ function ColorsPanel() {
             恢复默认
           </button>
         )}
-        {view === 'custom' && (
-          <button disabled={busy || !editorBaseColors} onClick={() => void restoreEditorBase()} type="button">
-            恢复默认
-          </button>
-        )}
       </footer>
+      {pendingDeleteKit && (
+        <ColorKitDeleteDialog
+          busy={busy}
+          error={deleteError}
+          kit={pendingDeleteKit}
+          onCancel={() => setPendingDeleteKit(null)}
+          onConfirm={() => void deleteKit(pendingDeleteKit)}
+        />
+      )}
     </main>
   );
 }
@@ -2133,7 +2168,7 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     <main
       className={embedded ? 'desk-panel widget-themed' : 'app widget-themed'}
       onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
-      style={widgetColorStyle(widget)}
+      style={useWidgetColorStyle(widget)}
     >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
@@ -2359,7 +2394,7 @@ function TodoDragPreview({
       aria-hidden="true"
       className={`${todo.done ? 'todo-row todo-row--done' : 'todo-row'} todo-row--drag-overlay`}
       style={{
-        ...widgetColorStyle(widget),
+        ...useWidgetColorStyle(widget),
         background: 'var(--widget-accent)',
         borderColor: 'var(--widget-soft)',
         boxShadow: 'inset 3px 0 0 var(--widget-ink)',
@@ -2594,7 +2629,7 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     <main
       className={embedded ? 'desk-panel widget-themed' : 'app widget-themed'}
       onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
-      style={widgetColorStyle(widget)}
+      style={useWidgetColorStyle(widget)}
     >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
@@ -2776,7 +2811,7 @@ function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     <main
       className={embedded ? 'desk-panel widget-themed' : 'app widget-themed'}
       onContextMenu={!embedded ? contextMenu.handleContextMenu : undefined}
-      style={widgetColorStyle(widget)}
+      style={useWidgetColorStyle(widget)}
     >
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
@@ -2855,7 +2890,7 @@ function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
   };
 
   return (
-    <main className="app widget-themed" onContextMenu={contextMenu.handleContextMenu} style={widgetColorStyle(widget)}>
+    <main className="app widget-themed" onContextMenu={contextMenu.handleContextMenu} style={useWidgetColorStyle(widget)}>
       <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />
       {!widget.collapsed && (
         <>
@@ -2907,7 +2942,7 @@ function UnsupportedWidget({ widget }: { widget: PinWidget }) {
   };
 
   return (
-    <main className="app widget-themed" style={widgetColorStyle(currentWidget)}>
+    <main className="app widget-themed" style={useWidgetColorStyle(currentWidget)}>
       <TitleBar
         onCollapse={toggleCollapsed}
         onHide={() => void window.pinApi.hideWindow()}
@@ -2950,15 +2985,33 @@ function WidgetApp() {
 }
 
 function App() {
+  const [settings, setSettings] = useState<PinSettings>(DEFAULT_SETTINGS);
+  const [colorPreview, setColorPreview] = useState<ColorPreview | null>(null);
   useEffect(() => {
     let active = true;
-    const applyFontSize = (settings: PinSettings) => {
+    let receivedEvent = false;
+    const unsubscribe = window.pinApi.onColorPreviewChanged((preview) => {
+      receivedEvent = true;
+      if (active) setColorPreview(preview);
+    });
+    void window.pinApi.getColorPreview().then((preview) => {
+      if (active && !receivedEvent) setColorPreview(preview);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+  useEffect(() => {
+    let active = true;
+    const applySettings = (settings: PinSettings) => {
       if (active) {
+        setSettings(settings);
         document.documentElement.style.fontSize = `${settings.fontSize}px`;
       }
     };
-    const unsubscribe = window.pinApi.onSettingsChanged(applyFontSize);
-    void window.pinApi.getSettings().then(applyFontSize);
+    const unsubscribe = window.pinApi.onSettingsChanged(applySettings);
+    void window.pinApi.getSettings().then(applySettings);
     return () => {
       active = false;
       unsubscribe();
@@ -2969,16 +3022,15 @@ function App() {
   if (context.role === 'onboarding') {
     return <Onboarding />;
   }
-  if (context.role === 'manager') {
-    return <Manager />;
+  if (context.role === 'manager' || context.role === 'settings' || context.role === 'colors') {
+    const page = context.role === 'manager' ? context.page : context.role;
+    return (
+      <div className="utility-themed" style={colorSetStyle(colorPreview?.colors ?? settingsToColorSet(settings))}>
+        {page === 'settings' ? <SettingsPanel /> : page === 'colors' ? <ColorsPanel /> : <Manager />}
+      </div>
+    );
   }
-  if (context.role === 'settings') {
-    return <SettingsPanel />;
-  }
-  if (context.role === 'colors') {
-    return <ColorsPanel />;
-  }
-  return <WidgetApp />;
+  return <ColorPreviewContext.Provider value={colorPreview}><WidgetApp /></ColorPreviewContext.Provider>;
 }
 
 const root = document.getElementById('root');
