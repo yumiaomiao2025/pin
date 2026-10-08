@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 
 import './styles/global.scss';
+import { OverlayScrollArea, OverlayTextarea } from './components/overlay-scroll-area';
 import { COLOR_PRESETS, colorSetEquals, deriveColorVars, mixColor } from './shared/colors';
 
 type WidgetType = PinWidget['type'];
@@ -72,10 +73,6 @@ const MANAGER_FILTER_OPTIONS: Array<{ type: WidgetType | 'all'; label: string }>
 
 function widgetDisplayName(widget: PinWidget) {
   return widget.title.trim() || widget.type.toUpperCase();
-}
-
-function effectiveTheme(settings: PinSettings) {
-  return settings.effectiveTheme;
 }
 
 function widgetColorStyle(widget: PinWidget): React.CSSProperties {
@@ -151,12 +148,11 @@ function RangeControl({
   );
 }
 
-type WindowDisplaySettings = Pick<PinSettings, 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar'>;
+type WindowDisplaySettings = Pick<PinSettings, 'maxLines' | 'hoverFull' | 'opacityBar'>;
 
 const DEFAULT_TODO_SETTINGS: WindowDisplaySettings = {
   maxLines: 0,
   hoverFull: true,
-  scrollbar: 'overlay',
   opacityBar: true,
 };
 
@@ -512,7 +508,6 @@ function ManagerWidgetRow({
 
 function Manager() {
   const [widgets, setWidgets] = useState<PinWidget[]>([]);
-  const [theme, setTheme] = useState<PinSettings['theme']>('light');
   const [filter, setFilter] = useState<WidgetType | 'all'>('all');
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -548,24 +543,6 @@ function Manager() {
     return () => {
       unsubscribe();
       unsubscribeDeleted();
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const unsubscribe = window.pinApi.onSettingsChanged((settings) => {
-      if (active) {
-        setTheme(settings.effectiveTheme);
-      }
-    });
-    void window.pinApi.getSettings().then((settings) => {
-      if (active) {
-        setTheme(settings.effectiveTheme);
-      }
-    });
-    return () => {
-      active = false;
-      unsubscribe();
     };
   }, []);
 
@@ -692,7 +669,7 @@ function Manager() {
   const filteredWidgets = filter === 'all' ? widgets : widgets.filter((widget) => widget.type === filter);
 
   return (
-    <main className={theme === 'dark' ? 'app manager-app management-dark' : 'app manager-app'}>
+    <main className="app manager-app">
       <ManagerTitleBar
         count={widgets.length}
         onHide={() => void window.pinApi.hideManager()}
@@ -714,7 +691,7 @@ function Manager() {
           );
         })}
       </nav>
-      <section aria-label="窗口列表" className="manager-list">
+      <OverlayScrollArea aria-label="窗口列表" className="manager-list">
         {filteredWidgets.length === 0 ? (
           <p className="manager-empty">没有匹配的窗口</p>
         ) : (
@@ -748,7 +725,7 @@ function Manager() {
             </button>
           </div>
         )}
-      </section>
+      </OverlayScrollArea>
       <footer className="manager-footer">
         <div className="manager-visibility-actions">
           <button disabled={busy} onClick={() => void setAllHidden(false)} type="button">
@@ -805,9 +782,6 @@ function Manager() {
 }
 
 const DEFAULT_SETTINGS: PinSettings = {
-  theme: 'light',
-  autoTheme: false,
-  effectiveTheme: 'light',
   defaultPaperColor: '#FFFFFF',
   defaultInkColor: '#111111',
   defaultTitleColor: '#FFE566',
@@ -817,7 +791,6 @@ const DEFAULT_SETTINGS: PinSettings = {
   fontSize: 13,
   maxLines: 0,
   hoverFull: true,
-  scrollbar: 'overlay',
   opacityBar: true,
   defaultOpacity: 100,
   pinAll: false,
@@ -1002,29 +975,20 @@ function SettingsPanel() {
   };
 
   return (
-    <main className={effectiveTheme(settings) === 'dark' ? 'app settings-app management-dark' : 'app settings-app'}>
+    <main className="app settings-app">
       <SettingsTitleBar onHide={() => void window.pinApi.hideSettings()} />
-      <div className="settings-scroll">
+      <OverlayScrollArea className="settings-scroll">
         <SettingsSection title="WINDOW">
           <SettingsToggle checked={settings.pinAll} disabled={busy} label="全部始终置顶" onChange={(pinAll) => void updateSettings({ pinAll })} />
-          <SettingsToggle checked={settings.autostart} disabled={busy} label="开机自启" onChange={(autostart) => void updateSettings({ autostart })} />
           <SettingsToggle checked={settings.snap} disabled={busy} label="吸附屏幕边缘" onChange={(snap) => void updateSettings({ snap })} />
           <SettingsToggle checked={settings.hoverFull} disabled={busy} label="溢出悬停显示全文" onChange={(hoverFull) => void updateSettings({ hoverFull })} />
         </SettingsSection>
-        <SettingsSection title="THEME">
-          <SettingsSegmented
-            disabled={busy}
-            onChange={(theme) => void updateSettings(theme === 'auto' ? { autoTheme: true } : { theme, autoTheme: false })}
-            options={[{ id: 'light', label: 'LIGHT' }, { id: 'dark', label: 'DARK' }, { id: 'auto', label: 'AUTO' }]}
-            value={settings.autoTheme ? 'auto' : settings.theme}
-          />
-        </SettingsSection>
-        <SettingsSection title="DEFAULTS">
+        <SettingsSection title="APPEARANCE">
           <button className="settings-kit-row" onClick={() => void window.pinApi.openDefaultColors()} type="button">
             <span>配色套装</span>
             <span className="settings-kit-value">
               <ColorSwatches colors={{ paper: settings.defaultPaperColor, accent: settings.defaultAccentColor, ink: settings.defaultInkColor }} />
-              {currentPreset?.name ?? '自定义'}
+              <span>{currentPreset?.name ?? '自定义'}</span>
               <ChevronRight aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
             </span>
           </button>
@@ -1068,17 +1032,11 @@ function SettingsPanel() {
               value={String(settings.maxLines) as '0' | '1' | '2' | '3'}
             />
           </div>
-          <div className="settings-row settings-choice-row">
-            <span>滚动条</span>
-            <SettingsSegmented
-              disabled={busy}
-              onChange={(scrollbar) => void updateSettings({ scrollbar })}
-              options={[{ id: 'always', label: '常驻' }, { id: 'overlay', label: '悬浮' }, { id: 'hidden', label: '隐藏' }]}
-              value={settings.scrollbar}
-            />
-          </div>
         </SettingsSection>
-      </div>
+        <SettingsSection title="STARTUP">
+          <SettingsToggle checked={settings.autostart} disabled={busy} label="开机自启" onChange={(autostart) => void updateSettings({ autostart })} />
+        </SettingsSection>
+      </OverlayScrollArea>
       <footer className="settings-footer">
         <span>v0.3</span>
         <button disabled={busy} onClick={() => void resetSettings()} type="button">RESET</button>
@@ -1133,7 +1091,6 @@ function ColorsTitleBar({
 function ColorsPanel() {
   const [context, setContext] = useState<PinColorContext | null>(null);
   const [kits, setKits] = useState<PinCustomKit[]>([]);
-  const [theme, setTheme] = useState<PinSettings['theme']>('light');
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<'kits' | 'custom'>('kits');
   const [expandedPart, setExpandedPart] = useState<EditableColorPart | null>(null);
@@ -1146,9 +1103,8 @@ function ColorsPanel() {
 
   useEffect(() => {
     let active = true;
-    const unsubscribe = window.pinApi.onSettingsChanged((settings) => {
+    const unsubscribe = window.pinApi.onSettingsChanged(() => {
       if (active) {
-        setTheme(settings.effectiveTheme);
         void reload();
       }
     });
@@ -1159,15 +1115,13 @@ function ColorsPanel() {
       }
     });
     void Promise.all([
-      window.pinApi.getSettings(),
       window.pinApi.getColorContext(),
       window.pinApi.listColorKits(),
     ]).then(
-      ([settings, nextContext, nextKits]) => {
+      ([nextContext, nextKits]) => {
         if (!active) {
           return;
         }
-        setTheme(settings.effectiveTheme);
         setContext(nextContext);
         setKits(nextKits ?? []);
       },
@@ -1318,7 +1272,7 @@ function ColorsPanel() {
     currentColors.paper === mixColor(color, '#FFFFFF', 0.88)
   ));
   return (
-    <main className={theme === 'dark' ? 'app colors-app management-dark' : 'app colors-app'}>
+    <main className="app colors-app">
       <ColorsTitleBar
         onBack={view === 'custom' ? () => setView('kits') : undefined}
         onHide={() => void window.pinApi.hideColors()}
@@ -1326,7 +1280,7 @@ function ColorsPanel() {
         title={title}
       />
       {view === 'kits' ? (
-        <section className="colors-section">
+        <OverlayScrollArea className="colors-section">
           <h2>套装</h2>
           {COLOR_PRESETS.map((preset) => (
             <button
@@ -1380,9 +1334,9 @@ function ColorsPanel() {
             自定义…
             <ChevronRight aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
           </button>
-        </section>
+        </OverlayScrollArea>
       ) : (
-        <section className="colors-section colors-custom-section">
+        <OverlayScrollArea className="colors-section colors-custom-section">
           <h2>主色 · 一选五处同步</h2>
           <div className="color-primary-grid">
             {PRIMARY_COLORS.map((color) => (
@@ -1442,7 +1396,7 @@ function ColorsPanel() {
               );
             })}
           </div>
-        </section>
+        </OverlayScrollArea>
       )}
       <footer className="colors-footer">
         <span>
@@ -1952,7 +1906,7 @@ function ClipRow({
     >
       <span className="clip-index">{String(index + 1).padStart(2, '0')}</span>
       {editing ? (
-        <textarea
+        <OverlayTextarea
           aria-label="编辑剪贴文本"
           autoFocus
           className="clip-text clip-text--editing"
@@ -2034,8 +1988,6 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const viewSettings = useWindowDisplaySettings();
   const [loaded, setLoaded] = useState(false);
-  const [listHovered, setListHovered] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(window.outerWidth);
   const composing = useRef(false);
 
   useEffect(() => {
@@ -2068,12 +2020,6 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     return () => {
       active = false;
     };
-  }, []);
-
-  useEffect(() => {
-    const handleWindowResize = () => setWindowWidth(window.outerWidth);
-    window.addEventListener('resize', handleWindowResize);
-    return () => window.removeEventListener('resize', handleWindowResize);
   }, []);
 
   const hide = () => {
@@ -2183,9 +2129,6 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     setDragOverId(null);
   };
 
-  const scrollbarMode = windowWidth < 300 ? 'overlay' : viewSettings.scrollbar;
-  const listClassName = `clip-list clip-list--${scrollbarMode}${listHovered ? ' clip-list--hovered' : ''}`;
-
   return (
     <main
       className={embedded ? 'desk-panel widget-themed' : 'app widget-themed'}
@@ -2195,11 +2138,7 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
-          <div
-            className={listClassName}
-            onMouseEnter={() => setListHovered(true)}
-            onMouseLeave={() => setListHovered(false)}
-          >
+          <OverlayScrollArea aria-label="剪贴文本列表" className="clip-list">
             {!loaded && <p className="app--loading">加载中…</p>}
             {loaded && items.map((item, index) => (
               <ClipRow
@@ -2227,10 +2166,10 @@ function ClipWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
                 </button>
               </div>
             )}
-          </div>
+          </OverlayScrollArea>
           <footer className="clip-input-row">
             <span aria-hidden="true" className="clip-input-symbol">[+]</span>
-            <textarea
+            <OverlayTextarea
               aria-label="新增剪贴文本"
               className="clip-input"
               onChange={(event) => setDraft(event.target.value)}
@@ -2352,7 +2291,7 @@ function TodoRow({
         {(todo.done || completing) && <Check aria-hidden="true" className="todo-check-mark ui-icon" size={12} strokeWidth={2} />}
       </button>
       {editing ? (
-        <textarea
+        <OverlayTextarea
           aria-label="编辑待办"
           autoFocus
           className="todo-text todo-text--editing"
@@ -2450,8 +2389,6 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   const [deletedTodo, setDeletedTodo] = useState<PinTodo | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(() => new Set());
   const viewSettings = useWindowDisplaySettings();
-  const [listHovered, setListHovered] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(window.outerWidth);
   const [loaded, setLoaded] = useState(false);
   const [activeTodoId, setActiveTodoId] = useState<string | null>(null);
   const composing = useRef(false);
@@ -2490,12 +2427,6 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
     return () => {
       active = false;
     };
-  }, []);
-
-  useEffect(() => {
-    const handleWindowResize = () => setWindowWidth(window.outerWidth);
-    window.addEventListener('resize', handleWindowResize);
-    return () => window.removeEventListener('resize', handleWindowResize);
   }, []);
 
   const hide = () => {
@@ -2632,9 +2563,6 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
   const openTodos = todos.filter((todo) => !todo.done);
   const completedTodos = todos.filter((todo) => todo.done);
   const activeTodo = todos.find((todo) => todo.id === activeTodoId) ?? null;
-  const scrollbarMode = windowWidth < 300 ? 'overlay' : viewSettings.scrollbar;
-  const listClassName = `todo-list todo-list--${scrollbarMode}${listHovered ? ' todo-list--hovered' : ''}`;
-
   const reorderTodos = (group: PinTodo[], event: DragEndEvent) => {
     if (!event.over || event.active.id === event.over.id) {
       return;
@@ -2671,11 +2599,7 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
-          <div
-            className={listClassName}
-            onMouseEnter={() => setListHovered(true)}
-            onMouseLeave={() => setListHovered(false)}
-          >
+          <OverlayScrollArea aria-label="待办列表" className="todo-list">
             {!loaded && <p className="app--loading">加载中…</p>}
             {loaded && (
               <DndContext
@@ -2756,10 +2680,10 @@ function TodoWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
                 </button>
               </div>
             )}
-          </div>
+          </OverlayScrollArea>
           <footer className="todo-input-row">
             <span aria-hidden="true" className="todo-input-symbol">[+]</span>
-            <textarea
+            <OverlayTextarea
               aria-label="新增待办"
               className="todo-input"
               onChange={(event) => setDraft(event.target.value)}
@@ -2857,7 +2781,7 @@ function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWid
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
-          <textarea
+          <OverlayTextarea
             aria-label="便签正文"
             className="note-editor"
             onChange={(event) => setDraft(event.target.value)}

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pin · Scrollbar styles preview</title>
+  <style>
+    :root {
+      color: #111;
+      background: #222831;
+      font: 13px/1.4 "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 28px; }
+    h1 { margin: 0 0 8px; color: #f2f2f2; font-size: 16px; }
+    .intro { margin: 0 0 22px; color: #b8bdc5; font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(5, 320px); gap: 28px 22px; align-items: start; }
+    .sample-title { margin: 0 0 8px; color: #f2f2f2; font-weight: 700; }
+    .sample-note { min-height: 34px; margin: 0 0 8px; color: #9ba2ad; font-size: 11px; }
+
+    .window {
+      position: relative;
+      width: 320px;
+      height: 480px;
+      overflow: hidden;
+      border: 1.5px solid #111;
+      background: #fff;
+      box-shadow: 8px 8px 0 #111;
+    }
+    .titlebar {
+      display: flex;
+      height: 32px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px 0 12px;
+      border-bottom: 1.5px solid #111;
+      background: #ffe566;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+    }
+    .titlebar button { border: 0; background: transparent; font: inherit; font-size: 16px; }
+    .viewport {
+      position: absolute;
+      inset: 32px 0 38px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+    }
+    .viewport::-webkit-scrollbar { display: none; }
+    .content { min-height: 760px; }
+    .section-title {
+      padding: 6px 12px;
+      color: #777;
+      background: #f4f4f1;
+      border-bottom: 1px solid #ddd;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .16em;
+    }
+    .row {
+      display: flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #d8d8d8;
+    }
+    .row label { white-space: nowrap; }
+    .toggle { width: 38px; height: 18px; border: 1.5px solid #111; background: #111; }
+    .toggle::after { display: block; width: 12px; height: 13px; margin: 1px 0 0 auto; content: ""; background: #ffe566; }
+    .range { width: 180px; height: 10px; border: 1.5px solid #111; background: linear-gradient(90deg, #111 0 78%, #fff 78%); }
+    .swatches { display: flex; align-items: center; gap: 8px; }
+    .swatches i { display: block; width: 38px; height: 22px; border: 1.5px solid #111; background: linear-gradient(90deg, #fff 0 33%, #ffe566 33% 66%, #111 66%); }
+    .choice { padding: 7px 12px; border-bottom: 1px solid #d8d8d8; white-space: nowrap; }
+    .choice b { display: inline-block; margin-left: 36px; padding: 3px 7px; color: #fff; background: #111; font-weight: 400; }
+    .footer { position: absolute; right: 0; bottom: 0; left: 0; display: flex; height: 38px; align-items: center; justify-content: space-between; padding: 0 12px; border-top: 1.5px solid #111; color: #777; background: #f4f4f1; font-size: 10px; }
+    .footer button { padding: 2px 7px; border: 1px solid #111; background: #fff; font: inherit; }
+
+    .bar { position: absolute; z-index: 3; top: 32px; right: 0; bottom: 38px; width: 8px; opacity: 0; pointer-events: none; transition: opacity 120ms linear; }
+    .window:hover .bar { opacity: 1; }
+    .thumb { position: absolute; top: 0; right: 0; width: 100%; min-height: 42px; transform: translateY(0); pointer-events: auto; cursor: ns-resize; }
+
+    /* 1. Plain square */
+    .style-1 .thumb { background: rgba(17,17,17,.48); }
+    /* 2. Narrow line */
+    .style-2 .bar { right: 0; width: 4px; }
+    .style-2 .thumb { background: rgba(17,17,17,.65); }
+    /* 3. Accent */
+    .style-3 .bar { right: 0; width: 8px; }
+    .style-3 .thumb { background: rgba(255,229,102,.9); box-shadow: inset 0 0 0 1.5px #111; }
+    /* 4. Hard shadow */
+    .style-4 .bar { right: 0; width: 8px; }
+    .style-4 .thumb { background: #111; box-shadow: 3px 3px 0 rgba(17,17,17,.35); }
+    /* 5. Soft square */
+    .style-5 .bar { right: 0; width: 10px; }
+    .style-5 .thumb { width: 8px; min-height: 46px; background: rgba(17,17,17,.32); }
+
+    @media (max-width: 1750px) { .grid { grid-template-columns: repeat(3, 320px); } }
+    @media (max-width: 1100px) { body { padding: 20px; } .grid { grid-template-columns: repeat(2, 320px); } }
+    @media (max-width: 720px) { .grid { grid-template-columns: 320px; } }
+  </style>
+</head>
+<body>
+  <h1>Pin · 滚动条样式预览</h1>
+  <p class="intro">五个方案都贴在窗口最右侧，不改变内容宽度。默认隐藏，鼠标悬浮窗口后显示；滚轮可滚动，拖动右侧方块可查看位置变化。</p>
+  <main class="grid">
+    <section><h2 class="sample-title">01 · 标准方块</h2><p class="sample-note">8px，半透明，最接近硬线框风格。</p><div class="window style-1"><div class="titlebar"><span>SETTINGS</span><button>×</button></div><div class="viewport"><div class="content"></div></div><div class="bar"><div class="thumb"></div></div><div class="footer"><span>v0.3</span><button>RESET</button></div></div></section>
+    <section><h2 class="sample-title">02 · 细线方块</h2><p class="sample-note">4px，更克制，内容边缘最轻。</p><div class="window style-2"><div class="titlebar"><span>SETTINGS</span><button>×</button></div><div class="viewport"><div class="content"></div></div><div class="bar"><div class="thumb"></div></div><div class="footer"><span>v0.3</span><button>RESET</button></div></div></section>
+    <section><h2 class="sample-title">03 · 强调色方块</h2><p class="sample-note">使用黄色强调色，和标题栏呼应。</p><div class="window style-3"><div class="titlebar"><span>SETTINGS</span><button>×</button></div><div class="viewport"><div class="content"></div></div><div class="bar"><div class="thumb"></div></div><div class="footer"><span>v0.3</span><button>RESET</button></div></div></section>
+    <section><h2 class="sample-title">04 · 硬阴影方块</h2><p class="sample-note">黑色方块带小硬阴影，识别度最高。</p><div class="window style-4"><div class="titlebar"><span>SETTINGS</span><button>×</button></div><div class="viewport"><div class="content"></div></div><div class="bar"><div class="thumb"></div></div><div class="footer"><span>v0.3</span><button>RESET</button></div></div></section>
+    <section><h2 class="sample-title">05 · 柔和方块</h2><p class="sample-note">更低透明度，尽量降低对内容的干扰。</p><div class="window style-5"><div class="titlebar"><span>SETTINGS</span><button>×</button></div><div class="viewport"><div class="content"></div></div><div class="bar"><div class="thumb"></div></div><div class="footer"><span>v0.3</span><button>RESET</button></div></div></section>
+  </main>
+  <script>
+    const rows = [
+      ['WINDOW', ['全部始终置顶', '吸附屏幕边缘', '溢出悬停显示全文']],
+      ['APPEARANCE', ['配色套装', '新窗口透明度', '窗口内显示透明度条']],
+      ['TEXT', ['字体大小', '条目最多显示', '不限']],
+      ['STARTUP', ['开机自启', '启动后显示桌面组件', '恢复上次窗口位置']],
+    ];
+    document.querySelectorAll('.content').forEach((content) => {
+      content.innerHTML = rows.map(([title, items]) => `<div class="section-title">${title}</div>${items.map((item, index) => `<div class="row"><label>${item}</label>${index % 3 === 0 ? '<span class="toggle"></span>' : index % 3 === 1 ? '<span class="range"></span>' : '<span class="swatches"><i></i>›</span>'}</div>`).join('')}`).join('');
+    });
+    document.querySelectorAll('.viewport').forEach((viewport) => {
+      const thumb = viewport.parentElement.querySelector('.thumb');
+      const bar = thumb.parentElement;
+      const sync = () => {
+        const max = viewport.scrollHeight - viewport.clientHeight;
+        const track = bar.clientHeight;
+        const height = Math.max(42, track * viewport.clientHeight / viewport.scrollHeight);
+        thumb.style.height = `${height}px`;
+        thumb.style.transform = `translateY(${max ? (track - height) * viewport.scrollTop / max : 0}px)`;
+      };
+      viewport.addEventListener('scroll', sync);
+      new ResizeObserver(sync).observe(viewport);
+      sync();
+      let drag = null;
+      thumb.addEventListener('pointerdown', (event) => { drag = { y: event.clientY, scroll: viewport.scrollTop }; thumb.setPointerCapture(event.pointerId); });
+      thumb.addEventListener('pointermove', (event) => { if (!drag) return; const max = viewport.scrollHeight - viewport.clientHeight; const range = bar.clientHeight - thumb.offsetHeight; viewport.scrollTop = drag.scroll + (event.clientY - drag.y) * max / range; });
+      thumb.addEventListener('pointerup', () => { drag = null; });
+    });
+  </script>
+</body>
+</html>

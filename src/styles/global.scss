@@ -298,7 +298,7 @@ button:disabled {
 .clip-list {
   min-height: 0;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .todo-list {
@@ -718,89 +718,86 @@ button:disabled {
   white-space: pre-wrap;
 }
 
-.todo-list--always,
-.clip-list--always {
-  overflow-y: scroll;
+.overlay-scroll-area,
+.overlay-textarea-area {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
 }
 
-.todo-list--always::-webkit-scrollbar,
-.clip-list--always::-webkit-scrollbar {
-  width: 10px;
+.overlay-scroll-area {
+  overflow: hidden;
 }
 
-.todo-list--always::-webkit-scrollbar-track,
-.clip-list--always::-webkit-scrollbar-track {
-  border-left: 1.5px solid #111111;
-  background: repeating-linear-gradient(45deg, #ffffff 0 4px, #f4f4f4 4px 8px);
+.overlay-textarea-area {
+  display: flex;
 }
 
-.todo-list--always::-webkit-scrollbar-thumb,
-.clip-list--always::-webkit-scrollbar-thumb {
-  background: #111111;
+.overlay-scroll-area > .overlay-scroll-viewport {
+  position: absolute;
+  inset: 0;
 }
 
-.todo-list--overlay,
-.clip-list--overlay {
-  scrollbar-color: transparent transparent;
-}
-
-.todo-list--overlay::-webkit-scrollbar,
-.clip-list--overlay::-webkit-scrollbar {
-  width: 6px;
-}
-
-.todo-list--overlay::-webkit-scrollbar-track,
-.clip-list--overlay::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.todo-list--overlay::-webkit-scrollbar-thumb,
-.clip-list--overlay::-webkit-scrollbar-thumb {
-  background: rgba(17, 17, 17, 0);
-  transition: background-color 120ms linear;
-}
-
-.todo-list--overlay.todo-list--hovered,
-.clip-list--overlay.clip-list--hovered {
-  scrollbar-color: rgba(17, 17, 17, 0.85) transparent;
-}
-
-.todo-list--overlay.todo-list--hovered::-webkit-scrollbar-thumb,
-.clip-list--overlay.clip-list--hovered::-webkit-scrollbar-thumb {
-  background: rgba(17, 17, 17, 0.85);
-}
-
-.todo-list--hidden,
-.clip-list--hidden {
+.overlay-scroll-viewport,
+.overlay-textarea-area > .overlay-scroll-viewport {
+  display: block;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-width: none;
+  scrollbar-gutter: auto;
 }
 
-.todo-list--hidden::-webkit-scrollbar,
-.clip-list--hidden::-webkit-scrollbar {
+.overlay-textarea-area > .overlay-scroll-viewport {
+  width: 100%;
+}
+
+.overlay-scroll-viewport::-webkit-scrollbar {
   display: none;
+  width: 0;
+  height: 0;
 }
 
-@media (max-width: 300px) {
-  .todo-list--always,
-  .clip-list--always {
-    scrollbar-width: auto;
-  }
+.overlay-scroll-content {
+  display: flow-root;
+}
 
-  .todo-list--always::-webkit-scrollbar,
-  .clip-list--always::-webkit-scrollbar {
-    width: 6px;
-  }
+.overlay-scrollbar {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms linear;
+}
 
-  .todo-list--always::-webkit-scrollbar-track,
-  .clip-list--always::-webkit-scrollbar-track {
-    background: transparent;
-    border-left: 0;
-  }
+.overlay-scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  border: 0;
+  border-radius: 0;
+  background: var(--widget-ink, #111111);
+  opacity: 0.32;
+  cursor: ns-resize;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+}
 
-  .todo-list--always::-webkit-scrollbar-thumb,
-  .clip-list--always::-webkit-scrollbar-thumb {
-    background: rgba(17, 17, 17, 0.85);
-  }
+.app:hover .overlay-scrollbar,
+.overlay-scrollbar--dragging {
+  opacity: 1;
+}
+
+.app:hover .overlay-scrollbar-thumb,
+.overlay-scrollbar--dragging .overlay-scrollbar-thumb {
+  pointer-events: auto;
 }
 
 .todo-undo-row {
@@ -1033,7 +1030,7 @@ button:disabled {
 .manager-list {
   min-height: 0;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .manager-row {
@@ -1312,7 +1309,7 @@ button:disabled {
 .settings-scroll {
   min-height: 0;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .settings-section {
@@ -1343,6 +1340,38 @@ button:disabled {
 
 .settings-row:last-child {
   border-bottom: 0;
+}
+
+.settings-kit-row {
+  display: flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid #d8d8d8;
+  background: transparent;
+  font-size: 0.923077rem;
+  text-align: left;
+}
+
+.settings-kit-row:hover {
+  background: #f4f4f1;
+}
+
+.settings-kit-value {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-kit-value > span:not(.color-swatches) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-toggle {
@@ -1434,107 +1463,6 @@ button:disabled {
   font-size: 0.769231rem;
 }
 
-.management-dark {
-  color: #f2f2f2;
-  background: #0d0d0d;
-  border-color: #f2f2f2;
-}
-
-.management-dark .type-label {
-  color: #f2f2f2;
-}
-
-.management-dark button,
-.management-dark input {
-  color: #f2f2f2;
-  border-color: #f2f2f2;
-}
-
-.management-dark .manager-titlebar,
-.management-dark .settings-titlebar {
-  border-color: #f2f2f2;
-  background: #1a1a18;
-}
-
-.management-dark .title-action--icon {
-  border-color: transparent;
-}
-
-.management-dark .manager-filters,
-.management-dark .manager-row,
-.management-dark .settings-section,
-.management-dark .settings-row {
-  border-color: #f2f2f2;
-}
-
-.management-dark .manager-filter--active,
-.management-dark .settings-segment--active,
-.management-dark .settings-toggle--on,
-.management-dark .manager-confirm-delete {
-  color: #0d0d0d;
-  background: #f2f2f2;
-}
-
-.management-dark .manager-action--active {
-  color: #f2f2f2;
-  background: transparent;
-  box-shadow: inset 0 -3px 0 #f2f2f2;
-}
-
-.management-dark .manager-type--desk {
-  color: #0d0d0d;
-  background: #f2f2f2;
-}
-
-.management-dark .manager-type--note {
-  color: #111111;
-  border-color: #ffe566;
-}
-
-.management-dark .settings-section h2,
-.management-dark .settings-footer,
-.management-dark .manager-footer,
-.management-dark .manager-undo-row {
-  color: #6f6f6f;
-  background: #1a1a18;
-  border-color: #f2f2f2;
-}
-
-.management-dark .settings-toggle {
-  background: #0d0d0d;
-}
-
-.management-dark .settings-toggle--on .settings-toggle-knob {
-  background: #ffe566;
-}
-
-.management-dark .range-control-shell {
-  --range-fill: #f2f2f2;
-  --range-empty: #0d0d0d;
-}
-
-.management-dark .settings-hint,
-.management-dark .manager-empty,
-.management-dark .manager-visibility-actions button {
-  color: #6f6f6f;
-}
-
-.management-dark .manager-new-menu,
-.management-dark .manager-confirm {
-  color: #f2f2f2;
-  background: #0d0d0d;
-  border-color: #f2f2f2;
-  box-shadow: 5px 5px 0 #f2f2f2;
-}
-
-.app.management-dark {
-  box-shadow: var(--window-shadow-offset) var(--window-shadow-offset) 0 #f2f2f2;
-}
-
-.management-dark .manager-new-menu button {
-  border-color: #6f6f6f;
-}
-
 .colors-titlebar {
   display: flex;
   height: 32px;
@@ -1564,7 +1492,7 @@ button:disabled {
 .colors-section {
   min-height: 0;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .colors-section h2 {
@@ -1632,7 +1560,7 @@ button:disabled {
 }
 
 .color-custom-section {
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .color-primary-grid {
@@ -1781,89 +1709,6 @@ button:disabled {
   color: #6f6f6f;
   background: #f4f4f1;
   font-size: 0.769231rem;
-}
-
-.management-dark .colors-titlebar {
-  border-color: #f2f2f2;
-  background: #1a1a18;
-}
-
-.management-dark .colors-save-action {
-  color: #f2f2f2;
-  border-color: #f2f2f2;
-}
-
-.management-dark .colors-section,
-.management-dark .colors-section h2,
-.management-dark .color-preset,
-.management-dark .color-custom-placeholder,
-.management-dark .colors-footer {
-  border-color: #f2f2f2;
-}
-
-.management-dark .colors-section h2,
-.management-dark .colors-footer {
-  color: #6f6f6f;
-  background: #1a1a18;
-}
-
-.management-dark .color-preset--active {
-  color: #0d0d0d;
-  background: #ffe566;
-  box-shadow: inset 3px 0 0 #f2f2f2;
-}
-
-.management-dark .color-preset-current {
-  color: #111111;
-}
-
-.management-dark .color-primary-grid,
-.management-dark .color-parts-list,
-.management-dark .color-part,
-.management-dark .color-primary,
-.management-dark .color-part-options {
-  border-color: #f2f2f2;
-}
-
-.management-dark .color-primary--active {
-  box-shadow: inset 0 0 0 3px #f2f2f2;
-}
-
-.management-dark .color-part-swatch,
-.management-dark .color-part-option {
-  border-color: #f2f2f2;
-}
-
-.management-dark .color-part-option--active {
-  box-shadow: inset 0 0 0 2px #0d0d0d;
-}
-
-.management-dark .color-kit-row {
-  border-color: #f2f2f2;
-}
-
-.management-dark .color-kit-row--active {
-  color: #0d0d0d;
-  background: #ffe566;
-  box-shadow: inset 3px 0 0 #f2f2f2;
-}
-
-.management-dark .color-kit-row--active .color-kit-apply {
-  color: #0d0d0d;
-}
-
-.management-dark .color-kit-action {
-  color: #f2f2f2;
-  border-color: #6f6f6f;
-}
-
-.management-dark .color-kit-row--active .color-kit-action {
-  color: #111111;
-}
-
-.management-dark .color-kit-action:hover {
-  color: #111111;
-  background: #f2f2f2;
 }
 
 .widget-themed {

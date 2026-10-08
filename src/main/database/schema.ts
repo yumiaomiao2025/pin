@@ -10,13 +10,9 @@ import {
 
 export const WIDGET_TYPES = ['note', 'todo', 'clip', 'desk'] as const;
 export const DESK_TABS = ['note', 'todo', 'clip'] as const;
-export const THEMES = ['light', 'dark'] as const;
-export const SCROLLBAR_MODES = ['always', 'overlay', 'hidden'] as const;
 
 export type WidgetType = (typeof WIDGET_TYPES)[number];
 export type DeskTab = (typeof DESK_TABS)[number];
-export type Theme = (typeof THEMES)[number];
-export type ScrollbarMode = (typeof SCROLLBAR_MODES)[number];
 
 export const DEFAULT_COLORS: Readonly<{
   paper: string;
@@ -38,8 +34,6 @@ export const settings = sqliteTable(
   'settings',
   {
     id: integer('id').primaryKey(),
-    theme: text('theme', { enum: THEMES }).notNull().default('light'),
-    autoTheme: integer('auto_theme', { mode: 'boolean' }).notNull().default(false),
     defaultPaperColor: text('default_paper_color').notNull().default(DEFAULT_COLORS.paper),
     defaultInkColor: text('default_ink_color').notNull().default(DEFAULT_COLORS.ink),
     defaultTitleColor: text('default_title_color').default(DEFAULT_COLORS.title),
@@ -47,7 +41,6 @@ export const settings = sqliteTable(
     defaultSpineColor: text('default_spine_color'),
     defaultShadowColor: text('default_shadow_color').notNull().default(DEFAULT_COLORS.shadow),
     fontSize: integer('font_size').notNull().default(13),
-    scrollbar: text('scrollbar', { enum: SCROLLBAR_MODES }).notNull().default('overlay'),
     maxLines: integer('max_lines').notNull().default(0),
     hoverFull: integer('hover_full', { mode: 'boolean' }).notNull().default(true),
     opacityBar: integer('opacity_bar', { mode: 'boolean' }).notNull().default(true),
@@ -58,11 +51,6 @@ export const settings = sqliteTable(
   },
   (table) => [
     check('settings_singleton_id_check', sql`${table.id} = 1`),
-    check('settings_theme_check', sql`${table.theme} in ('light', 'dark')`),
-    check(
-      'settings_scrollbar_check',
-      sql`${table.scrollbar} in ('always', 'overlay', 'hidden')`,
-    ),
     check('settings_max_lines_check', sql`${table.maxLines} between 0 and 3`),
     check('settings_font_size_check', sql`${table.fontSize} between 11 and 18`),
     check('settings_opacity_check', sql`${table.defaultOpacity} between 5 and 100`),

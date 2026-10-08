@@ -1,5 +1,9 @@
 # Handoff: Windows 桌面便签工具（便签 / 待办 / 剪贴板 / 三合一）
 
+> 当前实现已移除 LIGHT / DARK / AUTO 管理界面主题功能，管理界面固定使用浅色样式。本文及配套 HTML 中的主题切换和管理界面深色稿作为历史设计参考；内容窗口配色套装继续保留。最新决定见 [技术方案](../technical-plan.md)。
+
+> 当前实现的列表滚动条统一为悬浮模式：默认隐藏，鼠标悬浮窗口时显示，并继承对应窗口的配色。
+
 ## Overview
 一组常驻 Windows 桌面的极简小工具窗口：**便签（NOTE）**、**待办（TODO）**、**剪贴板历史（CLIP）**，以及把三者合入一个窗口的**三合一（DESK）**。另有两个管理型窗口：**WIDGETS 管理器**（多实例显隐/删除/排序/重命名/新建）与 **SETTINGS 设置**（全局默认值与行为）。
 
@@ -151,7 +155,7 @@ PIN 置顶态：底 `title ? '#111' : ink`，字 `title || paper`。
 内容区为整块 `textarea`：`padding:14px`，13px/1.85，无边框无描边，底透明，`resize:none`，输入即存。
 
 ### 3. TODO 待办
-- 列表可滚动（滚动条三模式见下）。
+- 列表可滚动，滚动条默认隐藏，鼠标悬浮窗口时显示。
 - **未完成条目行**：`display:flex; align-items:flex-start; gap:10px; padding:11px 12px`，底边 1px。
   - 复选框 16×16，`margin-top:1px`，`1.5px solid line`，未选透明底、已选填 `line` 并居中显示 `✓`（10px，`inv` 色）。
   - 文字 13px，`flex:1`，`word-break: normal`；按「最多显示 N 行」截断（见下）。
@@ -195,10 +199,10 @@ PIN 置顶态：底 `title ? '#111' : ink`，字 `title || paper`。
 ### 8. SETTINGS 设置（320×480）
 标题栏 `SETTINGS` ＋ `×`，可拖动。分区标题统一为 `padding:6px 12px`，底 `soft`，10px/700/.16em。
 
-**WINDOW**（四个开关）：`全部始终置顶`（打开即把所有实例设为置顶）、`开机自启`、`吸附屏幕边缘`、`溢出悬停显示全文`。
-**THEME**：`LIGHT` / `DARK` 二等分（`padding:8px 0`，11px/700/.10em，选中反白）—— 只影响管理型窗口的浅深。
-**DEFAULTS**：`配色套装` 行（右侧 38×18 三段色样 + 套装名 + `›`，整行可点，打开 COLORS 面板的默认 scope）、`新窗口透明度`（同 OPACITY 条规格，5–100）、`窗口内显示透明度条`（开关），并附说明行 `关掉透明度条后，它会出现在窗口右键菜单里`（10px/1.6/`sub`）。
-**TEXT**：`条目最多显示` = `1 行 / 2 行 / 3 行 / 不限`（`padding:2px 7px`，11px，选中反白）；`滚动条` = `常驻 / 悬浮 / 隐藏`。
+**WINDOW**：`全部始终置顶`（打开即把所有实例设为置顶）、`吸附屏幕边缘`、`溢出悬停显示全文`。
+**APPEARANCE**：`配色套装`、`新窗口透明度`（同 OPACITY 条规格，5–100）、`窗口内显示透明度条`（开关），并附说明行 `关掉透明度条后，它会出现在窗口右键菜单里`。
+**TEXT**：`字体大小`、`条目最多显示` = `1 行 / 2 行 / 3 行 / 不限`（`padding:2px 7px`，11px，选中反白）。
+**STARTUP**：`开机自启`。
 **底栏**（高 38）：左 `v0.3`（10px/`sub`），右 `RESET`（10px，1px 边，`padding:2px 7px`）—— 还原上述全部全局项为默认值。
 
 开关样式：轨道 38×18，`1.5px solid line`，`padding:1.5px`；关=底 `bg`、旋钮 `fg` 靠左；开=底 `fg`、旋钮 accent 靠右。
@@ -242,11 +246,8 @@ PIN 置顶态：底 `title ? '#111' : ink`，字 `title || paper`。
 - CLIP 条目与所有窗口标题恒为单行 `text-overflow: ellipsis`。
 - **悬停气泡**：仅当元素实际溢出（`scrollHeight-clientHeight ≥ 2` 或 `scrollWidth-clientWidth ≥ 2`）才触发；悬停 **400ms** 后浮出；底 `#111`、字 `#fff` 12px/1.65、`1.5px solid #111`、阴影 `5px 5px 0 accent`、`padding:10px 12px`、宽 = max(220, 目标宽)、位于目标下方 6px；`pointer-events:none`；贴屏幕边时翻转；移出立即消失。可在设置中整体关闭。
 
-### 滚动条（三模式）
-1. **常驻**：列表右侧独立 10px 轨道，左边 1.5px 边，轨道底为斜纹 `repeating-linear-gradient(45deg, bg 0 4px, soft 4px 8px)`，滑块为实心 `line` 方块（无圆角）。**占位**。
-2. **悬浮**（默认）：绝对定位于内容右侧 3px，宽 6px 实心 `line`，`pointer-events:none`；鼠标进入窗口 `opacity 0 → .85`（120ms linear），移出后 600ms 淡出。**不占位**。
-3. **隐藏**：不显示，仅滚轮滚动。
-> 窗口宽 < 300px 时强制使用「悬浮」，避免挤压文字。
+### 滚动条
+滚动条统一使用悬浮模式：默认透明，鼠标悬浮窗口时显示，移出后淡出；滑块使用当前窗口的 `ink` 颜色，不额外占用内容宽度。
 
 ### 动效 token
 | 场景 | 参数 |
@@ -271,7 +272,6 @@ defaultKit: 'plain'|'kraft'|'blueprint'|'grass'|'invert'
 defaultParts: { [part]: color|null }   // 默认套装之上的覆盖
 autoTheme: boolean                     // 跟随系统深浅
 colors: { open, scope: 'default'|widgetId, view:'kits'|'custom', x, y, part }
-scrollbar: 'always' | 'overlay' | 'hidden'
 maxLines: 1 | 2 | 3 | 0            // 0 = 不限
 hoverFull: boolean                  // 溢出悬停显示全文
 opBar: boolean                      // 窗口内显示透明度条
@@ -324,7 +324,7 @@ clips: [{ id, text }]
 字体 JetBrains Mono 需自行引入（原型用 Google Fonts）。
 
 ## Files
-- `Desk Widgets Prototype.dc.html` —— **可交互原型**：真实的标签切换、勾选动画、增删条目、拖拽排序、透明度拖拽、配色套装与自定义面板、置顶、折叠、缩放、右键菜单、管理器（显隐/删除/撤销/重命名/新建）、设置、浅深主题、两种滚动条、悬停气泡。行为规格以此文件为准。
+- `Desk Widgets Prototype.dc.html` —— **可交互原型**：真实的标签切换、勾选动画、增删条目、拖拽排序、透明度拖拽、配色套装与自定义面板、置顶、折叠、缩放、右键菜单、管理器（显隐/删除/撤销/重命名/新建）、设置和悬停气泡。早期主题与滚动条选项仅保留作历史参考。
 - `Desktop Widgets Styles.dc.html` —— **静态规范画布**：四种部件的完整视觉稿与深色反相版、设置面板、托盘与管理器流程、交互六态与动效分帧、以及全部边缘情况示意。像素与文案规格以此文件为准。
 
 两个文件均可直接在浏览器打开。

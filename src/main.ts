@@ -6,12 +6,8 @@ import { createAppDatabaseService } from './main/database/app-service';
 import { closeAppDatabase, initializeAppDatabase } from './main/database/app-database';
 import {
   DESK_TABS,
-  SCROLLBAR_MODES,
-  THEMES,
   WIDGET_TYPES,
   type DeskTab,
-  type ScrollbarMode,
-  type Theme,
   type WidgetType,
 } from './main/database/schema';
 import type { UpdateSettingsInput } from './main/database/repositories';
@@ -249,24 +245,6 @@ ipcMain.handle('settings:update', (event, input: unknown) => {
   }
   const values = input as Record<string, unknown>;
   const patch: UpdateSettingsInput = {};
-  if ('theme' in values && values.theme !== undefined) {
-    if (typeof values.theme !== 'string' || !THEMES.includes(values.theme as Theme)) {
-      throw new TypeError('Unknown theme');
-    }
-    patch.theme = values.theme as Theme;
-  }
-  if ('autoTheme' in values && values.autoTheme !== undefined) {
-    if (typeof values.autoTheme !== 'boolean') {
-      throw new TypeError('autoTheme must be a boolean');
-    }
-    patch.autoTheme = values.autoTheme;
-  }
-  if ('scrollbar' in values && values.scrollbar !== undefined) {
-    if (typeof values.scrollbar !== 'string' || !SCROLLBAR_MODES.includes(values.scrollbar as ScrollbarMode)) {
-      throw new TypeError('Unknown scrollbar mode');
-    }
-    patch.scrollbar = values.scrollbar as ScrollbarMode;
-  }
   if ('maxLines' in values && values.maxLines !== undefined) {
     if (typeof values.maxLines !== 'number' || !Number.isInteger(values.maxLines) || values.maxLines < 0 || values.maxLines > 3) {
       throw new TypeError('maxLines must be an integer from 0 to 3');

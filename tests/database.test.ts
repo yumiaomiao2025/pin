@@ -44,15 +44,13 @@ test('initializes and updates the singleton settings row', () => {
 
   const initial = repositories.settings.ensure();
   assert.equal(initial.id, 1);
-  assert.equal(initial.theme, 'light');
   assert.equal(initial.fontSize, 13);
   assert.equal(initial.defaultOpacity, 100);
 
-  const updated = repositories.settings.update({ theme: 'dark', fontSize: 16, defaultOpacity: 80 });
-  assert.equal(updated.theme, 'dark');
+  const updated = repositories.settings.update({ fontSize: 16, defaultOpacity: 80 });
   assert.equal(updated.fontSize, 16);
   assert.equal(updated.defaultOpacity, 80);
-  assert.equal(repositories.settings.ensure().theme, 'dark');
+  assert.equal(repositories.settings.ensure().fontSize, 16);
 });
 
 test('persists opacity from 5 to 100 and rejects values outside the range', () => {
@@ -67,8 +65,8 @@ test('persists opacity from 5 to 100 and rejects values outside the range', () =
   }
 });
 
-for (const lastMigration of [1, 2, 3]) {
-  test('upgrades opacity constraints from migration ' + lastMigration + ' without losing content', () => {
+for (const lastMigration of [1, 2, 3, 4, 5]) {
+  test('upgrades settings from migration ' + lastMigration + ' without losing content or colors', () => {
     const oldMigrations = path.join(temporaryDirectory, 'old-migrations');
     fs.mkdirSync(path.join(oldMigrations, 'meta'), { recursive: true });
     const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, 'meta/_journal.json'), 'utf8'));
@@ -84,7 +82,15 @@ for (const lastMigration of [1, 2, 3]) {
     const old = createRepositories(handle.db);
     const previousOpacity = lastMigration === 3 ? 1 : lastMigration === 2 ? 5 : 72;
     old.settings.update({ fontSize: 17, defaultOpacity: previousOpacity });
-    const widget = old.widgets.create({ type: 'desk', noteText: 'keep note', opacity: previousOpacity });
+    if (lastMigration <= 4) {
+      handle.sqlite.exec("UPDATE settings SET theme = 'dark', auto_theme = 1");
+    }
+    const previousSettings = old.settings.get() as Record<string, unknown>;
+    const kit = old.customKits.create({ ...COLOR_PRESETS[4], name: 'Keep dark kit' });
+    const widget = old.widgets.create({
+      type: 'desk', noteText: 'keep note', opacity: previousOpacity,
+      paperColor: kit.paper, inkColor: kit.ink, followsDefault: false,
+    });
     const todo = old.todos.create({ widgetId: widget.id, text: 'keep todo', done: true });
     const clip = old.clipItems.create({ widgetId: widget.id, text: 'keep clip' });
     assert.throws(() => old.widgets.update(widget.id, { opacity: 0 }), /widgets_opacity_check/);
@@ -95,6 +101,14 @@ for (const lastMigration of [1, 2, 3]) {
     assert.deepEqual(upgraded.widgets.getById(widget.id), { ...widget, opacity: Math.max(5, previousOpacity) });
     assert.deepEqual(upgraded.todos.getById(todo.id), todo);
     assert.deepEqual(upgraded.clipItems.getById(clip.id), clip);
+    assert.deepEqual(upgraded.customKits.getById(kit.id), kit);
+    const settingsWithoutRemovedFields = { ...previousSettings };
+    delete settingsWithoutRemovedFields.theme;
+    delete settingsWithoutRemovedFields.autoTheme;
+    delete settingsWithoutRemovedFields.scrollbar;
+    assert.deepEqual(upgraded.settings.get(), { ...settingsWithoutRemovedFields, defaultOpacity: Math.max(5, previousOpacity) });
+    const columns = handle.sqlite.pragma('table_info(settings)') as Array<{ name: string }>;
+    assert.equal(columns.some(({ name }) => name === 'theme' || name === 'auto_theme'), false);
     assert.equal(upgraded.settings.get()?.fontSize, 17);
     assert.equal(upgraded.settings.get()?.defaultOpacity, Math.max(5, previousOpacity));
     assert.equal(upgraded.settings.update({ defaultOpacity: 5 }).defaultOpacity, 5);
@@ -121,7 +135,6 @@ test('persists the global window and text settings', () => {
     opacityBar: false,
     hoverFull: false,
     maxLines: 2,
-    scrollbar: 'hidden',
     defaultOpacity: 72,
   });
 
@@ -131,7 +144,6 @@ test('persists the global window and text settings', () => {
   assert.equal(updated.opacityBar, false);
   assert.equal(updated.hoverFull, false);
   assert.equal(updated.maxLines, 2);
-  assert.equal(updated.scrollbar, 'hidden');
   assert.equal(updated.defaultOpacity, 72);
 });
 

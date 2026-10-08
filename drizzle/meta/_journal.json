@@ -36,6 +36,20 @@
       "when": 1791425850500,
       "tag": "0004_remarkable_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791426523641,
+      "tag": "0005_cute_hiroim",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791429847774,
+      "tag": "0006_right_spitfire",
+      "breakpoints": true
     }
   ]
 }

@@ -44,9 +44,6 @@ interface PinClipItem {
 }
 
 interface PinSettings {
-  theme: 'light' | 'dark';
-  autoTheme: boolean;
-  effectiveTheme: 'light' | 'dark';
   defaultPaperColor: string;
   defaultInkColor: string;
   defaultTitleColor: string | null;
@@ -56,7 +53,6 @@ interface PinSettings {
   fontSize: number;
   maxLines: number;
   hoverFull: boolean;
-  scrollbar: 'always' | 'overlay' | 'hidden';
   opacityBar: boolean;
   defaultOpacity: number;
   pinAll: boolean;
@@ -96,7 +92,7 @@ interface PinCustomKit {
 
 type PinSettingsUpdate = Partial<Pick<
   PinSettings,
-  'theme' | 'autoTheme' | 'fontSize' | 'maxLines' | 'hoverFull' | 'scrollbar' | 'opacityBar' | 'defaultOpacity' | 'pinAll' | 'autostart' | 'snap'
+  'fontSize' | 'maxLines' | 'hoverFull' | 'opacityBar' | 'defaultOpacity' | 'pinAll' | 'autostart' | 'snap'
 >>;
 
 interface Window {
