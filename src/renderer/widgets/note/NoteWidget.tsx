@@ -6,7 +6,7 @@ import { useWindowDisplaySettings } from '../../hooks/use-window-display-setting
 import { useOpacityControl } from '../../hooks/use-opacity-control';
 import { useWidgetColorStyle } from '../../colors/widget-colors';
 import { TitleBar, OpacityBar, ResizeHandle } from '../../components/WidgetChrome';
-import { OverlayTextarea } from '../../../components/overlay-scroll-area';
+import { OverlayTextarea } from '../../components/OverlayScrollArea';
 
 export function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
   const [widget, setWidget] = useState(initialWidget);

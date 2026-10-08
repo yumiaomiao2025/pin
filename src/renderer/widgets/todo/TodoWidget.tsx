@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSortable, sortableKeyboardCoordinates, arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Check, GripVertical, Trash2 } from 'lucide-react';
-import { OverlayTextarea, OverlayScrollArea } from '../../../components/overlay-scroll-area';
+import { OverlayTextarea, OverlayScrollArea } from '../../components/OverlayScrollArea';
 import { HoverText } from '../../components/HoverText';
 import { useWidgetColorStyle } from '../../colors/widget-colors';
 import { useWidgetUpdates } from '../../hooks/use-widget-updates';

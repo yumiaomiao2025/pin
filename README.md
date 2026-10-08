@@ -23,7 +23,7 @@ Pin 是一个面向 Windows 的常驻桌面组件工具。它把便签、待办�
 - SQLite + `better-sqlite3` + Drizzle ORM
 - React Hooks（renderer 临时状态）
 - `@dnd-kit`（TODO/CLIP 拖拽排序）
-- SCSS / SCSS Modules
+- SCSS（按职责组织的样式模块）
 - Node `node:test` + `tsx`（数据库测试）
 
 主进程独占数据库连接并负责业务状态，renderer 通过 `preload` 和类型化 IPC 访问功能；启用 `contextIsolation`，关闭 `nodeIntegration`。WIDGETS、SETTINGS 和 COLORS 共用一个管理 `BrowserWindow`，通过页面参数在同一窗口内切换；每个内容组件仍是独立的 Electron `BrowserWindow`。
@@ -92,9 +92,9 @@ src/
   shared/colors.ts                配色套装与派生颜色
   shared/types.ts                 跨进程数据结构
   shared/pin-api.ts               preload API 契约
-  styles/global.scss              样式加载入口，保留覆盖顺序
-  styles/_*.scss                  基础、控件、窗口、内容、滚动条及主题
-  styles/pages/                   管理、设置、配色和引导页面样式
+  renderer/styles/global.scss     样式加载入口，保留覆盖顺序
+  renderer/styles/_*.scss         基础、控件、窗口、内容、滚动条及主题
+  renderer/styles/pages/          管理、设置、配色和引导页面样式
 drizzle/                          SQLite migration
 docs/                             技术方案、视觉规范和交互原型
 scripts/                          Electron 测试与打包验证辅助脚本

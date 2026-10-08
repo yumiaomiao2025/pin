@@ -1,7 +1,7 @@
 import type * as React from 'react';
 import { type PinClipItem, type PinWidget } from '../../../shared/types';
 import { useState, useRef, useEffect } from 'react';
-import { OverlayTextarea, OverlayScrollArea } from '../../../components/overlay-scroll-area';
+import { OverlayTextarea, OverlayScrollArea } from '../../components/OverlayScrollArea';
 import { HoverText } from '../../components/HoverText';
 import { Check, Copy, GripVertical, Trash2 } from 'lucide-react';
 import { useWidgetUpdates } from '../../hooks/use-widget-updates';

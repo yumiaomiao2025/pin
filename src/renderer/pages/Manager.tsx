@@ -4,7 +4,7 @@ import { type PinWidget } from '../../shared/types';
 import { widgetDisplayName, type WidgetType, MANAGER_FILTER_OPTIONS, WIDGET_OPTIONS } from '../widget-utils';
 import { useState, useEffect } from 'react';
 import { getWindowContext } from '../window-context';
-import { OverlayScrollArea } from '../../components/overlay-scroll-area';
+import { OverlayScrollArea } from '../components/OverlayScrollArea';
 
 function ManagerTitleBar({ count, onHide, onSettings }: { count: number; onHide: () => void; onSettings: () => void }) {
   const drag = useWindowDrag();

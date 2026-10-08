@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { type PinSettings, type PinCustomKit, type PinSettingsUpdate } from '../../shared/types';
 import { DEFAULT_SETTINGS } from '../default-settings';
 import { COLOR_PRESETS, colorSetEquals } from '../../shared/colors';
-import { OverlayScrollArea } from '../../components/overlay-scroll-area';
+import { OverlayScrollArea } from '../components/OverlayScrollArea';
 import { ColorSwatches } from '../components/ColorSwatches';
 import { RangeControl } from '../components/RangeControl';
 

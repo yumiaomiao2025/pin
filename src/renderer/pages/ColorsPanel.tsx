@@ -3,7 +3,7 @@ import { type PinCustomKit, type PinColorContext, type PinColorSet } from '../..
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { getWindowContext } from '../window-context';
 import { normalizeKitColors, COLOR_PRESETS } from '../../shared/colors';
-import { OverlayScrollArea } from '../../components/overlay-scroll-area';
+import { OverlayScrollArea } from '../components/OverlayScrollArea';
 import { ColorSwatches } from '../components/ColorSwatches';
 
 type EditableColorPart = 'paper' | 'accent' | 'ink';
