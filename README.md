@@ -73,7 +73,7 @@ pnpm make        # 生成可分发安装包
 
 ```text
 src/
-  main.ts                         Electron 主进程、IPC 和系统托盘
+  main.ts                         Electron 启动、模块组装与退出协调
   preload.ts                      安全的 contextBridge API
   renderer.tsx                    React 挂载入口
   renderer/App.tsx                窗口角色与页面选择
@@ -83,6 +83,8 @@ src/
   renderer/hooks/                窗口状态与交互 Hooks
   renderer/colors/               配色预览与样式映射
   main/window-manager.ts          独立窗口生命周期与系统窗口行为
+  main/ipc/                       按职责分组的 IPC 注册与参数验证
+  main/tray.ts                    系统托盘菜单
   main/database/                  schema、migration、repository 和 service
   shared/colors.ts                配色套装与派生颜色
   shared/types.ts                 跨进程数据结构
