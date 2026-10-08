@@ -55,6 +55,64 @@ test('initializes and updates the singleton settings row', () => {
   assert.equal(repositories.settings.ensure().theme, 'dark');
 });
 
+test('persists opacity from 5 to 100 and rejects values outside the range', () => {
+  const widget = repositories.widgets.create({ type: 'note', opacity: 5 });
+  for (const opacity of [5, 34, 100]) {
+    assert.equal(repositories.settings.update({ defaultOpacity: opacity }).defaultOpacity, opacity);
+    assert.equal(repositories.widgets.update(widget.id, { opacity })?.opacity, opacity);
+  }
+  for (const opacity of [-1, 0, 1, 4, 101]) {
+    assert.throws(() => repositories.settings.update({ defaultOpacity: opacity }), /settings_opacity_check/);
+    assert.throws(() => repositories.widgets.update(widget.id, { opacity }), /widgets_opacity_check/);
+  }
+});
+
+for (const lastMigration of [1, 2, 3]) {
+  test('upgrades opacity constraints from migration ' + lastMigration + ' without losing content', () => {
+    const oldMigrations = path.join(temporaryDirectory, 'old-migrations');
+    fs.mkdirSync(path.join(oldMigrations, 'meta'), { recursive: true });
+    const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, 'meta/_journal.json'), 'utf8'));
+    journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= lastMigration);
+    fs.writeFileSync(path.join(oldMigrations, 'meta/_journal.json'), JSON.stringify(journal));
+    for (const entry of journal.entries) {
+      fs.copyFileSync(path.join(migrationsFolder, `${entry.tag}.sql`), path.join(oldMigrations, `${entry.tag}.sql`));
+    }
+
+    handle.close();
+    const databasePath = path.join(temporaryDirectory, 'upgrade.sqlite');
+    handle = openDatabase(databasePath, oldMigrations);
+    const old = createRepositories(handle.db);
+    const previousOpacity = lastMigration === 3 ? 1 : lastMigration === 2 ? 5 : 72;
+    old.settings.update({ fontSize: 17, defaultOpacity: previousOpacity });
+    const widget = old.widgets.create({ type: 'desk', noteText: 'keep note', opacity: previousOpacity });
+    const todo = old.todos.create({ widgetId: widget.id, text: 'keep todo', done: true });
+    const clip = old.clipItems.create({ widgetId: widget.id, text: 'keep clip' });
+    assert.throws(() => old.widgets.update(widget.id, { opacity: 0 }), /widgets_opacity_check/);
+    handle.close();
+
+    handle = openDatabase(databasePath, migrationsFolder);
+    const upgraded = createRepositories(handle.db);
+    assert.deepEqual(upgraded.widgets.getById(widget.id), { ...widget, opacity: Math.max(5, previousOpacity) });
+    assert.deepEqual(upgraded.todos.getById(todo.id), todo);
+    assert.deepEqual(upgraded.clipItems.getById(clip.id), clip);
+    assert.equal(upgraded.settings.get()?.fontSize, 17);
+    assert.equal(upgraded.settings.get()?.defaultOpacity, Math.max(5, previousOpacity));
+    assert.equal(upgraded.settings.update({ defaultOpacity: 5 }).defaultOpacity, 5);
+    assert.equal(upgraded.widgets.update(widget.id, { opacity: 5 })?.opacity, 5);
+    assert.equal(handle.sqlite.pragma('foreign_keys', { simple: true }), 1);
+    assert.deepEqual(handle.sqlite.pragma('foreign_key_check'), []);
+    handle.close();
+
+    handle = openDatabase(databasePath, migrationsFolder);
+    const reopened = createRepositories(handle.db);
+    assert.equal(reopened.settings.get()?.defaultOpacity, 5);
+    assert.equal(reopened.widgets.getById(widget.id)?.opacity, 5);
+    reopened.widgets.delete(widget.id);
+    assert.equal(reopened.todos.getById(todo.id), undefined);
+    assert.equal(reopened.clipItems.getById(clip.id), undefined);
+  });
+}
+
 test('persists the global window and text settings', () => {
   const updated = repositories.settings.update({
     pinAll: true,

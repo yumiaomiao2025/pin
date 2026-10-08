@@ -225,13 +225,118 @@ function useOpacityControl(setWidget: React.Dispatch<React.SetStateAction<PinWid
   }, [flush]);
 
   return useCallback((value: number) => {
-    const opacity = Math.min(100, Math.max(35, Math.round(value)));
+    const opacity = Math.min(100, Math.max(5, Math.round(value)));
     setWidgetRef.current((current) => ({ ...current, opacity }));
     pendingOpacity.current = opacity;
     if (persistTimer.current === undefined) {
       persistTimer.current = window.setTimeout(flush, 32);
     }
   }, [flush]);
+}
+
+function useWindowDrag() {
+  const dragRef = useRef<{
+    pointerId: number;
+    startScreenX: number;
+    startScreenY: number;
+    currentScreenX: number;
+    currentScreenY: number;
+    originX: number;
+    originY: number;
+    ready: boolean;
+    frame: number | null;
+  } | null>(null);
+
+  const flushDrag = () => {
+    const drag = dragRef.current;
+    if (!drag || !drag.ready) {
+      return;
+    }
+    drag.frame = null;
+    void window.pinApi.setPosition(
+      drag.originX + drag.currentScreenX - drag.startScreenX,
+      drag.originY + drag.currentScreenY - drag.startScreenY,
+    );
+  };
+
+  const scheduleDrag = () => {
+    const drag = dragRef.current;
+    if (!drag || !drag.ready || drag.frame !== null) {
+      return;
+    }
+    drag.frame = requestAnimationFrame(flushDrag);
+  };
+
+  const finishDrag = (event: React.PointerEvent<HTMLElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (drag.frame !== null) {
+      cancelAnimationFrame(drag.frame);
+      drag.frame = null;
+    }
+    if (drag.ready) {
+      void window.pinApi.setPosition(
+        drag.originX + drag.currentScreenX - drag.startScreenX,
+        drag.originY + drag.currentScreenY - drag.startScreenY,
+      );
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+  };
+
+  return {
+    onPointerCancel: finishDrag,
+    onPointerDown: (event: React.PointerEvent<HTMLElement>) => {
+      if (
+        event.button !== 0 ||
+        (event.target instanceof Element && event.target.closest('button'))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      const drag = {
+        pointerId: event.pointerId,
+        startScreenX: event.screenX,
+        startScreenY: event.screenY,
+        currentScreenX: event.screenX,
+        currentScreenY: event.screenY,
+        originX: 0,
+        originY: 0,
+        ready: false,
+        frame: null as number | null,
+      };
+      dragRef.current = drag;
+      void window.pinApi.getWindowBounds().then((bounds) => {
+        if (dragRef.current !== drag) {
+          return;
+        }
+        if (!bounds) {
+          dragRef.current = null;
+          return;
+        }
+        drag.originX = bounds.x;
+        drag.originY = bounds.y;
+        drag.ready = true;
+        scheduleDrag();
+      });
+    },
+    onPointerMove: (event: React.PointerEvent<HTMLElement>) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) {
+        return;
+      }
+      event.preventDefault();
+      drag.currentScreenX = event.screenX;
+      drag.currentScreenY = event.screenY;
+      scheduleDrag();
+    },
+    onPointerUp: finishDrag,
+  };
 }
 
 function compareTodos(left: PinTodo, right: PinTodo) {
@@ -282,8 +387,10 @@ function Onboarding() {
 }
 
 function ManagerTitleBar({ count, onHide, onSettings }: { count: number; onHide: () => void; onSettings: () => void }) {
+  const drag = useWindowDrag();
+
   return (
-    <header className="manager-titlebar">
+    <header className="manager-titlebar" {...drag}>
       <span className="type-label">WIDGETS · {count}</span>
       <button
         aria-label="打开设置"
@@ -928,7 +1035,7 @@ function SettingsPanel() {
               disabled={busy}
               id="default-opacity"
               maximum={100}
-              minimum={35}
+              minimum={5}
               onChange={updateDefaultOpacity}
               value={settings.defaultOpacity}
             />
@@ -1374,110 +1481,13 @@ function TitleBar({ widget, onHide, onPin, onCollapse }: {
   onPin: () => void;
   onCollapse: () => void;
 }) {
-  const dragRef = useRef<{
-    pointerId: number;
-    startScreenX: number;
-    startScreenY: number;
-    currentScreenX: number;
-    currentScreenY: number;
-    originX: number;
-    originY: number;
-    ready: boolean;
-    frame: number | null;
-  } | null>(null);
-
-  const flushDrag = () => {
-    const drag = dragRef.current;
-    if (!drag || !drag.ready) {
-      return;
-    }
-    drag.frame = null;
-    void window.pinApi.setPosition(
-      drag.originX + drag.currentScreenX - drag.startScreenX,
-      drag.originY + drag.currentScreenY - drag.startScreenY,
-    );
-  };
-
-  const scheduleDrag = () => {
-    const drag = dragRef.current;
-    if (!drag || !drag.ready || drag.frame !== null) {
-      return;
-    }
-    drag.frame = requestAnimationFrame(flushDrag);
-  };
-
-  const finishDrag = (event: React.PointerEvent<HTMLElement>) => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-    if (drag.frame !== null) {
-      cancelAnimationFrame(drag.frame);
-      drag.frame = null;
-    }
-    if (drag.ready) {
-      void window.pinApi.setPosition(
-        drag.originX + drag.currentScreenX - drag.startScreenX,
-        drag.originY + drag.currentScreenY - drag.startScreenY,
-      );
-    }
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    dragRef.current = null;
-  };
+  const drag = useWindowDrag();
 
   return (
     <header
       className="titlebar"
+      {...drag}
       onDoubleClick={onCollapse}
-      onPointerCancel={finishDrag}
-      onPointerDown={(event) => {
-        if (
-          event.button !== 0 ||
-          (event.target instanceof Element && event.target.closest('button'))
-        ) {
-          return;
-        }
-        event.preventDefault();
-        event.currentTarget.setPointerCapture(event.pointerId);
-        const drag = {
-          pointerId: event.pointerId,
-          startScreenX: event.screenX,
-          startScreenY: event.screenY,
-          currentScreenX: event.screenX,
-          currentScreenY: event.screenY,
-          originX: 0,
-          originY: 0,
-          ready: false,
-          frame: null as number | null,
-        };
-        dragRef.current = drag;
-        void window.pinApi.getWindowBounds().then((bounds) => {
-          if (dragRef.current !== drag) {
-            return;
-          }
-          if (!bounds) {
-            dragRef.current = null;
-            return;
-          }
-          drag.originX = bounds.x;
-          drag.originY = bounds.y;
-          drag.ready = true;
-          scheduleDrag();
-        });
-      }}
-      onPointerMove={(event) => {
-        const drag = dragRef.current;
-        if (!drag || drag.pointerId !== event.pointerId) {
-          return;
-        }
-        event.preventDefault();
-        drag.currentScreenX = event.screenX;
-        drag.currentScreenY = event.screenY;
-        scheduleDrag();
-      }}
-      onPointerUp={finishDrag}
     >
       <span className="type-label">{widget.type.toUpperCase()}</span>
       <button
@@ -1526,7 +1536,7 @@ function OpacityBar({ widget, onChange }: { widget: PinWidget; onChange: (value:
         aria-label="窗口透明度"
         id="opacity"
         maximum={100}
-        minimum={35}
+        minimum={5}
         onChange={onChange}
         value={widget.opacity}
       />
@@ -1605,7 +1615,7 @@ function OpacityContextMenu({
             aria-label="窗口透明度"
             id="context-opacity"
             maximum={100}
-            minimum={35}
+            minimum={5}
             onChange={onChange}
             value={widget.opacity}
           />

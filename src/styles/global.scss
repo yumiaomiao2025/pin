@@ -202,7 +202,9 @@ button:disabled {
 .range-control-shell::after {
   position: absolute;
   top: 0;
-  left: var(--range-progress, 0%);
+  // Keep the 16px visual thumb fully inside the track at both endpoints.
+  // The progress fill still reaches 0%/100%; only the centered thumb is clamped.
+  left: clamp(8px, var(--range-progress, 0%), calc(100% - 8px));
   width: 16px;
   height: 100%;
   content: '';
@@ -992,8 +994,10 @@ button:disabled {
   padding: 0 6px 0 12px;
   border-bottom: 1.5px solid #111111;
   background: #ffe566;
+  cursor: move;
   user-select: none;
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
+  touch-action: none;
 }
 
 .manager-titlebar .title-action {

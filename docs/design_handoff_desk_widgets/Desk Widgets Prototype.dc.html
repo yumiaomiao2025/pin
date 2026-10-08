@@ -460,7 +460,7 @@ class Component extends DCLogic {
         this.patch(d.id, { x: Math.max(0, x), y: Math.max(0, y) });
       } else if (d.kind === 'defop') {
         const r = d.el.getBoundingClientRect();
-        this.setState({ defaultOpacity: Math.round(35 + Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 65) });
+        this.setState({ defaultOpacity: Math.round(5 + Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 95) });
       } else if (d.kind === 'col') {
         this.setState(s => ({ colors: { ...s.colors, x: Math.max(0, e.clientX - d.dx), y: Math.max(0, e.clientY - d.dy) } }));
       } else if (d.kind === 'set') {
@@ -471,7 +471,7 @@ class Component extends DCLogic {
         this.patch(d.id, { w: Math.max(240, d.w0 + e.clientX - d.sx), h: Math.max(160, d.h0 + e.clientY - d.sy) });
       } else if (d.kind === 'op') {
         const r = d.el.getBoundingClientRect();
-        this.patch(d.id, { opacity: Math.round(35 + Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 65) });
+        this.patch(d.id, { opacity: Math.round(5 + Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 95) });
       }
     };
     this._up = () => { this._drag = null; };
@@ -657,7 +657,7 @@ class Component extends DCLogic {
         })),
         clipEmpty: w.clips.length === 0,
         onClearClips: () => this.patch(w.id, { clips: [] }),
-        opacity: w.opacity, opFill: ((w.opacity - 35) / 65 * 100) + '%',
+        opacity: w.opacity, opFill: ((w.opacity - 5) / 95 * 100) + '%',
         onRaise: () => this.raise(w.id),
         onEnter: () => this.setState({ hoverWin: w.id }),
         onCtx: (e) => { e.preventDefault(); e.stopPropagation(); this.setState({ menu: { id: w.id, x: e.clientX, y: e.clientY }, colors: { ...this.state.colors, open:false } }); },
@@ -873,13 +873,13 @@ class Component extends DCLogic {
         onPick: () => this.setState({ theme: k }),
       })),
       onReset: () => this.setState({ theme:'light', scrollbar:'overlay', maxLines:2, hoverFull:true, pinAll:false, autostart:false, snap:true, opBar:true, defaultOpacity:100, defaultKit:'plain', defaultParts:{}, autoTheme:true }),
-      defaultOpacity: s.defaultOpacity, defOpFill: ((s.defaultOpacity - 35) / 65 * 100) + '%',
+      defaultOpacity: s.defaultOpacity, defOpFill: ((s.defaultOpacity - 5) / 95 * 100) + '%',
       onDefOpDown: (e) => { this._drag = { kind:'defop', el:e.currentTarget }; this._move(e); },
       opBarTrack: s.opBar ? c.fg : c.bg, opBarKnob: s.opBar ? ACCENT : c.fg, opBarAlign: s.opBar ? 'flex-end' : 'flex-start',
       onToggleOpBar: () => this.setState({ opBar: !s.opBar }),
       menuHasOpacity: !!menuW && !s.opBar,
       menuOpacity: menuW ? menuW.opacity : 100,
-      menuOpFill: menuW ? ((menuW.opacity - 35) / 65 * 100) + '%' : '0%',
+      menuOpFill: menuW ? ((menuW.opacity - 5) / 95 * 100) + '%' : '0%',
       onMenuOpDown: (e) => { if (menuW) { this._drag = { kind:'op', id: menuW.id, el: e.currentTarget }; this._move(e); } },
       themeLabel: s.theme === 'light' ? '浅色' : '深色',
       themeMark: s.theme === 'light' ? '◐' : '◑',

@@ -65,7 +65,7 @@ export const settings = sqliteTable(
     ),
     check('settings_max_lines_check', sql`${table.maxLines} between 0 and 3`),
     check('settings_font_size_check', sql`${table.fontSize} between 11 and 18`),
-    check('settings_opacity_check', sql`${table.defaultOpacity} between 35 and 100`),
+    check('settings_opacity_check', sql`${table.defaultOpacity} between 5 and 100`),
   ],
 );
 
@@ -101,7 +101,7 @@ export const widgets = sqliteTable(
     check('widgets_type_check', sql`${table.type} in ('note', 'todo', 'clip', 'desk')`),
     check('widgets_width_check', sql`${table.width} >= 240`),
     check('widgets_height_check', sql`${table.height} >= 160`),
-    check('widgets_opacity_check', sql`${table.opacity} between 35 and 100`),
+    check('widgets_opacity_check', sql`${table.opacity} between 5 and 100`),
     check('widgets_active_tab_check', sql`${table.activeTab} in ('note', 'todo', 'clip')`),
   ],
 );

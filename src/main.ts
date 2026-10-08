@@ -280,8 +280,8 @@ ipcMain.handle('settings:update', (event, input: unknown) => {
     patch.fontSize = values.fontSize;
   }
   if ('defaultOpacity' in values && values.defaultOpacity !== undefined) {
-    if (typeof values.defaultOpacity !== 'number' || !Number.isInteger(values.defaultOpacity) || values.defaultOpacity < 35 || values.defaultOpacity > 100) {
-      throw new TypeError('defaultOpacity must be an integer from 35 to 100');
+    if (typeof values.defaultOpacity !== 'number' || !Number.isInteger(values.defaultOpacity) || values.defaultOpacity < 5 || values.defaultOpacity > 100) {
+      throw new TypeError('defaultOpacity must be an integer from 5 to 100');
     }
     patch.defaultOpacity = values.defaultOpacity;
   }

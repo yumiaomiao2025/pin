@@ -176,7 +176,7 @@ PIN 置顶态：底 `title ? '#111' : ink`，字 `title || paper`。
 ### 6. OPACITY 条（所有窗口）
 高 44，上边 1.5px，`padding:0 12px`，`gap:10px`：
 `OPACITY`（10px/.10em）＋ 轨道（`flex:1`，高 10，`1.5px solid line`，内部左起实心 `line` 填充）＋ 数值（10px，右对齐，宽 22）。
-**范围 35–100%**；按下并拖动即时改窗口不透明度（映射：填充宽 = (opacity-35)/65）。
+**范围 5–100%**；按下并拖动即时改窗口不透明度（映射：填充宽 = (opacity-5)/95）。
 
 ### 7. WIDGETS 管理器（320×480）
 - 标题栏：`WIDGETS · N`（N=实例总数）＋ `⚙`（打开设置）＋ `×`（关闭）；可拖动。
@@ -197,7 +197,7 @@ PIN 置顶态：底 `title ? '#111' : ink`，字 `title || paper`。
 
 **WINDOW**（四个开关）：`全部始终置顶`（打开即把所有实例设为置顶）、`开机自启`、`吸附屏幕边缘`、`溢出悬停显示全文`。
 **THEME**：`LIGHT` / `DARK` 二等分（`padding:8px 0`，11px/700/.10em，选中反白）—— 只影响管理型窗口的浅深。
-**DEFAULTS**：`配色套装` 行（右侧 38×18 三段色样 + 套装名 + `›`，整行可点，打开 COLORS 面板的默认 scope）、`新窗口透明度`（同 OPACITY 条规格，35–100）、`窗口内显示透明度条`（开关），并附说明行 `关掉透明度条后，它会出现在窗口右键菜单里`（10px/1.6/`sub`）。
+**DEFAULTS**：`配色套装` 行（右侧 38×18 三段色样 + 套装名 + `›`，整行可点，打开 COLORS 面板的默认 scope）、`新窗口透明度`（同 OPACITY 条规格，5–100）、`窗口内显示透明度条`（开关），并附说明行 `关掉透明度条后，它会出现在窗口右键菜单里`（10px/1.6/`sub`）。
 **TEXT**：`条目最多显示` = `1 行 / 2 行 / 3 行 / 不限`（`padding:2px 7px`，11px，选中反白）；`滚动条` = `常驻 / 悬浮 / 隐藏`。
 **底栏**（高 38）：左 `v0.3`（10px/`sub`），右 `RESET`（10px，1px 边，`padding:2px 7px`）—— 还原上述全部全局项为默认值。
 
@@ -275,7 +275,7 @@ scrollbar: 'always' | 'overlay' | 'hidden'
 maxLines: 1 | 2 | 3 | 0            // 0 = 不限
 hoverFull: boolean                  // 溢出悬停显示全文
 opBar: boolean                      // 窗口内显示透明度条
-defaultOpacity: 35..100             // 新窗口默认透明度
+defaultOpacity: 5..100              // 新窗口默认透明度
 pinAll / autostart / snap: boolean
 trash: { widget, index } | null      // 5s 后自动清空
 renaming: widgetId | null
@@ -290,7 +290,7 @@ copied: clipId | null                // CLIP 刚复制高亮
 id, type: 'note'|'todo'|'clip'|'desk', title,
 x, y, w, h, z,
 pin, hidden, collapsed,
-opacity: 35..100,
+opacity: 5..100,
 kit: string,                         // 套装 id
 parts: { [part]: color|null },       // 该窗口的逐项覆盖
 follows: boolean,                    // 是否跟随全局默认（被单独改过即 false）

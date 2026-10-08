@@ -1785,7 +1785,18 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
 
     getBounds: (event) => {
       const target = showWidgetForEvent(event);
-      return target?.window && !target.window.isDestroyed() ? target.window.getBounds() : undefined;
+      if (target?.window && !target.window.isDestroyed()) {
+        return target.window.getBounds();
+      }
+      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      if (
+        senderWindow &&
+        !senderWindow.isDestroyed() &&
+        (senderWindow === managerWindow || senderWindow === settingsWindow || senderWindow === colorsWindow)
+      ) {
+        return senderWindow.getBounds();
+      }
+      return undefined;
     },
 
     setSize: (event, width, height) => {
@@ -1812,6 +1823,14 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     setPosition: (event, x, y) => {
       const target = showWidgetForEvent(event);
       if (!target?.window || target.window.isDestroyed()) {
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        if (
+          senderWindow &&
+          !senderWindow.isDestroyed() &&
+          (senderWindow === managerWindow || senderWindow === settingsWindow || senderWindow === colorsWindow)
+        ) {
+          senderWindow.setPosition(Math.round(x), Math.round(y));
+        }
         return undefined;
       }
       const bounds = target.window.getBounds();
@@ -1833,7 +1852,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (!target?.window || target.window.isDestroyed()) {
         return undefined;
       }
-      const normalizedOpacity = clamp(Math.round(opacity), 35, 100);
+      const normalizedOpacity = clamp(Math.round(opacity), 5, 100);
       target.window.setOpacity(normalizedOpacity / 100);
       return service.widgets.update(target.widgetId, { opacity: normalizedOpacity });
     },
