@@ -123,5 +123,6 @@ module.exports = async function verifyWorkflow({ evaluate, waitFor, page, connec
   await click(note, '[aria-label="展开"]');
   await waitIn(note, "!!document.querySelector('.note-editor')");
   assert.equal(await evaluate(note, '(await window.pinApi.getWidget()).opacity'), 5);
+  await require('./packaged-lifecycle.cjs')({ evaluate, waitIn, page, connect, input, note, todo, manager: colors });
   console.log('PASS: shared utility navigation; named kits and theme dialogs; preview scope isolation; TODO and CLIP workflows; DESK isolation; settings and window controls');
 };

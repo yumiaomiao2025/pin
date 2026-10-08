@@ -1,41 +1,19 @@
-import {
-  app,
-  BrowserWindow,
-  clipboard,
-  screen,
-  type IpcMainInvokeEvent,
-  type Rectangle,
-} from 'electron';
-import { execFile } from 'node:child_process';
 import path from 'node:path';
+import { type Rectangle, BrowserWindow, type IpcMainInvokeEvent, app, screen } from 'electron';
+import { type Widget, type WidgetType, type Settings, type CustomKit, type DeskTab, type Todo, type ClipItem, DEFAULT_COLORS } from './database/schema';
+import { type UpdateSettingsInput, type UpdateTodoInput, type UpdateClipItemInput, type CreateWidgetInput } from './database/repositories';
+import { type PinColorContext } from '../shared/types';
+import { type ColorSet, type ColorPreview, normalizeKitColors } from '../shared/colors';
+import { type AppDatabaseService } from './database/app-service';
+import { type WidgetWindow, type UtilityWindow } from './windows/identities';
+import { settingsToColors, colorsToWidgetPatch } from './services/color-model';
+import { normalizeBounds, MIN_WIDTH, MIN_HEIGHT, rectanglesMatch, displayForNativeMonitor, DEFAULT_BOUNDS, clamp, snapBounds, COLLAPSED_HEIGHT } from './windows/geometry';
+import { readForegroundWindow, isFullscreenForeground, isDesktopForeground } from './platform/foreground-window';
+import { widgetIdForEvent, isManagerEvent, isSettingsEvent, colorsScopeForEvent } from './windows/identities';
+import { createColorActions } from './services/color-actions';
+import { createContentActions } from './services/content-actions';
 
-import type { AppDatabaseService } from './database/app-service';
-import type { CreateWidgetInput, UpdateClipItemInput, UpdateSettingsInput, UpdateTodoInput } from './database/repositories';
-import { DEFAULT_COLORS, type ClipItem, type CustomKit, type DeskTab, type Settings, type Todo, type Widget, type WidgetType } from './database/schema';
-import type { ColorPreview, ColorSet } from '../shared/colors';
-import type { PinColorContext } from '../shared/types';
-import { COLOR_PRESETS, normalizeKitColors } from '../shared/colors';
-
-const MIN_WIDTH = 240;
-const MIN_HEIGHT = 160;
-const COLLAPSED_HEIGHT = 40;
-const SNAP_DISTANCE = 12;
 const SYSTEM_STATE_POLL_MS = 600;
-
-const DEFAULT_BOUNDS: Record<WidgetType, { width: number; height: number }> = {
-  note: { width: 320, height: 230 },
-  todo: { width: 320, height: 480 },
-  clip: { width: 320, height: 220 },
-  desk: { width: 320, height: 480 },
-};
-
-type WidgetWindow = BrowserWindow & { __pinWidgetId?: string };
-type UtilityWindow = BrowserWindow & {
-  __pinRole?: 'manager';
-  __pinView?: 'manager' | 'settings' | 'colors';
-  __pinColorsScope?: 'default' | 'widget';
-  __pinColorsWidgetId?: string;
-};
 
 type AutoHideReason = 'desktop' | 'fullscreen';
 
@@ -46,216 +24,10 @@ type AutoHideState = {
   userOverride: boolean;
 };
 
-type ForegroundWindowInfo = {
-  processId: number;
-  className: string;
-  isShell: boolean;
-  isMaximized: boolean;
-  windowBounds: Rectangle;
-  monitorBounds: Rectangle;
-};
-
 type SystemVisibilityState = {
   desktopShown: boolean;
   fullscreenDisplays: Array<{ id?: number; bounds: Rectangle }>;
 };
-
-const WINDOWS_FOREGROUND_PROBE = String.raw`
-$ErrorActionPreference = 'Stop'
-Add-Type @'
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-
-public static class PinWindowProbe {
-  [StructLayout(LayoutKind.Sequential)]
-  public struct RECT {
-    public int Left;
-    public int Top;
-    public int Right;
-    public int Bottom;
-  }
-
-  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-  public struct MONITORINFO {
-    public int cbSize;
-    public RECT rcMonitor;
-    public RECT rcWork;
-    public uint dwFlags;
-  }
-
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-  [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
-  [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
-  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-  [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr hWnd);
-}
-'@
-
-$window = [PinWindowProbe]::GetForegroundWindow()
-if ($window -eq [IntPtr]::Zero) { exit 0 }
-
-$windowRect = New-Object PinWindowProbe+RECT
-if (-not [PinWindowProbe]::GetWindowRect($window, [ref]$windowRect)) { exit 0 }
-
-$monitor = [PinWindowProbe]::MonitorFromWindow($window, 2)
-$monitorInfo = New-Object PinWindowProbe+MONITORINFO
-$monitorInfo.cbSize = [Runtime.InteropServices.Marshal]::SizeOf($monitorInfo)
-if ($monitor -eq [IntPtr]::Zero -or -not [PinWindowProbe]::GetMonitorInfo($monitor, [ref]$monitorInfo)) { exit 0 }
-
-$classNameBuilder = New-Object Text.StringBuilder 256
-[void][PinWindowProbe]::GetClassName($window, $classNameBuilder, $classNameBuilder.Capacity)
-$processId = [uint32]0
-[void][PinWindowProbe]::GetWindowThreadProcessId($window, [ref]$processId)
-
-[pscustomobject]@{
-  processId = [int]$processId
-  className = $classNameBuilder.ToString()
-  isMaximized = [bool][PinWindowProbe]::IsZoomed($window)
-  windowLeft = $windowRect.Left
-  windowTop = $windowRect.Top
-  windowRight = $windowRect.Right
-  windowBottom = $windowRect.Bottom
-  monitorLeft = $monitorInfo.rcMonitor.Left
-  monitorTop = $monitorInfo.rcMonitor.Top
-  monitorRight = $monitorInfo.rcMonitor.Right
-  monitorBottom = $monitorInfo.rcMonitor.Bottom
-} | ConvertTo-Json -Compress
-`;
-
-function parseProbeRectangle(record: Record<string, unknown>, prefix: 'window' | 'monitor') {
-  const left = record[`${prefix}Left`];
-  const top = record[`${prefix}Top`];
-  const right = record[`${prefix}Right`];
-  const bottom = record[`${prefix}Bottom`];
-  if (
-    typeof left !== 'number' ||
-    typeof top !== 'number' ||
-    typeof right !== 'number' ||
-    typeof bottom !== 'number' ||
-    ![left, top, right, bottom].every(Number.isFinite) ||
-    right <= left ||
-    bottom <= top
-  ) {
-    return undefined;
-  }
-  return { x: left, y: top, width: right - left, height: bottom - top };
-}
-
-function readForegroundWindow(): Promise<ForegroundWindowInfo | undefined> {
-  if (process.platform !== 'win32') {
-    return Promise.resolve(undefined);
-  }
-  return new Promise((resolve) => {
-    execFile(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', WINDOWS_FOREGROUND_PROBE],
-      { windowsHide: true, timeout: 500, maxBuffer: 32 * 1024 },
-      (error, stdout) => {
-        if (error || !stdout.trim()) {
-          resolve(undefined);
-          return;
-        }
-        try {
-          const parsed: unknown = JSON.parse(stdout.trim());
-          if (!parsed || typeof parsed !== 'object') {
-            resolve(undefined);
-            return;
-          }
-          const record = parsed as Record<string, unknown>;
-          const processId = record.processId;
-          const className = record.className;
-          const isMaximized = record.isMaximized;
-          const windowBounds = parseProbeRectangle(record, 'window');
-          const monitorBounds = parseProbeRectangle(record, 'monitor');
-          if (
-            typeof processId !== 'number' ||
-            !Number.isInteger(processId) ||
-            typeof className !== 'string' ||
-            typeof isMaximized !== 'boolean' ||
-            !windowBounds ||
-            !monitorBounds
-          ) {
-            resolve(undefined);
-            return;
-          }
-          const normalizedClassName = className.toLowerCase();
-          resolve({
-            processId,
-            className: normalizedClassName,
-            isShell: ['progman', 'workerw', 'shell_traywnd', 'shell_secondarytraywnd'].includes(
-              normalizedClassName,
-            ),
-            isMaximized,
-            windowBounds,
-            monitorBounds,
-          });
-        } catch {
-          resolve(undefined);
-        }
-      },
-    );
-  });
-}
-
-function rectanglesMatch(left: Rectangle, right: Rectangle, tolerance = 4) {
-  return (
-    Math.abs(left.x - right.x) <= tolerance &&
-    Math.abs(left.y - right.y) <= tolerance &&
-    Math.abs(left.width - right.width) <= tolerance &&
-    Math.abs(left.height - right.height) <= tolerance
-  );
-}
-
-function intersectionArea(left: Rectangle, right: Rectangle) {
-  const width = Math.max(0, Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x));
-  const height = Math.max(0, Math.min(left.y + left.height, right.y + right.height) - Math.max(left.y, right.y));
-  return width * height;
-}
-
-function displayForNativeMonitor(bounds: Rectangle) {
-  const displays = screen.getAllDisplays();
-  const exact = displays.find((display) => rectanglesMatch(display.bounds, bounds));
-  if (exact) {
-    return exact;
-  }
-  const monitorCenter = {
-    x: bounds.x + bounds.width / 2,
-    y: bounds.y + bounds.height / 2,
-  };
-  const containing = displays.find(
-    (display) =>
-      monitorCenter.x >= display.bounds.x &&
-      monitorCenter.x <= display.bounds.x + display.bounds.width &&
-      monitorCenter.y >= display.bounds.y &&
-      monitorCenter.y <= display.bounds.y + display.bounds.height,
-  );
-  if (containing) {
-    return containing;
-  }
-  return displays
-    .map((display) => ({ display, overlap: intersectionArea(display.bounds, bounds) }))
-    .sort((left, right) => right.overlap - left.overlap)[0]?.display;
-}
-
-function isDesktopForeground(info: ForegroundWindowInfo) {
-  return info.processId !== process.pid && (info.className === 'progman' || info.className === 'workerw');
-}
-
-function isFullscreenForeground(info: ForegroundWindowInfo) {
-  if (info.processId === process.pid || info.isShell || info.isMaximized) {
-    return false;
-  }
-  const tolerance = 4;
-  return (
-    Math.abs(info.windowBounds.x - info.monitorBounds.x) <= tolerance &&
-    Math.abs(info.windowBounds.y - info.monitorBounds.y) <= tolerance &&
-    Math.abs(info.windowBounds.width - info.monitorBounds.width) <= tolerance &&
-    Math.abs(info.windowBounds.height - info.monitorBounds.height) <= tolerance
-  );
-}
 
 export interface WindowManager {
   openVisibleWidgets(): void;
@@ -323,147 +95,12 @@ export interface WindowManager {
   prepareQuit(): void;
 }
 
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
-}
-
-function getDisplayForWidget(widget: Widget) {
-  const displays = screen.getAllDisplays();
-  const matchingDisplay = widget.displayId
-    ? displays.find((display) => display.id === widget.displayId)
-    : undefined;
-  return matchingDisplay ?? screen.getDisplayMatching(widget);
-}
-
-function normalizeBounds(widget: Widget): Rectangle {
-  const display = getDisplayForWidget(widget);
-  const workArea = display.workArea;
-  const defaults = DEFAULT_BOUNDS[widget.type];
-  const width = clamp(widget.width || defaults.width, MIN_WIDTH, workArea.width);
-  const expandedHeight = clamp(widget.height || defaults.height, MIN_HEIGHT, workArea.height);
-  const height = widget.collapsed ? COLLAPSED_HEIGHT : expandedHeight;
-
-  return {
-    width,
-    height,
-    x: clamp(widget.x, workArea.x, workArea.x + workArea.width - width),
-    y: clamp(widget.y, workArea.y, workArea.y + workArea.height - height),
-  };
-}
-
-function snapBounds(bounds: Rectangle): Rectangle {
-  const display = screen.getDisplayMatching(bounds);
-  const workArea = display.workArea;
-  const right = workArea.x + workArea.width - bounds.width;
-  const bottom = workArea.y + workArea.height - bounds.height;
-  const x =
-    Math.abs(bounds.x - workArea.x) <= SNAP_DISTANCE
-      ? workArea.x
-      : Math.abs(bounds.x - right) <= SNAP_DISTANCE
-        ? right
-        : bounds.x;
-  const y =
-    Math.abs(bounds.y - workArea.y) <= SNAP_DISTANCE
-      ? workArea.y
-      : Math.abs(bounds.y - bottom) <= SNAP_DISTANCE
-        ? bottom
-        : bounds.y;
-
-  return { ...bounds, x, y };
-}
-
-function isWidgetWindow(window: BrowserWindow): window is WidgetWindow {
-  return Boolean((window as WidgetWindow).__pinWidgetId);
-}
-
-function isManagerWindow(window: BrowserWindow): window is UtilityWindow {
-  return (window as UtilityWindow).__pinRole === 'manager' && (window as UtilityWindow).__pinView === 'manager';
-}
-
-function isSettingsWindow(window: BrowserWindow): window is UtilityWindow {
-  return (window as UtilityWindow).__pinRole === 'manager' && (window as UtilityWindow).__pinView === 'settings';
-}
-
-function isColorsWindow(window: BrowserWindow): window is UtilityWindow {
-  return (window as UtilityWindow).__pinRole === 'manager' && (window as UtilityWindow).__pinView === 'colors';
-}
-
-function settingsToColors(settings: Settings): ColorSet {
-  return {
-    paper: settings.defaultPaperColor,
-    ink: settings.defaultInkColor,
-    title: settings.defaultTitleColor,
-    accent: settings.defaultAccentColor,
-    spine: settings.defaultSpineColor,
-    shadow: settings.defaultShadowColor,
-  };
-}
-
-function colorsToSettings(colors: ColorSet) {
-  return {
-    defaultPaperColor: colors.paper,
-    defaultInkColor: colors.ink,
-    defaultTitleColor: colors.title,
-    defaultAccentColor: colors.accent,
-    defaultSpineColor: colors.spine,
-    defaultShadowColor: colors.shadow,
-  };
-}
-
-function colorsToWidgetPatch(colors: ColorSet) {
-  return {
-    paperColor: colors.paper,
-    inkColor: colors.ink,
-    titleColor: colors.title,
-    accentColor: colors.accent,
-    spineColor: colors.spine,
-    shadowColor: colors.shadow,
-  };
-}
-
-function widgetToColors(widget: Widget): ColorSet {
-  return {
-    paper: widget.paperColor,
-    ink: widget.inkColor,
-    title: widget.titleColor,
-    accent: widget.accentColor,
-    spine: widget.spineColor,
-    shadow: widget.shadowColor,
-  };
-}
-
-function kitToColors(kit: CustomKit): ColorSet {
-  return {
-    paper: kit.paper,
-    ink: kit.ink,
-    title: kit.title,
-    accent: kit.accent,
-    spine: kit.spine,
-    shadow: kit.shadow,
-  };
-}
-
-function colorsEqual(left: ColorSet, right: ColorSet) {
-  return (
-    left.paper === right.paper &&
-    left.ink === right.ink &&
-    left.title === right.title &&
-    left.accent === right.accent &&
-    left.spine === right.spine &&
-    left.shadow === right.shadow
-  );
-}
-
 export function createWindowManager(service: AppDatabaseService): WindowManager {
   const windows = new Map<string, WidgetWindow>();
   let managerWindow: UtilityWindow | undefined;
   let colorPreview: ColorPreview | null = null;
   const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  let contentTrash:
-    | { kind: 'todo'; widgetId: string; item: Todo; timer: ReturnType<typeof setTimeout> }
-    | { kind: 'clip'; widgetId: string; item: ClipItem; timer: ReturnType<typeof setTimeout> }
-    | { kind: 'widget'; item: Widget; todos: Todo[]; clips: ClipItem[]; timer: ReturnType<typeof setTimeout> }
-    | undefined;
+  
   let quitting = false;
   const autoHideStates = new Map<string, AutoHideState>();
   const visibilityVersions = new Map<string, number>();
@@ -472,35 +109,6 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
   let currentSystemVisibility: SystemVisibilityState = {
     desktopShown: false,
     fullscreenDisplays: [],
-  };
-
-  const widgetIdForEvent = (event: IpcMainInvokeEvent) => {
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    if (!senderWindow || !isWidgetWindow(senderWindow)) {
-      return undefined;
-    }
-    return senderWindow.__pinWidgetId;
-  };
-
-  const isManagerEvent = (event: IpcMainInvokeEvent) => {
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    return Boolean(senderWindow && isManagerWindow(senderWindow));
-  };
-
-  const isSettingsEvent = (event: IpcMainInvokeEvent) => {
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    return Boolean(senderWindow && isSettingsWindow(senderWindow));
-  };
-
-  const colorsScopeForEvent = (event: IpcMainInvokeEvent) => {
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    if (!senderWindow || !isColorsWindow(senderWindow)) {
-      return undefined;
-    }
-    return {
-      scope: senderWindow.__pinColorsScope,
-      widgetId: senderWindow.__pinColorsWidgetId,
-    };
   };
 
   const broadcastColorPreview = () => {
@@ -587,24 +195,6 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
   const isAutoHidden = (widgetId: string) => {
     const state = autoHideStates.get(widgetId);
     return Boolean(state && state.reasons.size > 0 && !state.userOverride);
-  };
-
-  const todoForEvent = (event: IpcMainInvokeEvent, todoId: string) => {
-    const widgetId = widgetIdForEvent(event);
-    if (!widgetId) {
-      return undefined;
-    }
-    const todo = service.todos.getById(todoId);
-    return todo?.widgetId === widgetId ? todo : undefined;
-  };
-
-  const clipForEvent = (event: IpcMainInvokeEvent, clipId: string) => {
-    const widgetId = widgetIdForEvent(event);
-    if (!widgetId) {
-      return undefined;
-    }
-    const clip = service.clipItems.getById(clipId);
-    return clip?.widgetId === widgetId ? clip : undefined;
   };
 
   const persistBounds = (widgetId: string, window: WidgetWindow, bounds: Rectangle) => {
@@ -1040,40 +630,31 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
     return { widgetId, window: windows.get(widgetId) };
   };
 
-  const deleteWidgetById = (widgetId: string) => {
-    const widget = service.widgets.getById(widgetId);
-    if (!widget) {
-      return undefined;
-    }
-
-    if (contentTrash) {
-      clearTimeout(contentTrash.timer);
-    }
-    const persistTimer = persistTimers.get(widgetId);
-    if (persistTimer) {
-      clearTimeout(persistTimer);
-      persistTimers.delete(widgetId);
-    }
-
-    const todos = service.todos.listByWidget(widgetId);
-    const clips = service.clipItems.listByWidget(widgetId);
-    const targetWindow = windows.get(widgetId);
-    if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.destroy();
-    }
-    windows.delete(widgetId);
-    service.widgets.delete(widgetId);
-    if (colorPreview?.scope === 'widget' && colorPreview.widgetId === widgetId) clearColorPreview();
-    broadcastWidgetDeleted(widgetId);
-
-    const timer = setTimeout(() => {
-      if (contentTrash?.kind === 'widget' && contentTrash.item.id === widget.id) {
-        contentTrash = undefined;
+  const { deleteWidgetById, clearUndo, ...contentActions } = createContentActions(service, {
+    cancelWidgetPersist: (widgetId) => {
+      const timer = persistTimers.get(widgetId);
+      if (timer) {
+        clearTimeout(timer);
+        persistTimers.delete(widgetId);
       }
-    }, 5_000);
-    contentTrash = { kind: 'widget', item: widget, todos, clips, timer };
-    return widget;
-  };
+    },
+    closeWidget: (widgetId) => {
+      const targetWindow = windows.get(widgetId);
+      if (targetWindow && !targetWindow.isDestroyed()) targetWindow.destroy();
+      windows.delete(widgetId);
+    },
+    onWidgetDeleted: (widgetId) => {
+      if (colorPreview?.scope === 'widget' && colorPreview.widgetId === widgetId) clearColorPreview();
+      broadcastWidgetDeleted(widgetId);
+    },
+    openWidget,
+    broadcastWidget,
+  });
+  const colorActions = createColorActions(service, {
+    isUtilityEvent: (event) => BrowserWindow.fromWebContents(event.sender) === managerWindow,
+    updateGlobalSettings,
+    broadcastWidget,
+  });
 
   if (process.platform === 'win32') {
     void pollSystemVisibility();
@@ -1083,6 +664,8 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
   }
 
   return {
+    ...colorActions,
+    ...contentActions,
     openVisibleWidgets: () => {
       service.widgets.list().filter((widget) => !widget.hidden).forEach((widget) => {
         openWidget(widget.id);
@@ -1224,23 +807,6 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       return widgetId ? deleteWidgetById(widgetId) : undefined;
     },
 
-    restoreWidget: (event) => {
-      if (!isManagerEvent(event) || !contentTrash || contentTrash.kind !== 'widget') {
-        return undefined;
-      }
-      const { item: widget, todos, clips, timer } = contentTrash;
-      clearTimeout(timer);
-      contentTrash = undefined;
-      service.transaction(({ widgets, todos: todoRepository, clipItems }) => {
-        widgets.create(widget);
-        todos.forEach((todo) => todoRepository.create(todo));
-        clips.forEach((clip) => clipItems.create(clip));
-      });
-      openWidget(widget.id);
-      broadcastWidget(widget);
-      return service.widgets.getById(widget.id);
-    },
-
     getSettings: () => service.settings.ensure(),
 
     updateSettings: (event, patch) => {
@@ -1273,86 +839,6 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       });
     },
 
-    getColorContext: (event) => {
-      const context = colorsScopeForEvent(event);
-      if (!context || (context.scope !== 'default' && context.scope !== 'widget')) {
-        return undefined;
-      }
-      if (context.scope === 'widget') {
-        if (!context.widgetId) {
-          return undefined;
-        }
-        const widget = service.widgets.getById(context.widgetId);
-        if (!widget) {
-          return undefined;
-        }
-        const colors = widgetToColors(widget);
-        const activeKitId = service.customKits.getById(widget.colorKitId ?? '')?.id ?? null;
-        const activePresetId = activeKitId ? null : COLOR_PRESETS.find((preset) => colorsEqual(preset, colors))?.id ?? null;
-        return {
-          scope: 'widget' as const,
-          colors,
-          activePresetId,
-          activeKitId,
-          appliedWindowCount: 1,
-          followsDefault: widget.followsDefault,
-          widgetTitle: widget.title.trim() || widget.type.toUpperCase(),
-        };
-      }
-      const settings = service.settings.ensure();
-      const colors = settingsToColors(settings);
-      const activeKitId = service.customKits.getById(settings.defaultColorKitId ?? '')?.id ?? null;
-      const activePresetId = activeKitId ? null : COLOR_PRESETS.find((preset) => colorsEqual(preset, colors))?.id ?? null;
-      const appliedWindowCount = service.widgets.list().filter((widget) => widget.followsDefault).length;
-      return { scope: 'default' as const, colors, activePresetId, activeKitId, appliedWindowCount };
-    },
-
-    applyDefaultPreset: (event, presetId) => {
-      if (colorsScopeForEvent(event)?.scope !== 'default') {
-        return undefined;
-      }
-      const preset = COLOR_PRESETS.find((candidate) => candidate.id === presetId);
-      if (!preset) {
-        return undefined;
-      }
-      return updateGlobalSettings({ ...colorsToSettings(preset), defaultColorKitId: null });
-    },
-
-    applyWidgetPreset: (event, presetId) => {
-      const context = colorsScopeForEvent(event);
-      if (context?.scope !== 'widget' || !context.widgetId) {
-        return undefined;
-      }
-      const preset = COLOR_PRESETS.find((candidate) => candidate.id === presetId);
-      if (!preset) {
-        return undefined;
-      }
-      const updated = service.widgets.update(context.widgetId, {
-        ...colorsToWidgetPatch(preset),
-        colorKitId: null,
-        followsDefault: false,
-      });
-      if (updated) {
-        broadcastWidget(updated);
-      }
-      return updated;
-    },
-
-    setWidgetFollowDefault: (event, followsDefault) => {
-      const context = colorsScopeForEvent(event);
-      if (context?.scope !== 'widget' || !context.widgetId) {
-        return undefined;
-      }
-      const patch = followsDefault
-        ? { ...colorsToWidgetPatch(settingsToColors(service.settings.ensure())), colorKitId: service.settings.ensure().defaultColorKitId, followsDefault: true }
-        : { followsDefault: false };
-      const updated = service.widgets.update(context.widgetId, patch);
-      if (updated) {
-        broadcastWidget(updated);
-      }
-      return updated;
-    },
-
     getColorPreview: () => colorPreview,
 
     previewColorKit: (event, colors) => {
@@ -1368,99 +854,6 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       if (BrowserWindow.fromWebContents(event.sender) !== managerWindow) return false;
       clearColorPreview();
       return true;
-    },
-
-    listColorKits: (event) => {
-      return BrowserWindow.fromWebContents(event.sender) === managerWindow ? service.customKits.list() : undefined;
-    },
-
-    createColorKit: (event, name, colors) => {
-      const context = colorsScopeForEvent(event);
-      if (context?.scope !== 'default' && context?.scope !== 'widget') {
-        return undefined;
-      }
-      const normalizedName = name.trim();
-      if (!normalizedName) {
-        return undefined;
-      }
-      if (context.scope === 'widget' && !service.widgets.getById(context.widgetId ?? '')) {
-        return undefined;
-      }
-      return service.customKits.create({
-        name: normalizedName,
-        ...normalizeKitColors(colors),
-      });
-    },
-
-    updateColorKit: (event, kitId, name, colors) => {
-      const context = colorsScopeForEvent(event);
-      if ((context?.scope !== 'default' && context?.scope !== 'widget') || !name.trim()) {
-        return undefined;
-      }
-      const kit = service.customKits.update(kitId, { name: name.trim(), ...normalizeKitColors(colors) });
-      if (!kit) return undefined;
-      if (service.settings.ensure().defaultColorKitId === kitId) {
-        updateGlobalSettings(colorsToSettings(kitToColors(kit)));
-      }
-      service.widgets.list().filter((widget) => widget.colorKitId === kitId).forEach((widget) => {
-        const updated = service.widgets.update(widget.id, colorsToWidgetPatch(kitToColors(kit)));
-        if (updated) broadcastWidget(updated);
-      });
-      return kit;
-    },
-
-    renameColorKit: (event, kitId, name) => {
-      const context = colorsScopeForEvent(event);
-      if ((context?.scope !== 'default' && context?.scope !== 'widget') || !name.trim()) {
-        return undefined;
-      }
-      return service.customKits.update(kitId, { name: name.trim() });
-    },
-
-    deleteColorKit: (event, kitId) => {
-      const context = colorsScopeForEvent(event);
-      if (context?.scope !== 'default' && context?.scope !== 'widget') {
-        return undefined;
-      }
-      const kit = service.customKits.getById(kitId);
-      if (!kit || !service.customKits.delete(kitId)) {
-        return undefined;
-      }
-      if (service.settings.ensure().defaultColorKitId === kitId) {
-        updateGlobalSettings({ defaultColorKitId: null });
-      }
-      service.widgets.list().filter((widget) => widget.colorKitId === kitId).forEach((widget) => {
-        const updated = service.widgets.update(widget.id, { colorKitId: null });
-        if (updated) broadcastWidget(updated);
-      });
-      return kit;
-    },
-
-    applyColorKit: (event, kitId) => {
-      const context = colorsScopeForEvent(event);
-      if (context?.scope !== 'default' && context?.scope !== 'widget') {
-        return undefined;
-      }
-      const kit = service.customKits.getById(kitId);
-      if (!kit) {
-        return undefined;
-      }
-      const colors = kitToColors(kit);
-      if (context.scope === 'default') {
-        return updateGlobalSettings({ ...colorsToSettings(colors), defaultColorKitId: kitId });
-      }
-      if (!context.widgetId) {
-        return undefined;
-      }
-      const updated = service.widgets.update(context.widgetId, {
-        ...colorsToWidgetPatch(colors),
-        colorKitId: kitId,
-        followsDefault: false,
-      });
-      if (updated) {
-        broadcastWidget(updated);
-      }
-      return updated;
     },
 
     getWidgetForEvent: (event) => {
@@ -1504,171 +897,6 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
         markUserVisibility(widget.id, hidden);
       });
       return service.widgets.list();
-    },
-
-    setActiveTab: (event, activeTab) => {
-      const widgetId = widgetIdForEvent(event);
-      if (!widgetId) {
-        return undefined;
-      }
-      const widget = service.widgets.getById(widgetId);
-      if (!widget || widget.type !== 'desk') {
-        return undefined;
-      }
-      return service.widgets.update(widgetId, { activeTab });
-    },
-
-    getTodosForEvent: (event) => {
-      const widgetId = widgetIdForEvent(event);
-      return widgetId ? service.todos.listByWidget(widgetId) : undefined;
-    },
-
-    createTodo: (event, text) => {
-      const widgetId = widgetIdForEvent(event);
-      return widgetId ? service.createTodo({ widgetId, text }) : undefined;
-    },
-
-    updateTodo: (event, todoId, patch) => {
-      if (!todoForEvent(event, todoId)) {
-        return undefined;
-      }
-      return service.todos.update(todoId, patch);
-    },
-
-    deleteTodo: (event, todoId) => {
-      const widgetId = widgetIdForEvent(event);
-      const todo = todoForEvent(event, todoId);
-      if (!widgetId || !todo) {
-        return undefined;
-      }
-      if (contentTrash) {
-        clearTimeout(contentTrash.timer);
-      }
-      if (!service.todos.delete(todoId)) {
-        return undefined;
-      }
-      const timer = setTimeout(() => {
-        if (contentTrash?.kind === 'todo' && contentTrash.item.id === todo.id) {
-          contentTrash = undefined;
-        }
-      }, 5_000);
-      contentTrash = { kind: 'todo', widgetId, item: todo, timer };
-      return todo;
-    },
-
-    restoreTodo: (event) => {
-      const widgetId = widgetIdForEvent(event);
-      if (
-        !widgetId ||
-        !contentTrash ||
-        contentTrash.kind !== 'todo' ||
-        contentTrash.widgetId !== widgetId
-      ) {
-        return undefined;
-      }
-      const { item: todo, timer } = contentTrash;
-      clearTimeout(timer);
-      contentTrash = undefined;
-      return service.createTodo({
-        id: todo.id,
-        widgetId: todo.widgetId,
-        text: todo.text,
-        done: todo.done,
-        sortOrder: todo.sortOrder,
-        createdAt: todo.createdAt,
-        updatedAt: todo.updatedAt,
-      });
-    },
-
-    reorderTodos: (event, orderedIds) => {
-      const widgetId = widgetIdForEvent(event);
-      if (!widgetId) {
-        return undefined;
-      }
-      return service.todos.reorder(widgetId, orderedIds);
-    },
-
-    getClipsForEvent: (event) => {
-      const widgetId = widgetIdForEvent(event);
-      return widgetId ? service.clipItems.listByWidget(widgetId) : undefined;
-    },
-
-    createClip: (event, text) => {
-      const widgetId = widgetIdForEvent(event);
-      return widgetId ? service.createClipItem({ widgetId, text }) : undefined;
-    },
-
-    updateClip: (event, clipId, patch) => {
-      if (!clipForEvent(event, clipId)) {
-        return undefined;
-      }
-      return service.clipItems.update(clipId, patch);
-    },
-
-    deleteClip: (event, clipId) => {
-      const widgetId = widgetIdForEvent(event);
-      const clip = clipForEvent(event, clipId);
-      if (!widgetId || !clip || !service.clipItems.delete(clipId)) {
-        return undefined;
-      }
-      if (contentTrash) {
-        clearTimeout(contentTrash.timer);
-      }
-      const timer = setTimeout(() => {
-        if (contentTrash?.kind === 'clip' && contentTrash.item.id === clip.id) {
-          contentTrash = undefined;
-        }
-      }, 5_000);
-      contentTrash = { kind: 'clip', widgetId, item: clip, timer };
-      return clip;
-    },
-
-    restoreClip: (event) => {
-      const widgetId = widgetIdForEvent(event);
-      if (
-        !widgetId ||
-        !contentTrash ||
-        contentTrash.kind !== 'clip' ||
-        contentTrash.widgetId !== widgetId
-      ) {
-        return undefined;
-      }
-      const { item: clip, timer } = contentTrash;
-      clearTimeout(timer);
-      contentTrash = undefined;
-      return service.createClipItem({
-        id: clip.id,
-        widgetId: clip.widgetId,
-        text: clip.text,
-        sortOrder: clip.sortOrder,
-        createdAt: clip.createdAt,
-        updatedAt: clip.updatedAt,
-      });
-    },
-
-    reorderClips: (event, orderedIds) => {
-      const widgetId = widgetIdForEvent(event);
-      if (!widgetId) {
-        return undefined;
-      }
-      return service.clipItems.reorder(widgetId, orderedIds);
-    },
-
-    copyClip: (event, clipId) => {
-      const clip = clipForEvent(event, clipId);
-      if (!clip) {
-        return undefined;
-      }
-      clipboard.writeText(clip.text);
-      return clip;
-    },
-
-    saveNote: (event, noteText) => {
-      const widgetId = widgetIdForEvent(event);
-      if (!widgetId) {
-        return undefined;
-      }
-      return service.widgets.update(widgetId, { noteText });
     },
 
     hide: (event) => {
@@ -1795,10 +1023,7 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       }
       autoHideStates.clear();
       visibilityVersions.clear();
-      if (contentTrash) {
-        clearTimeout(contentTrash.timer);
-        contentTrash = undefined;
-      }
+      clearUndo();
       persistTimers.forEach((timer, widgetId) => {
         clearTimeout(timer);
         const window = windows.get(widgetId);
@@ -1812,9 +1037,4 @@ export function createWindowManager(service: AppDatabaseService): WindowManager 
       }
     },
   };
-}
-
-export function registerDisplayRecovery(manager: WindowManager) {
-  screen.on('display-added', () => manager.openVisibleWidgets());
-  screen.on('display-removed', () => manager.openVisibleWidgets());
 }

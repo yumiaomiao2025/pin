@@ -82,7 +82,10 @@ src/
   renderer/components/           公共控件与窗口交互
   renderer/hooks/                窗口状态与交互 Hooks
   renderer/colors/               配色预览与样式映射
-  main/window-manager.ts          独立窗口生命周期与系统窗口行为
+  main/window-manager.ts          窗口生命周期、预览与退出协调
+  main/windows/                   窗口身份、几何计算与显示器恢复
+  main/platform/                  Windows 前台窗口探测
+  main/services/                  配色套装、内容操作与撤销
   main/ipc/                       按职责分组的 IPC 注册与参数验证
   main/tray.ts                    系统托盘菜单
   main/database/                  schema、migration、repository 和 service

@@ -1,7 +1,8 @@
 import started from 'electron-squirrel-startup';
 import path from 'node:path';
 import { app, BrowserWindow, type Tray } from 'electron';
-import { type WindowManager, createWindowManager, registerDisplayRecovery } from './main/window-manager';
+import { type WindowManager, createWindowManager } from './main/window-manager';
+import { registerDisplayRecovery } from './main/windows/display-recovery';
 import { initializeAppDatabase, closeAppDatabase } from './main/database/app-database';
 import { createAppDatabaseService } from './main/database/app-service';
 import { registerIpcHandlers } from './main/ipc/register';

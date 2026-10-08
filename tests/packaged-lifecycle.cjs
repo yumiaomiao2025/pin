@@ -1,0 +1,56 @@
+const assert = require('node:assert/strict');
+
+module.exports = async function verifyLifecycle({ evaluate, waitIn, page, connect, input, note, todo, manager }) {
+  const widget = await evaluate(manager, "window.pinApi.createManagedWidget('desk')");
+  const desk = await connect((await page('widget', widget.id)).webSocketDebuggerUrl);
+  await input(desk, '.note-editor', 'Undo preserves widget contents');
+  await waitIn(desk, "window.pinApi.getWidget().then(widget => widget.noteText === 'Undo preserves widget contents')");
+  const item = await evaluate(desk, "window.pinApi.createTodo('Undo task')");
+  const clip = await evaluate(desk, "window.pinApi.createClip('Undo clip')");
+  assert.equal(await evaluate(note, `window.pinApi.deleteTodo(${JSON.stringify(item.id)})`), null);
+  assert.equal(await evaluate(note, `window.pinApi.copyClip(${JSON.stringify(clip.id)})`), null);
+  assert.equal(await evaluate(desk, 'window.pinApi.updateSettings({fontSize:18})'), null);
+  assert.equal(await evaluate(desk, 'window.pinApi.listManagedWidgets()'), null);
+
+  await evaluate(desk, `window.pinApi.deleteTodo(${JSON.stringify(item.id)})`);
+  assert.equal(await evaluate(todo, 'window.pinApi.restoreTodo()'), null);
+  assert.equal((await evaluate(desk, 'window.pinApi.restoreTodo()')).id, item.id);
+  await evaluate(desk, `window.pinApi.deleteTodo(${JSON.stringify(item.id)})`);
+  await evaluate(desk, `window.pinApi.deleteClip(${JSON.stringify(clip.id)})`);
+  assert.equal(await evaluate(desk, 'window.pinApi.restoreTodo()'), null);
+  assert.equal((await evaluate(desk, 'window.pinApi.restoreClip()')).id, clip.id);
+  const preservedTodo = await evaluate(desk, "window.pinApi.createTodo('Preserved task')");
+  await evaluate(desk, "window.pinApi.setActiveTab('clip')");
+  const before = await evaluate(desk, 'window.pinApi.getWidget()');
+  assert.equal((await evaluate(manager, `window.pinApi.deleteManagedWidget(${JSON.stringify(widget.id)})`)).id, widget.id);
+  const restored = await evaluate(manager, 'window.pinApi.restoreManagedWidget()');
+  assert.equal(restored.id, widget.id);
+  assert.equal(restored.noteText, before.noteText);
+  assert.equal(restored.activeTab, 'clip');
+  const reopened = await connect((await page('widget', widget.id)).webSocketDebuggerUrl);
+  assert.equal((await evaluate(reopened, 'window.pinApi.listTodos()'))[0].id, preservedTodo.id);
+  assert.equal((await evaluate(reopened, 'window.pinApi.listClips()'))[0].id, clip.id);
+
+  await evaluate(note, 'window.pinApi.openDefaultColors()');
+  await waitIn(manager, "window.pinApi.getColorContext().then(context => context?.scope === 'default')");
+  assert.equal(await evaluate(note, "window.pinApi.previewColorKit({paper:'#123456',accent:'#abcdef',ink:'#ffffff'})"), false);
+  await evaluate(manager, "window.pinApi.previewColorKit({paper:'#123456',accent:'#abcdef',ink:'#ffffff'})");
+  const duringPreview = await evaluate(todo, 'window.pinApi.createSameWidget()');
+  const previewWidget = await connect((await page('widget', duringPreview.id)).webSocketDebuggerUrl);
+  await waitIn(previewWidget, "!!document.querySelector('.app')");
+  await waitIn(previewWidget, "getComputedStyle(document.querySelector('.app')).backgroundColor === 'rgb(18, 52, 86)'");
+  assert.notEqual(await evaluate(previewWidget, '(await window.pinApi.getWidget()).paperColor'), '#123456');
+  await manager('Page.reload');
+  await waitIn(manager, "!!document.querySelector('.color-custom-placeholder:not(:disabled)')");
+  assert.equal(await evaluate(note, 'window.pinApi.getColorPreview()'), null);
+  await waitIn(previewWidget, "getComputedStyle(document.querySelector('.app')).backgroundColor !== 'rgb(18, 52, 86)'");
+  await evaluate(manager, "window.pinApi.previewColorKit({paper:'#123456',accent:'#abcdef',ink:'#ffffff'})");
+  await evaluate(note, 'window.pinApi.openSettings()');
+  await waitIn(manager, "!!document.querySelector('.settings-titlebar')");
+  assert.equal(await evaluate(note, 'window.pinApi.getColorPreview()'), null);
+  await evaluate(note, 'window.pinApi.openManager()');
+  await waitIn(manager, "!!document.querySelector('.manager-titlebar')");
+  await evaluate(manager, `window.pinApi.deleteManagedWidget(${JSON.stringify(duringPreview.id)})`);
+  await evaluate(manager, `window.pinApi.deleteManagedWidget(${JSON.stringify(widget.id)})`);
+  console.log('PASS: sender and widget isolation; shared undo ownership; complete widget restoration; preview reload, navigation and new windows');
+};
