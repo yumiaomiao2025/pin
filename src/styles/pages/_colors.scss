@@ -1,0 +1,259 @@
+.colors-titlebar {
+  display: flex;
+  height: 32px;
+  min-height: 32px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1.5px solid #111111;
+  background: #ffe566;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.colors-titlebar .title-action {
+  -webkit-app-region: no-drag;
+}
+
+.colors-section {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.colors-section h2 {
+  margin: 0;
+  padding: 6px 12px;
+  color: #6f6f6f;
+  background: #f4f4f1;
+  font-size: 0.769231rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.color-preset,
+.color-custom-placeholder {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid #d8d8d8;
+  font-size: 0.923077rem;
+  text-align: left;
+}
+
+.color-preset--active {
+  background: #ffe566;
+}
+
+.color-swatches {
+  display: inline-flex;
+  width: 38px;
+  height: 22px;
+  flex: none;
+  border: 1.5px solid #111111;
+}
+
+.color-swatches > span {
+  min-width: 0;
+  flex: 1;
+  border-right: 1px solid #111111;
+}
+
+.color-swatches > span:last-child {
+  border-right: 0;
+}
+
+.color-preset-current {
+  margin-left: auto;
+  color: #111111;
+  font-size: 0.769231rem;
+}
+
+.color-preset-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.color-custom-placeholder {
+  gap: 6px;
+  color: #6f6f6f;
+  border-bottom: 0;
+  cursor: pointer;
+}
+
+.color-custom-placeholder:disabled {
+  opacity: 1;
+}
+
+.color-custom-section {
+  overflow: hidden;
+}
+
+.color-parts-list {
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.color-part {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #d8d8d8;
+  font-size: 0.923077rem;
+  text-align: left;
+}
+
+.color-part:last-child {
+  border-bottom: 0;
+}
+
+.color-part-value {
+  display: inline-flex;
+  min-width: 108px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 0.769231rem;
+}
+
+.color-part-picker {
+  flex: none;
+  width: 40px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #111111;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.color-part-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-part-picker::-webkit-color-swatch {
+  border: 0;
+  border-radius: 0;
+}
+
+.color-part-picker:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 2px;
+}
+
+.color-part-picker:disabled {
+  cursor: default;
+}
+
+.color-kit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 12px;
+  font-size: 0.923077rem;
+}
+
+.color-kit-form input {
+  min-width: 0;
+  width: 100%;
+  height: 30px;
+  padding: 4px 8px;
+  border: 1px solid var(--widget-ink);
+  border-radius: 0;
+}
+
+.color-kit-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.color-kit-form-actions button {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 10px;
+}
+
+.color-kit-error {
+  margin: 0;
+  color: #b32d34;
+  font-size: 0.846154rem;
+  line-height: 1.5;
+}
+
+.color-kit-row {
+  display: flex;
+  min-height: 42px;
+  align-items: stretch;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.color-kit-row--active {
+  background: #ffe566;
+}
+
+.color-kit-apply {
+  min-width: 0;
+  flex: 1;
+  border-bottom: 0;
+}
+
+.color-kit-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+}
+
+.color-kit-action--delete {
+  color: #6f6f6f;
+}
+
+.color-kit-confirm {
+  width: min(260px, calc(100% - 40px));
+  max-height: calc(100% - 40px);
+  overflow-wrap: anywhere;
+}
+
+.color-kit-confirm::backdrop {
+  background: color-mix(in srgb, var(--widget-paper) 82%, transparent);
+}
+
+.color-kit-confirm button:focus-visible {
+  outline: 1.5px solid var(--widget-ink);
+  outline-offset: 2px;
+}
+
+.colors-footer {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 12px;
+  border-top: 1.5px solid #111111;
+  color: #6f6f6f;
+  background: #f4f4f1;
+  font-size: 0.769231rem;
+}
+

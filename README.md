@@ -45,7 +45,7 @@ pnpm lint        # ESLint 检查
 pnpm test:db     # 数据库与 repository 测试
 pnpm db:check    # Drizzle migration 检查
 pnpm package     # 生成未安装的 Windows 应用目录
-pnpm package:check # 用临时数据目录验证打包应用启动和基础配色流程（Node.js 22+）
+pnpm package:check # 用临时数据目录验证打包应用启动及功能回归（Node.js 22+）
 pnpm make        # 生成可分发安装包
 ```
 
@@ -92,10 +92,13 @@ src/
   shared/colors.ts                配色套装与派生颜色
   shared/types.ts                 跨进程数据结构
   shared/pin-api.ts               preload API 契约
-  styles/global.scss              全局样式和设计 token
+  styles/global.scss              样式加载入口，保留覆盖顺序
+  styles/_*.scss                  基础、控件、窗口、内容、滚动条及主题
+  styles/pages/                   管理、设置、配色和引导页面样式
 drizzle/                          SQLite migration
 docs/                             技术方案、视觉规范和交互原型
-tests/                            数据库测试
+scripts/                          Electron 测试与打包验证辅助脚本
+tests/                            数据库测试与实际打包应用行为回归
 ```
 
 ## 文档

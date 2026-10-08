@@ -1,0 +1,107 @@
+.todo-undo-row {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  color: #6f6f6f;
+  background: #f4f4f4;
+  font-size: 0.846154rem;
+}
+
+.todo-undo-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-undo-button {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid #111111;
+  font-size: 0.769231rem;
+  line-height: 1.2;
+}
+
+.opacity-bar {
+  display: flex;
+  height: 44px;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border-top: 1.5px solid #111111;
+  font-size: 0.769231rem;
+  letter-spacing: 0.1em;
+}
+
+.opacity-bar label {
+  flex: none;
+}
+
+.opacity-bar output {
+  width: 32px;
+  flex: none;
+  text-align: right;
+  letter-spacing: 0;
+}
+
+.window-context-menu {
+  position: fixed;
+  z-index: 12;
+  display: flex;
+  min-width: 186px;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  border: 1.5px solid #111111;
+  background: #ffffff;
+  box-shadow: 5px 5px 0 #111111;
+  font-size: 0.846154rem;
+}
+
+.window-context-menu-opacity {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.window-context-menu-opacity label {
+  flex: none;
+}
+
+.window-context-menu-opacity output {
+  width: 30px;
+  flex: none;
+  font-size: 0.769231rem;
+  text-align: right;
+}
+
+.window-context-menu-item {
+  min-height: 36px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid #d8d8d8;
+  background: transparent;
+  font-size: 0.923077rem;
+  text-align: left;
+}
+
+.window-context-menu-item:last-child {
+  border-bottom: 0;
+}
+
+.window-context-menu-item:hover {
+  color: #111111;
+  background: #ffe566;
+}
+
+.window-context-menu-item--delete {
+  background: #ffe566;
+}
+

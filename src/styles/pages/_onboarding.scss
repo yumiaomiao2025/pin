@@ -1,0 +1,75 @@
+.onboarding {
+  background: repeating-linear-gradient(45deg, #ffffff 0 8px, #f4f4f4 8px 16px);
+}
+
+.onboarding__titlebar {
+  background: #ffe566;
+}
+
+.onboarding__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: 22px 24px;
+}
+
+.onboarding__eyebrow {
+  margin: 0 0 10px;
+  color: #6f6f6f;
+  font-size: 0.769231rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.onboarding h1 {
+  max-width: 34ch;
+  margin: 0 0 18px;
+  font-size: 1.230769rem;
+  line-height: 1.5;
+}
+
+.onboarding__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.onboarding__option {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  font-size: 0.846154rem;
+}
+
+.onboarding__option:first-child {
+  background: #ffe566;
+}
+
+.widget-swatch {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 1px solid #111111;
+}
+
+.widget-swatch--note {
+  background: #ffe566;
+}
+
+.widget-swatch--desk {
+  color: #ffffff;
+  background: #111111;
+}
+
+.placeholder,
+.app--loading {
+  margin: auto;
+  padding: 24px;
+  color: #6f6f6f;
+  font-size: 0.923077rem;
+  text-align: center;
+}
+

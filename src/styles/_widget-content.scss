@@ -1,0 +1,442 @@
+.note-editor {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  resize: none;
+  padding: 14px;
+  border: 0;
+  outline: 0;
+  color: #111111;
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1.85;
+}
+
+.note-editor::placeholder {
+  color: #8a8a8a;
+}
+
+.todo-list,
+.clip-list {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.todo-list {
+  overflow-x: hidden;
+}
+
+.clip-row {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border-bottom: 1px solid #d8d8d8;
+  cursor: pointer;
+}
+
+.clip-row--dragging {
+  background: #ffe566;
+  box-shadow: inset 3px 0 0 #111111;
+  transform: translateX(2px);
+}
+
+.clip-row--drag-over {
+  box-shadow: inset 0 2px 0 #ffe566;
+}
+
+.clip-index {
+  width: 20px;
+  flex: none;
+  color: #6f6f6f;
+  font-size: 0.846154rem;
+  line-height: 1.384615rem;
+}
+
+.clip-text {
+  display: -webkit-box;
+  min-width: 0;
+  flex: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  color: #111111;
+  background: transparent;
+  font-size: 0.923077rem;
+  line-height: 1.5;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: pre-wrap;
+  word-break: normal;
+  cursor: text;
+  -webkit-app-region: no-drag;
+}
+
+.clip-text--editing {
+  display: block;
+  min-height: 20px;
+  resize: none;
+  outline: 1.5px solid #111111;
+  outline-offset: 2px;
+}
+
+.clip-copy-mark,
+.clip-drag-handle,
+.clip-delete {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  border: 0;
+  color: #6f6f6f;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.clip-copy-mark {
+  font-weight: 700;
+  -webkit-app-region: no-drag;
+}
+
+.clip-copy-mark--copied {
+  color: #111111;
+}
+
+.clip-drag-handle {
+  cursor: grab;
+  -webkit-app-region: no-drag;
+}
+
+.clip-delete {
+  -webkit-app-region: no-drag;
+}
+
+.clip-input-row {
+  display: flex;
+  min-height: 52px;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border-top: 1.5px solid #111111;
+  background: #f4f4f4;
+}
+
+.clip-input-symbol {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  font-size: 1rem;
+  line-height: 1.538462rem;
+}
+
+.clip-input {
+  min-width: 0;
+  min-height: 20px;
+  flex: 1;
+  resize: none;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #111111;
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.clip-input::placeholder {
+  color: #8a8a8a;
+}
+
+.clip-undo-row {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  color: #6f6f6f;
+  background: #f4f4f4;
+  font-size: 0.846154rem;
+}
+
+.clip-undo-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip-undo-button {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid #111111;
+  font-size: 0.769231rem;
+  line-height: 1.2;
+}
+
+.todo-row {
+  display: flex;
+  min-height: 40px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.todo-row--dragging {
+  opacity: 0;
+}
+
+.todo-row--drag-overlay {
+  width: 100%;
+  pointer-events: none;
+}
+
+.todo-row--drag-overlay .todo-check,
+.todo-row--drag-overlay .todo-drag-handle,
+.todo-row--drag-overlay .todo-delete {
+  display: block;
+}
+
+.todo-row--drag-overlay .todo-check {
+  border-color: var(--widget-ink);
+}
+
+.todo-row--drag-overlay .todo-check--done {
+  color: var(--widget-ink);
+  background: var(--widget-accent);
+}
+
+.todo-row--drag-overlay .todo-text {
+  color: var(--widget-ink);
+}
+
+.todo-row--drag-overlay .todo-drag-handle,
+.todo-row--drag-overlay .todo-delete,
+.todo-row--drag-overlay.todo-row--done .todo-text {
+  color: var(--widget-ink);
+}
+
+.todo-row--drag-over {
+  box-shadow: inset 0 2px 0 #ffe566;
+}
+
+.todo-row--completing .todo-text {
+  position: relative;
+  color: #111111;
+  animation: todo-text-complete 120ms linear 180ms forwards;
+}
+
+.todo-check--completing {
+  color: #ffffff;
+  background: #111111;
+  transform: scale(1.18);
+  animation: todo-check-settle 120ms linear 60ms forwards;
+}
+
+.todo-check-mark {
+  display: inline-block;
+}
+
+.todo-check--completing .todo-check-mark {
+  clip-path: inset(0 100% 0 0);
+  animation: todo-check-reveal 60ms linear 60ms forwards;
+}
+
+.todo-text-strike {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1.5px;
+  background: #111111;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: todo-strike 120ms linear 60ms forwards;
+}
+
+@keyframes todo-check-reveal {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes todo-check-settle {
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes todo-strike {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes todo-text-complete {
+  to {
+    color: var(--widget-ink, #6f6f6f);
+    transform: translateY(2px);
+  }
+}
+
+.todo-check {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 1px;
+  padding: 0;
+  border: 1.5px solid #111111;
+  font-size: 10px;
+  line-height: 13px;
+  text-align: center;
+  -webkit-app-region: no-drag;
+}
+
+.todo-check--done {
+  color: #ffffff;
+  background: #111111;
+}
+
+.todo-text {
+  display: block;
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  color: #111111;
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: normal;
+  cursor: text;
+  -webkit-app-region: no-drag;
+}
+
+.todo-text--clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.todo-text--unlimited {
+  overflow: visible;
+}
+
+.todo-row--done .todo-text {
+  color: #6f6f6f;
+  text-decoration: line-through;
+}
+
+.todo-text--editing {
+  min-height: 20px;
+  resize: none;
+  outline: 1.5px solid #111111;
+  outline-offset: 2px;
+}
+
+.todo-drag-handle,
+.todo-delete {
+  flex: none;
+  color: #6f6f6f;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.todo-drag-handle {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  -webkit-app-region: no-drag;
+  touch-action: none;
+}
+
+.todo-drag-handle:active {
+  cursor: grabbing;
+}
+
+.todo-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  line-height: 16px;
+  -webkit-app-region: no-drag;
+}
+
+.todo-completed-heading {
+  padding: 7px 12px;
+  color: #6f6f6f;
+  background: #f4f4f4;
+  font-size: 0.769231rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.todo-input-row {
+  display: flex;
+  min-height: 52px;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border-top: 1.5px solid #111111;
+  background: #f4f4f4;
+}
+
+.todo-input-symbol {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  font-size: 1rem;
+  line-height: 1.538462rem;
+}
+
+.todo-input {
+  min-width: 0;
+  min-height: 20px;
+  flex: 1;
+  resize: none;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #111111;
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.todo-input::placeholder {
+  color: #8a8a8a;
+}
+
+.overflow-tooltip {
+  position: fixed;
+  z-index: 20;
+  max-width: calc(100vw - 16px);
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  color: #ffffff;
+  background: #111111;
+  border: 1.5px solid #111111;
+  box-shadow: 5px 5px 0 #ffe566;
+  font-size: 0.923077rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+

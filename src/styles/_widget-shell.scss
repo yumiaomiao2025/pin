@@ -1,0 +1,130 @@
+.app {
+  position: relative;
+  display: flex;
+  width: calc(100% - var(--window-shadow-offset));
+  height: calc(100% - var(--window-shadow-offset));
+  min-width: calc(240px - var(--window-shadow-offset));
+  min-height: calc(160px - var(--window-shadow-offset));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1.5px solid #111111;
+  background: #ffffff;
+  box-shadow: var(--window-shadow-offset) var(--window-shadow-offset) 0 #111111;
+}
+
+.desk-panel,
+.desk-content {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.desk-panel {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+}
+
+.desk-tabs {
+  display: flex;
+  height: 38px;
+  min-height: 38px;
+  border-bottom: 1.5px solid #111111;
+}
+
+.desk-tab {
+  min-width: 0;
+  flex: 1;
+  padding: 9px 0;
+  border: 0;
+  border-right: 1.5px solid #111111;
+  font-size: 0.846154rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.desk-tab:last-child {
+  border-right: 0;
+}
+
+.desk-tab--active {
+  color: #ffffff;
+  background: #111111;
+}
+
+.resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  background: transparent;
+  border: 0;
+  -webkit-app-region: no-drag;
+  touch-action: none;
+}
+
+.titlebar,
+.onboarding__titlebar {
+  display: flex;
+  height: 32px;
+  min-height: 32px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1.5px solid #111111;
+  user-select: none;
+}
+
+.titlebar {
+  cursor: move;
+  -webkit-app-region: no-drag;
+  touch-action: none;
+}
+
+.type-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: #111111;
+  font-size: 0.846154rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title-action {
+  min-width: 22px;
+  height: 20px;
+  padding: 1px 5px;
+  border: 1px solid #111111;
+  font-size: 0.769231rem;
+  line-height: 1;
+  -webkit-app-region: no-drag;
+}
+
+.title-action--icon {
+  width: 18px;
+  min-width: 18px;
+  padding: 0;
+  border: 0;
+  border-color: transparent;
+  font-size: 14px;
+}
+
+.title-action--active {
+  color: #111111;
+  background: transparent;
+  box-shadow: inset 0 -3px 0 #111111;
+}
+
+.titlebar .title-action--pin {
+  margin-right: 6px;
+}
+

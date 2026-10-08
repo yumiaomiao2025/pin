@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { type PinSettings } from '../shared/types';
 import { DEFAULT_SETTINGS } from './default-settings';
-import { type ColorPreview } from '../shared/colors';
+import { useColorPreview } from './colors/use-color-preview';
 import { getWindowContext } from './window-context';
 import { Onboarding } from './pages/Onboarding';
 import { colorSetStyle, settingsToColorSet, ColorPreviewContext } from './colors/widget-colors';
@@ -12,22 +12,7 @@ import { WidgetApp } from './widgets/WidgetApp';
 
 export function App() {
   const [settings, setSettings] = useState<PinSettings>(DEFAULT_SETTINGS);
-  const [colorPreview, setColorPreview] = useState<ColorPreview | null>(null);
-  useEffect(() => {
-    let active = true;
-    let receivedEvent = false;
-    const unsubscribe = window.pinApi.onColorPreviewChanged((preview) => {
-      receivedEvent = true;
-      if (active) setColorPreview(preview);
-    });
-    void window.pinApi.getColorPreview().then((preview) => {
-      if (active && !receivedEvent) setColorPreview(preview);
-    });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
+  const colorPreview = useColorPreview();
   useEffect(() => {
     let active = true;
     const applySettings = (settings: PinSettings) => {

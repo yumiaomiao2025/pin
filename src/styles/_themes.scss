@@ -1,0 +1,311 @@
+.utility-themed {
+  width: 100%;
+  height: 100%;
+  color: var(--widget-ink);
+
+  .app,
+  .manager-confirm,
+  .manager-new-menu {
+    color: var(--widget-ink);
+    background: var(--widget-paper);
+    border-color: var(--widget-ink);
+    box-shadow: var(--window-shadow-offset) var(--window-shadow-offset) 0 var(--widget-shadow);
+  }
+
+  button,
+  input {
+    color: var(--widget-ink);
+    border-color: var(--widget-ink);
+  }
+
+  input {
+    background: var(--widget-paper);
+  }
+
+  .type-label,
+  .manager-type,
+  .manager-delete-action,
+  .manager-visibility-actions button,
+  .color-preset-current,
+  .color-custom-placeholder,
+  .color-kit-action--delete {
+    color: var(--widget-ink);
+  }
+
+  .manager-titlebar,
+  .settings-titlebar,
+  .colors-titlebar {
+    background: var(--widget-accent);
+    border-color: var(--widget-ink);
+  }
+
+  .manager-filters,
+  .manager-type,
+  .color-swatches,
+  .color-swatches > span,
+  .manager-footer,
+  .settings-section,
+  .settings-footer,
+  .colors-footer {
+    border-color: var(--widget-ink);
+  }
+
+  .manager-row,
+  .manager-new-menu button,
+  .settings-row,
+  .settings-kit-row,
+  .color-preset,
+  .color-kit-row,
+  .color-kit-action,
+  .color-parts-list,
+  .color-part {
+    border-color: var(--widget-soft);
+  }
+
+  .manager-footer,
+  .manager-undo-row,
+  .settings-section h2,
+  .settings-footer,
+  .colors-section h2,
+  .colors-footer {
+    color: var(--widget-ink);
+    background: var(--widget-soft);
+  }
+
+  .manager-filter--active,
+  .manager-new-button,
+  .manager-confirm-delete,
+  .manager-type--note,
+  .manager-type--desk,
+  .settings-segment--active,
+  .color-preset--active,
+  .color-kit-row--active,
+  .color-kit-save {
+    color: var(--widget-ink);
+    background: var(--widget-accent);
+  }
+
+  .title-action--icon,
+  .manager-action--icon,
+  .manager-filter,
+  .settings-segment {
+    border-color: transparent;
+  }
+
+  .manager-action--active {
+    box-shadow: inset 0 -3px 0 var(--widget-ink);
+  }
+
+  .color-part-picker:focus-visible {
+    outline-color: var(--widget-ink);
+  }
+
+  .settings-toggle-knob {
+    background: var(--widget-ink);
+  }
+
+  .settings-toggle--on {
+    background: var(--widget-accent);
+  }
+
+  .settings-toggle--on .settings-toggle-knob {
+    background: var(--widget-ink);
+  }
+
+  .settings-kit-row:hover {
+    background: var(--widget-soft);
+  }
+
+  .settings-hint,
+  .manager-empty,
+  .manager-confirm p {
+    color: var(--widget-sub);
+  }
+
+  .manager-confirm-backdrop {
+    background: color-mix(in srgb, var(--widget-paper) 82%, transparent);
+  }
+
+  .range-control-shell {
+    --range-fill: var(--widget-accent);
+    --range-empty: var(--widget-paper);
+  }
+}
+
+.widget-themed {
+  color: var(--widget-ink);
+  background: var(--widget-paper);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed button,
+.widget-themed input,
+.widget-themed textarea {
+  color: var(--widget-ink);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .titlebar {
+  color: var(--widget-ink);
+  background: var(--widget-title);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .titlebar .type-label,
+.widget-themed .titlebar .title-action {
+  color: var(--widget-ink);
+}
+
+.widget-themed .titlebar .title-action--icon {
+  border-color: transparent;
+}
+
+.widget-themed .title-action--active {
+  color: var(--widget-ink);
+  background: transparent;
+  border-color: var(--widget-ink);
+  box-shadow: inset 0 -3px 0 var(--widget-ink);
+}
+
+.widget-themed .note-editor,
+.widget-themed .clip-text,
+.widget-themed .todo-text,
+.widget-themed .clip-input,
+.widget-themed .todo-input {
+  color: var(--widget-ink);
+}
+
+.widget-themed .clip-text--editing,
+.widget-themed .todo-text--editing {
+  outline-color: var(--widget-ink);
+}
+
+.widget-themed .note-editor::placeholder,
+.widget-themed .clip-input::placeholder,
+.widget-themed .todo-input::placeholder {
+  color: var(--widget-sub);
+}
+
+.widget-themed .clip-row,
+.widget-themed .todo-row {
+  border-color: var(--widget-soft);
+}
+
+.widget-themed .clip-row--dragging,
+.widget-themed .todo-row--dragging {
+  color: var(--widget-ink);
+  background: var(--widget-accent);
+  box-shadow: inset 3px 0 0 var(--widget-ink);
+}
+
+.widget-themed .clip-row--drag-over,
+.widget-themed .todo-row--drag-over {
+  box-shadow: inset 0 2px 0 var(--widget-accent);
+}
+
+.widget-themed .clip-index,
+.widget-themed .clip-copy-mark,
+.widget-themed .clip-drag-handle,
+.widget-themed .clip-delete,
+.widget-themed .todo-drag-handle,
+.widget-themed .todo-delete,
+.widget-themed .todo-row--done .todo-text {
+  color: var(--widget-ink);
+}
+
+.widget-themed .clip-copy-mark--copied {
+  color: var(--widget-ink);
+}
+
+.widget-themed .todo-check {
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .todo-check--done,
+.widget-themed .todo-check--completing {
+  color: var(--widget-ink);
+  background: var(--widget-accent);
+}
+
+.widget-themed .todo-completed-heading,
+.widget-themed .todo-input-row,
+.widget-themed .clip-input-row,
+.widget-themed .todo-undo-row,
+.widget-themed .clip-undo-row {
+  color: var(--widget-sub);
+  background: var(--widget-soft);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .todo-completed-heading {
+  color: var(--widget-sub);
+}
+
+.widget-themed .todo-input-symbol,
+.widget-themed .clip-input-symbol {
+  color: var(--widget-ink);
+}
+
+.widget-themed .todo-text-strike {
+  background: var(--widget-ink);
+}
+
+.widget-themed .desk-tabs {
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .desk-tab {
+  color: var(--widget-ink);
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .desk-tab--active {
+  color: var(--widget-ink);
+  background: var(--widget-accent);
+}
+
+.widget-themed .opacity-bar {
+  border-color: var(--widget-ink);
+}
+
+.widget-themed .range-control-shell {
+  --range-fill: var(--widget-accent);
+  --range-empty: var(--widget-paper);
+}
+
+.widget-themed .resize-handle {
+  background: transparent;
+  border: 0;
+}
+
+.widget-themed .overflow-tooltip {
+  color: var(--widget-ink);
+  background: var(--widget-paper);
+  border-color: var(--widget-ink);
+  box-shadow: 5px 5px 0 var(--widget-accent);
+}
+
+.widget-themed .window-context-menu {
+  color: var(--widget-ink);
+  background: var(--widget-paper);
+  border-color: var(--widget-ink);
+  box-shadow: 5px 5px 0 var(--widget-shadow);
+}
+
+.widget-themed .window-context-menu-opacity {
+  border-color: var(--widget-soft);
+}
+
+.widget-themed .window-context-menu-item {
+  color: var(--widget-ink);
+  border-color: var(--widget-soft);
+}
+
+.widget-themed .window-context-menu-item:hover {
+  color: var(--widget-ink);
+  background: var(--widget-accent);
+}
+
+.widget-themed .window-context-menu-item--delete {
+  background: var(--widget-accent);
+}
