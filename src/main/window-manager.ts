@@ -13,6 +13,7 @@ import type { AppDatabaseService } from './database/app-service';
 import type { CreateWidgetInput, UpdateClipItemInput, UpdateSettingsInput, UpdateTodoInput } from './database/repositories';
 import { DEFAULT_COLORS, type ClipItem, type CustomKit, type DeskTab, type Settings, type Todo, type Widget, type WidgetType } from './database/schema';
 import type { ColorPreview, ColorSet } from '../shared/colors';
+import type { PinColorContext } from '../shared/types';
 import { COLOR_PRESETS, normalizeKitColors } from '../shared/colors';
 
 const MIN_WIDTH = 240;
@@ -278,15 +279,7 @@ export interface WindowManager {
   getSettings(): Settings;
   updateSettings(event: IpcMainInvokeEvent, patch: UpdateSettingsInput): Settings | undefined;
   resetSettings(event: IpcMainInvokeEvent): Settings | undefined;
-  getColorContext(event: IpcMainInvokeEvent): {
-    scope: 'default' | 'widget';
-    colors: ColorSet;
-    activePresetId: string | null;
-    activeKitId: string | null;
-    appliedWindowCount: number;
-    followsDefault?: boolean;
-    widgetTitle?: string;
-  } | undefined;
+  getColorContext(event: IpcMainInvokeEvent): PinColorContext | undefined;
   applyDefaultPreset(event: IpcMainInvokeEvent, presetId: string): Settings | undefined;
   applyWidgetPreset(event: IpcMainInvokeEvent, presetId: string): Widget | undefined;
   setWidgetFollowDefault(event: IpcMainInvokeEvent, followsDefault: boolean): Widget | undefined;

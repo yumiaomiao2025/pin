@@ -1,3 +1,4 @@
+import type { PinWidget, PinTodo, PinClipItem, PinSettings, PinColorContext, PinColorSet, PinCustomKit, PinSettingsUpdate } from './shared/types';
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';

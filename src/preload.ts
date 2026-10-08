@@ -1,18 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { PinApi } from './shared/pin-api';
+import type { ColorPreview } from './shared/colors';
+import type { PinSettings, PinSettingsUpdate, PinWidget, PinColorSet } from './shared/types';
 
-contextBridge.exposeInMainWorld('pinApi', {
+const pinApi: PinApi = {
   ping: () => ipcRenderer.invoke('app:ping'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
-  updateSettings: (patch: Record<string, unknown>) => ipcRenderer.invoke('settings:update', patch),
+  updateSettings: (patch: PinSettingsUpdate) => ipcRenderer.invoke('settings:update', patch),
   resetSettings: () => ipcRenderer.invoke('settings:reset'),
   openDefaultColors: () => ipcRenderer.invoke('colors:open-default'),
   openWidgetColors: () => ipcRenderer.invoke('colors:open-widget'),
   getColorContext: () => ipcRenderer.invoke('colors:get-context'),
-  previewColorKit: (colors: Record<string, string | null>) => ipcRenderer.invoke('colors:preview', colors),
+  previewColorKit: (colors: PinColorSet) => ipcRenderer.invoke('colors:preview', colors),
   endColorPreview: () => ipcRenderer.invoke('colors:end-preview'),
   getColorPreview: () => ipcRenderer.invoke('colors:get-preview'),
-  onColorPreviewChanged: (listener: (preview: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, preview: unknown) => listener(preview);
+  onColorPreviewChanged: (listener: (preview: ColorPreview | null) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, preview: ColorPreview | null) => listener(preview);
     ipcRenderer.on('colors:preview-changed', handler);
     return () => ipcRenderer.removeListener('colors:preview-changed', handler);
   },
@@ -20,24 +23,24 @@ contextBridge.exposeInMainWorld('pinApi', {
   setWidgetFollowDefault: (followsDefault: boolean) =>
     ipcRenderer.invoke('colors:set-widget-follow-default', followsDefault),
   listColorKits: () => ipcRenderer.invoke('colors:list-kits'),
-  createColorKit: (name: string, colors: Record<string, string | null>) => ipcRenderer.invoke('colors:create-kit', { name, colors }),
-  updateColorKit: (id: string, name: string, colors: Record<string, string | null>) => ipcRenderer.invoke('colors:update-kit', { id, name, colors }),
+  createColorKit: (name: string, colors: PinColorSet) => ipcRenderer.invoke('colors:create-kit', { name, colors }),
+  updateColorKit: (id: string, name: string, colors: PinColorSet) => ipcRenderer.invoke('colors:update-kit', { id, name, colors }),
   renameColorKit: (id: string, name: string) => ipcRenderer.invoke('colors:rename-kit', { id, name }),
   deleteColorKit: (id: string) => ipcRenderer.invoke('colors:delete-kit', id),
   applyColorKit: (id: string) => ipcRenderer.invoke('colors:apply-kit', id),
   hideColors: () => ipcRenderer.invoke('colors:hide'),
-  onSettingsChanged: (listener: (settings: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, settings: unknown) => listener(settings);
+  onSettingsChanged: (listener: (settings: PinSettings) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, settings: PinSettings) => listener(settings);
     ipcRenderer.on('settings:changed', handler);
     return () => ipcRenderer.removeListener('settings:changed', handler);
   },
-  onWidgetChanged: (listener: (widget: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, widget: unknown) => listener(widget);
+  onWidgetChanged: (listener: (widget: PinWidget) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, widget: PinWidget) => listener(widget);
     ipcRenderer.on('widget:changed', handler);
     return () => ipcRenderer.removeListener('widget:changed', handler);
   },
-  onWidgetDeleted: (listener: (widgetId: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, widgetId: unknown) => listener(widgetId);
+  onWidgetDeleted: (listener: (widgetId: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, widgetId: string) => listener(widgetId);
     ipcRenderer.on('widget:deleted', handler);
     return () => ipcRenderer.removeListener('widget:deleted', handler);
   },
@@ -84,4 +87,6 @@ contextBridge.exposeInMainWorld('pinApi', {
   deleteCurrentWidget: () => ipcRenderer.invoke('window:delete-current'),
   createWidget: (type: 'note' | 'todo' | 'clip' | 'desk') =>
     ipcRenderer.invoke('onboarding:create', type),
-});
+};
+
+contextBridge.exposeInMainWorld('pinApi', pinApi);
