@@ -75,10 +75,18 @@ pnpm make        # 生成可分发安装包
 src/
   main.ts                         Electron 主进程、IPC 和系统托盘
   preload.ts                      安全的 contextBridge API
-  renderer.tsx                    React 窗口、管理器、设置和颜色面板
+  renderer.tsx                    React 挂载入口
+  renderer/App.tsx                窗口角色与页面选择
+  renderer/pages/                管理、设置、配色和引导页面
+  renderer/widgets/              NOTE、TODO、CLIP、DESK 组件窗口
+  renderer/components/           公共控件与窗口交互
+  renderer/hooks/                窗口状态与交互 Hooks
+  renderer/colors/               配色预览与样式映射
   main/window-manager.ts          独立窗口生命周期与系统窗口行为
   main/database/                  schema、migration、repository 和 service
   shared/colors.ts                配色套装与派生颜色
+  shared/types.ts                 跨进程数据结构
+  shared/pin-api.ts               preload API 契约
   styles/global.scss              全局样式和设计 token
 drizzle/                          SQLite migration
 docs/                             技术方案、视觉规范和交互原型

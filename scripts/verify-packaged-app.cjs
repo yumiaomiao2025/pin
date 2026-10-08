@@ -68,9 +68,10 @@ async function connect(url) {
     catch { return undefined; }
   });
   const origin = endpoint.replace(/^ws:/, 'http:').split('/devtools/')[0];
-  const page = async role => waitFor(async () => {
+  const page = async (role, widgetId) => waitFor(async () => {
     const list = await (await fetch(`${origin}/json/list`)).json();
-    return list.find(target => target.type === 'page' && target.url.includes(`role=${role}`));
+    return list.find(target => target.type === 'page' && target.url.includes(`role=${role}`)
+      && (!widgetId || new URL(target.url).searchParams.get('id') === widgetId));
   });
   const evaluate = async (rpc, expression) => {
     const result = await rpc('Runtime.evaluate', { expression: `(async () => { return (${expression}); })()`, awaitPromise: true, returnByValue: true });
@@ -83,7 +84,12 @@ async function connect(url) {
   await evaluate(onboarding, "void window.pinApi.createWidget('note')");
   const note = await connect((await page('widget')).webSocketDebuggerUrl);
   await waitFor(() => evaluate(note, "!!document.querySelector('.titlebar')"));
-  await evaluate(note, "window.pinApi.saveNote('packaged cleanup check')");
+  await evaluate(note, `(() => {
+    const input = document.querySelector('.note-editor');
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'packaged cleanup check');
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+  })()`);
+  await waitFor(() => evaluate(note, "window.pinApi.getWidget().then(widget => widget.noteText === 'packaged cleanup check')"));
   await evaluate(note, 'window.pinApi.openDefaultColors()');
   const colors = await connect((await page('manager')).webSocketDebuggerUrl);
   await waitFor(() => evaluate(colors, "!!document.querySelector('.color-custom-placeholder')"));
@@ -101,6 +107,7 @@ async function connect(url) {
   await waitFor(() => evaluate(note, 'window.pinApi.getColorPreview().then(value => value === null)'));
   assert.equal(await evaluate(note, '(await window.pinApi.getWidget()).noteText'), 'packaged cleanup check');
   assert.ok(fs.existsSync(path.join(profile, 'desk-widgets.sqlite')), 'Database must use the isolated profile');
+  await require('../tests/packaged-workflow.cjs')({ evaluate, waitFor, page, connect, note, colors, profile });
   console.log('PASS: packaged app startup, isolated database migrations, native SQLite, preload, note save and color preview/cancel');
   console.log(`Profile: ${profile}`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => {
