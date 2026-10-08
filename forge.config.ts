@@ -13,7 +13,7 @@ const config: ForgeConfig = {
     asar: true,
     prune: false,
     ignore: [
-      /^\/(?!\.vite(?:\/|$)|drizzle(?:\/|$)|node_modules(?:\/better-sqlite3(?:\/|$)|$)|package\.json$).*/,
+      /^\/(?!\.vite(?:\/|$)|drizzle(?:\/|$)|node_modules(?:\/(?:better-sqlite3|drizzle-orm)(?:\/|$)|$)|package\.json$).*/,
     ],
   },
   rebuildConfig: {

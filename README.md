@@ -45,6 +45,7 @@ pnpm lint        # ESLint 检查
 pnpm test:db     # 数据库与 repository 测试
 pnpm db:check    # Drizzle migration 检查
 pnpm package     # 生成未安装的 Windows 应用目录
+pnpm package:check # 用临时数据目录验证打包应用启动和基础配色流程（Node.js 22+）
 pnpm make        # 生成可分发安装包
 ```
 

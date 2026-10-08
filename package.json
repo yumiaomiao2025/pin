@@ -8,6 +8,7 @@
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
+    "package:check": "node scripts/verify-packaged-app.cjs",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
