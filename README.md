@@ -76,6 +76,7 @@ src/
   main.ts                         Electron 启动、模块组装与退出协调
   preload.ts                      安全的 contextBridge API
   renderer.tsx                    React 挂载入口
+  renderer-env.d.ts               Window.pinApi 类型声明
   renderer/App.tsx                窗口角色与页面选择
   renderer/pages/                管理、设置、配色和引导页面
   renderer/widgets/              NOTE、TODO、CLIP、DESK 组件窗口
@@ -96,7 +97,11 @@ src/
   renderer/styles/_*.scss         基础、控件、窗口、内容、滚动条及主题
   renderer/styles/pages/          管理、设置、配色和引导页面样式
 drizzle/                          SQLite migration
-docs/                             技术方案、视觉规范和交互原型
+docs/
+  technical-plan.md               产品决定、架构与实现记录
+  refactoring-plan.md             清理、模块化和目录整理记录
+  design/                        历史设计规范、原型及 support.js
+  reference/                     图标、滑块与滚动条选型参考
 scripts/                          Electron 测试与打包验证辅助脚本
 tests/                            数据库测试与实际打包应用行为回归
 ```
@@ -105,9 +110,10 @@ tests/                            数据库测试与实际打包应用行为回�
 
 - [技术方案与完成步骤](docs/technical-plan.md)：产品决定、数据库设计、架构约束、实现阶段和验收记录。
 - [项目清理与模块化重构计划](docs/refactoring-plan.md)：分阶段任务、目录方案和验证记录。
-- [视觉与交互规范](docs/design_handoff_desk_widgets/README.md)：设计 token、窗口尺寸、交互规则和原型说明。
-- `docs/design_handoff_desk_widgets/Desk Widgets Prototype.dc.html`：可交互视觉原型，可直接在浏览器打开。
-- `docs/design_handoff_desk_widgets/Desktop Widgets Styles.dc.html`：静态视觉规范画布。
+- [设计交付与历史差异](docs/design/README.md)：保留视觉基线和原型，标明被当前实现覆盖的设计。
+- [交互原型](docs/design/Desk%20Widgets%20Prototype.dc.html)：可直接在浏览器打开，保留历史交互。
+- [视觉规范画布](docs/design/Desktop%20Widgets%20Styles.dc.html)：原始静态设计稿。
+- [选型参考索引](docs/reference/README.md)：图标、滑块和滚动条方案及采用情况。
 
 当前主要功能已经落地；多显示器、DPI 变化和最终发布回归仍在后续验证范围内，具体进度以技术方案文档中的阶段记录为准。
 

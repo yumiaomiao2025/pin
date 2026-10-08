@@ -8,20 +8,21 @@
 
 - 本文的“已确认”内容是当前产品决定。
 - 用户后续明确做出的决定优先于原型和旧文档。
-- docs/design_handoff_desk_widgets/README.md 仍是视觉 token 和未被覆盖的行为基线。
+- [设计交付说明](design/README.md) 仍是未被覆盖的视觉规则和行为参考；已覆盖的部分在文首列明。
 - 设计原型只说明已经演示的部分，不代表没有演示的功能不需要实现。
 - 每个阶段完成后先验收，再进入下一阶段。
 
-当前状态：阶段 0、阶段 1、阶段 2.1、阶段 2.2、阶段 2.3、阶段 3.1、阶段 3.2、阶段 4.1、阶段 4.2、阶段 4.3、阶段 5.1、阶段 5.2、阶段 6.1、阶段 7.1、阶段 7.2、阶段 7.3、阶段 7.4、阶段 7.5、阶段 7.6、阶段 7.7、阶段 7.8、阶段 8.1、阶段 8.2 和阶段 8.3 的代码实现已完成；窗口外壳、NOTE、TODO、独立 CLIP、DESK 标签页、条目撤销、WIDGETS 管理器、SETTINGS 基础行为设置、默认配色套装、窗口独立配色入口、自定义套装 CRUD、五部位颜色编辑、窗口右键菜单、系统托盘菜单、系统让位逻辑已落地，多显示器/DPI 和发布回归仍需后续处理。
+当前状态：NOTE、TODO、独立 CLIP、DESK、共享管理窗口、设置、三色配色套装和实时预览、内容撤销、右键菜单、系统托盘及系统让位代码已落地。主进程、renderer 和样式已按职责拆分，目录整理见 [重构计划](refactoring-plan.md)。多显示器、DPI、安装包和发布专项仍待后续验收。
 
-## 当前调整：移除管理界面主题
+## 当前实现说明
 
 - 删除 SETTINGS 的 LIGHT / DARK / AUTO 入口，以及系统主题监听和暗色样式。
-- WIDGETS、SETTINGS、COLORS 统一使用现有浅色样式；内容窗口仍由配色套装及独立颜色控制。
+- WIDGETS、SETTINGS、COLORS 共用一个管理窗口，随默认配色变化；内容窗口使用默认或独立配色。返回图标位于标题栏最右侧。
 - 新迁移移除 settings.theme 和 settings.auto_theme，保留其他设置、内容窗口和自定义配色。
 - 新迁移移除 settings.scrollbar；列表统一使用悬浮滚动条。
 - SETTINGS 按窗口行为、外观、文本与列表、启动四类组织设置项。
-- 下文的阶段验收记录及设计 HTML 保留历史状态，其中主题相关描述不再适用于当前版本。
+- 当前仅编辑背景色、强调色、文字色；内置套装只读，自定义套装支持命名、编辑和删除。临时预览不入库，内容区保存后应用。
+- 下文第四节的阶段验收记录及设计 HTML 保留历史状态，其中旧主题、五部位改色、旧套装保存方式和早期打包阻碍不代表当前实现。现行结构和开发命令见 [项目 README](../README.md)。
 
 ## 一、已确认的产品决定
 
@@ -30,8 +31,8 @@
 - 应用是 Windows 常驻桌面工具。
 - Win11 无边框窗口显式关闭系统圆角，所有窗口保持方角。
 - 窗口类型有四种：NOTE、TODO、CLIP、DESK。
-- 每个窗口都是独立的 Electron BrowserWindow。
-- 标题栏的 × 只隐藏窗口，不删除数据。
+- 内容窗口是独立的 Electron BrowserWindow；WIDGETS、SETTINGS、COLORS 通过页面参数共用一个管理窗口。
+- 内容窗口标题栏的 × 只隐藏窗口，不删除数据；管理窗口内的返回按钮用于页面回退。
 - 删除整个窗口时先弹出确认框；确认后删除窗口及其内容，并提供 5 秒撤销。
 - 删除单条 TODO 或 CLIP 时不弹确认框，但提供 5 秒撤销。
 - 同一时间只保留最近一次删除的撤销记录。
@@ -72,16 +73,17 @@
 
 ### 配色
 
-- 套装本质上是一组可复用的颜色模板，不是窗口的长期引用。
-- 用户将套装应用到窗口时，复制颜色结果到窗口自己的颜色字段。
-- 修改或删除套装，不影响已经使用过它的窗口。
-- 自定义套装支持保存、命名、重命名和删除。
+- 套装是一组可复用的颜色模板；应用时复制最终颜色，并保留 `color_kit_id` 或 `default_color_kit_id` 以显示生效的套装身份。
+- 内置的经典黄、牛皮纸、蓝图、草绿四个套装只读；自定义套装支持保存、命名、编辑、重命名和删除。
+- 编辑自定义套装会同步使用该套装的默认设置和窗口；删除套装只清除身份，保留已经应用的颜色值。
+- 编辑背景色、强调色和文字色时实时预览，保存后应用；取消、返回、切页、重载或关闭管理窗口时撤销未保存预览。
+- 背景色对应 `paper`；强调色对应 `title` 和 `accent`；文字色对应 `ink` 和 `shadow`；当前三色编辑不生成 `spine`。
 - 窗口单独改色后不再跟随默认颜色。
 - follows_default = true 的窗口在默认颜色改变时重新复制默认颜色。
 - title_color = NULL 表示标题栏使用窗口底色。
 - spine_color = NULL 表示不显示左侧色脊。
 - paper_color、ink_color、accent_color、shadow_color 必须有值。
-- sub、soft、hatch 等派生色只在运行时计算，不存数据库。
+- `sub`、`soft` 等派生色只在运行时计算，不存数据库；旧的可空标题栏和色脊字段保留以兼容已有数据。
 
 ## 二、已确认的技术栈和架构
 
@@ -93,20 +95,35 @@
 - SQLite
 - better-sqlite3
 - Drizzle ORM
-- Zustand（按需使用）
-- SCSS / SCSS Modules
+- React Hooks（界面临时状态）
+- `@dnd-kit`（TODO/CLIP 排序）、Lucide（操作图标）
+- SCSS（按职责组织的样式模块）
 - Node `node:test` + `tsx`（数据库测试，仅开发依赖）
 
 架构规则：
 
 - 每个 BrowserWindow 独立运行，但所有窗口共用一份 React renderer 入口。
-- 通过 role 和 windowId 区分窗口，例如 role=widget&id=...、role=manager、role=settings。
+- 通过 role、id 和 page 区分窗口与页面，例如 `role=widget&id=...`、`role=manager&page=settings`。
 - URL 参数只携带身份信息，不携带业务数据。
 - Electron 主进程是数据库和业务状态的唯一来源。
 - renderer 通过 preload + contextBridge 使用类型化 IPC，不启用 nodeIntegration。
-- renderer 使用 React Hooks 和适量 Zustand 管理界面状态、编辑状态和临时交互状态。
+- renderer 使用 React Hooks 管理界面状态、编辑状态和临时交互状态；未使用的 Zustand 依赖已移除。
 - 不引入 Redux。
 - 主进程独占 SQLite 连接，renderer 不直接打开数据库文件。
+
+### 构建与运行路径
+
+三个顶层入口仍是 `src/main.ts`、`src/preload.ts`、`src/renderer.tsx`，分别由 Forge/Vite 构建。源码子目录调整不改变以下运行路径：
+
+| 资源 | 运行时位置与加载方式 |
+| --- | --- |
+| 主进程 | `package.json` 的 main 指向 `.vite/build/main.js` |
+| preload | 与 main bundle 同目录的 `preload.js`，通过 `__dirname` 定位 |
+| renderer | 开发时加载 Vite 地址；打包时加载 `__dirname/../renderer/main_window/index.html` |
+| SQLite 迁移 | `__dirname/../../drizzle`；这里的 `__dirname` 是 main bundle 所在目录，不是 `src/main/database/` |
+| 用户数据 | Electron `userData` 下的 `desk-widgets.sqlite`，与源码和构建目录独立 |
+
+Forge 保留 `.vite/`、`drizzle/`、原生 SQLite 和外部 Drizzle 依赖。目录变更后分别使用隔离的开发应用、真实打包应用和临时数据库验证，不用用户数据库测试。
 
 ## 三、数据库设计
 
@@ -125,6 +142,7 @@
     default_accent_color
     default_spine_color
     default_shadow_color
+    default_color_kit_id
     font_size
     max_lines
     hover_full
@@ -159,6 +177,7 @@
     accent_color
     spine_color       // nullable
     shadow_color
+    color_kit_id
     follows_default
 
 约束：
@@ -167,7 +186,7 @@
 - title 不设唯一约束，允许窗口同名。
 - opacity 范围为 5～100。
 - 窗口最小尺寸由应用限制为 240×160。
-- 不保存 kit_id，不保存 parts_json，避免窗口依赖套装引用。
+- 保存最终颜色快照和 `color_kit_id`；不保存 `parts_json`，套装身份不是外键级联依赖。
 
 ### todos
 
@@ -211,7 +230,9 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 
 ## 四、分阶段完成步骤
 
-### 阶段 0：冻结规格（当前阶段）
+以下保留各阶段当时的任务及验收记录。后续决定已更新上方现行说明；旧 API、五部位编辑、主题选项及旧文件位置仅用于追溯，不应据此恢复已删除功能。
+
+### 阶段 0：冻结规格
 
 - [x] 确定 Electron + React + TypeScript。
 - [x] 确定使用 pnpm。
@@ -498,7 +519,7 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 - 图标统一使用 `14px` 左右尺寸、`2px` 线宽，并通过 CSS 使用方形线帽和连接，贴合直角窗口主题。
 - PIN 继续保留文字按钮；置顶激活态改为按钮底部黑色横线，避免黑色整块背景压过标题栏。
 - 设置与管理器中的显隐图标按动作显示为 `Eye / EyeOff`；关闭使用 `X`，删除使用 `Trash2`，颜色套装编辑操作使用 `Pencil` 和 `Trash2`。
-- 新增图标预览参考页 `docs/lucide-icon-options-preview.html`；正式界面的操作按钮不再依赖 Unicode 图标字符，PIN 继续保留文字，待办和剪贴板输入行保留约定的 `[+]` 文本前缀。
+- 新增图标预览参考页（现归档至 [Lucide 图标方案](reference/lucide-icon-options-preview.html)）；正式界面的操作按钮不再依赖 Unicode 图标字符，PIN 继续保留文字，待办和剪贴板输入行保留约定的 `[+]` 文本前缀。
 - `pnpm typecheck`、`pnpm lint` 和 `git diff --check` 通过。
 
 ### 阶段 8：Windows 系统能力和发布
@@ -544,4 +565,6 @@ widget_id 关联 widgets.id。同一窗口内的完全相同文本不重复。�
 
 ## 五、当前下一步
 
-阶段 8.3 已完成代码实现。下一步是人工验证显示桌面、全屏、多显示器和 DPI 场景，再进入开机自启安装包、升级、崩溃恢复和数据库迁移回归。
+三个阶段的清理与结构重构已完成，具体批次及验证见 [重构计划](refactoring-plan.md)。现有数据库升级、开发启动与未安装的打包应用回归已通过。
+
+后续仍需人工验证显示桌面、全屏、多显示器和 DPI 场景，并完成开机自启安装包、安装升级和崩溃恢复专项；结构重构不替代这些发布验收。
