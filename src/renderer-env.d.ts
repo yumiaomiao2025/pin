@@ -114,8 +114,6 @@ interface Window {
     onColorPreviewChanged: (listener: (preview: import('./shared/colors').ColorPreview | null) => void) => () => void;
     applyColorPreset: (presetId: string) => Promise<PinSettings | PinWidget | null>;
     setWidgetFollowDefault: (followsDefault: boolean) => Promise<PinWidget | null>;
-    updateColorParts: (patch: Partial<PinColorSet>) => Promise<PinSettings | PinWidget | null>;
-    applyPrimaryColor: (color: string) => Promise<PinSettings | PinWidget | null>;
     listColorKits: () => Promise<PinCustomKit[] | null>;
     createColorKit: (name: string, colors: PinColorSet) => Promise<PinCustomKit | null>;
     updateColorKit: (id: string, name: string, colors: PinColorSet) => Promise<PinCustomKit | null>;

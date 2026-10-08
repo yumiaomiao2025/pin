@@ -19,9 +19,6 @@ contextBridge.exposeInMainWorld('pinApi', {
   applyColorPreset: (presetId: string) => ipcRenderer.invoke('colors:apply-preset', presetId),
   setWidgetFollowDefault: (followsDefault: boolean) =>
     ipcRenderer.invoke('colors:set-widget-follow-default', followsDefault),
-  updateColorParts: (patch: Record<string, string | null>) =>
-    ipcRenderer.invoke('colors:update-parts', patch),
-  applyPrimaryColor: (color: string) => ipcRenderer.invoke('colors:apply-primary', color),
   listColorKits: () => ipcRenderer.invoke('colors:list-kits'),
   createColorKit: (name: string, colors: Record<string, string | null>) => ipcRenderer.invoke('colors:create-kit', { name, colors }),
   updateColorKit: (id: string, name: string, colors: Record<string, string | null>) => ipcRenderer.invoke('colors:update-kit', { id, name, colors }),

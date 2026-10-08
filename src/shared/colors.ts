@@ -92,11 +92,6 @@ export function mixColor(left: string, right: string, amount: number) {
     .join('')}`.toUpperCase();
 }
 
-export function luminance(hex: string) {
-  const [red, green, blue] = parseHex(hex);
-  return (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
-}
-
 export function deriveColorVars(colors: ColorSet) {
   const title = colors.title ?? colors.paper;
   const ink = colors.ink;

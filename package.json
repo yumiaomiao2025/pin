@@ -39,7 +39,6 @@
     "electron": "44.1.0",
     "eslint": "^8.0.1",
     "eslint-plugin-import": "^2.25.0",
-    "lodash": "^4.17.21",
     "sass": "^1.103.1",
     "tsx": "4.23.13",
     "typescript": "~5.9.3",
@@ -54,7 +53,6 @@
     "electron-squirrel-startup": "^1.0.1",
     "lucide-react": "^1.42.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "zustand": "^5.0.15"
+    "react-dom": "^19.2.8"
   }
 }

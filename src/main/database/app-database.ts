@@ -1,8 +1,6 @@
 import { app } from 'electron';
 import path from 'node:path';
 
-import { eq } from 'drizzle-orm';
-
 import { openDatabase, type AppDatabase, type DatabaseHandle } from './database';
 import { settings } from './schema';
 
@@ -30,18 +28,6 @@ export function initializeAppDatabase(): AppDatabase {
     .run();
 
   return handle.db;
-}
-
-export function getAppDatabase(): AppDatabase {
-  if (!handle) {
-    throw new Error('Database has not been initialized');
-  }
-
-  return handle.db;
-}
-
-export function getSettings() {
-  return getAppDatabase().select().from(settings).where(eq(settings.id, SETTINGS_ID)).get();
 }
 
 export function closeAppDatabase() {

@@ -301,37 +301,6 @@ ipcMain.handle('colors:set-widget-follow-default', (event, followsDefault: unkno
   }
   return getManager().setWidgetFollowDefault(event, followsDefault) ?? null;
 });
-ipcMain.handle('colors:update-parts', (event, input: unknown) => {
-  if (!input || typeof input !== 'object') {
-    throw new TypeError('color parts update must be an object');
-  }
-  const values = input as Record<string, unknown>;
-  const patch: Partial<ColorSet> = {};
-  (['paper', 'ink', 'title', 'accent', 'spine', 'shadow'] as const).forEach((key) => {
-    if (!(key in values)) {
-      return;
-    }
-    const value = values[key];
-    if (value === null && (key === 'title' || key === 'spine')) {
-      patch[key] = null;
-      return;
-    }
-    if (typeof value !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(value)) {
-      throw new TypeError(`${key} must be a six-digit hex color`);
-    }
-    patch[key] = value;
-  });
-  if (Object.keys(patch).length === 0) {
-    throw new TypeError('color parts update is empty');
-  }
-  return getManager().updateColorParts(event, patch) ?? null;
-});
-ipcMain.handle('colors:apply-primary', (event, color: unknown) => {
-  if (typeof color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(color)) {
-    throw new TypeError('primary color must be a six-digit hex color');
-  }
-  return getManager().applyPrimaryColor(event, color) ?? null;
-});
 ipcMain.handle('colors:list-kits', (event) => getManager().listColorKits(event) ?? null);
 function parseColorKitInput(input: unknown) {
   if (!input || typeof input !== 'object' || !('name' in input) || typeof input.name !== 'string' || !input.name.trim()) {

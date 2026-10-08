@@ -21,7 +21,7 @@ Pin 是一个面向 Windows 的常驻桌面组件工具。它把便签、待办�
 - Electron Forge + Vite
 - React 19 + TypeScript
 - SQLite + `better-sqlite3` + Drizzle ORM
-- Zustand（renderer 临时状态）
+- React Hooks（renderer 临时状态）
 - `@dnd-kit`（TODO/CLIP 拖拽排序）
 - SCSS / SCSS Modules
 - Node `node:test` + `tsx`（数据库测试）
@@ -78,7 +78,6 @@ src/
   main/window-manager.ts          独立窗口生命周期与系统窗口行为
   main/database/                  schema、migration、repository 和 service
   shared/colors.ts                配色套装与派生颜色
-  store/ui-store.ts               renderer 临时 UI 状态
   styles/global.scss              全局样式和设计 token
 drizzle/                          SQLite migration
 docs/                             技术方案、视觉规范和交互原型
@@ -88,6 +87,7 @@ tests/                            数据库测试
 ## 文档
 
 - [技术方案与完成步骤](docs/technical-plan.md)：产品决定、数据库设计、架构约束、实现阶段和验收记录。
+- [项目清理与模块化重构计划](docs/refactoring-plan.md)：分阶段任务、目录方案和验证记录。
 - [视觉与交互规范](docs/design_handoff_desk_widgets/README.md)：设计 token、窗口尺寸、交互规则和原型说明。
 - `docs/design_handoff_desk_widgets/Desk Widgets Prototype.dc.html`：可交互视觉原型，可直接在浏览器打开。
 - `docs/design_handoff_desk_widgets/Desktop Widgets Styles.dc.html`：静态视觉规范画布。
