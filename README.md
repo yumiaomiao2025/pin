@@ -51,6 +51,30 @@ pnpm make        # 生成可分发安装包
 
 `pnpm package` 的产物位于 `out/Pin-win32-x64`。首次启动且没有组件时会显示引导窗口，可选择创建 NOTE、TODO、CLIP 或 DESK。
 
+## Windows 发布构建
+
+在 Windows 上执行以下命令，目标架构为 x64：
+
+```bash
+pnpm release:portable   # 生成免安装 ZIP
+pnpm release:installer  # 生成安装包 EXE
+pnpm release:win        # 一次构建，同时生成 ZIP 和安装包
+```
+
+成品统一放在根目录的 `release/<版本号>/`，版本号取自 `package.json`。例如当前版本：
+
+```text
+release/1.0.0/
+  Pin-1.0.0-win-x64-portable.zip
+  Pin-1.0.0-win-x64-setup.exe
+  pin-1.0.0-full.nupkg
+  RELEASES
+```
+
+向用户提供 ZIP 或 `setup.exe` 即可：ZIP 需要完整解压后双击其中的 `Pin.exe`；EXE 双击安装。免安装版的数据仍保存在 `%APPDATA%\Pin`，不会随解压目录迁移。`.nupkg` 和 `RELEASES` 是 Squirrel 的更新产物，保留原始文件名供后续更新分发使用，当前命令不会上传发布或配置自动更新。
+
+`out/` 保留 Forge 的原始构建产物，`release/` 用于整理分发文件；两个目录都已被 Git 忽略。重复构建相同版本会覆盖对应文件，更改 `package.json` 的版本号后会生成新的版本目录。
+
 ## 数据存储
 
 生产环境数据库位于 Electron `userData` 目录：
@@ -102,7 +126,7 @@ docs/
   refactoring-plan.md             清理、模块化和目录整理记录
   design/                        历史设计规范、原型及 support.js
   reference/                     图标、滑块与滚动条选型参考
-scripts/                          Electron 测试与打包验证辅助脚本
+scripts/                          Electron 测试、打包验证与发布构建脚本
 tests/                            数据库测试与实际打包应用行为回归
 ```
 
