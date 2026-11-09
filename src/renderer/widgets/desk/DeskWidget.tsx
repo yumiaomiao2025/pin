@@ -5,7 +5,7 @@ import { useContextMenu, OpacityContextMenu } from '../../components/OpacityCont
 import { useWindowDisplaySettings } from '../../hooks/use-window-display-settings';
 import { useOpacityControl } from '../../hooks/use-opacity-control';
 import { useWidgetColorStyle } from '../../colors/widget-colors';
-import { TitleBar, OpacityBar, ResizeHandle } from '../../components/WidgetChrome';
+import { TitleBar, OpacityBar } from '../../components/WidgetChrome';
 import { NoteWidget } from '../note/NoteWidget';
 import { TodoWidget } from '../todo/TodoWidget';
 import { ClipWidget } from '../clip/ClipWidget';
@@ -92,7 +92,6 @@ export function DeskWidget({ initialWidget }: { initialWidget: PinWidget }) {
             {widget.activeTab === 'clip' && <ClipWidget embedded initialWidget={widget} />}
           </section>
           {viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}
-          <ResizeHandle />
         </>
       )}
       <OpacityContextMenu menu={contextMenu} onChange={setOpacity} onPin={togglePin} showOpacity={!viewSettings.opacityBar} widget={widget} />

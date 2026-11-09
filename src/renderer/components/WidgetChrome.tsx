@@ -3,7 +3,7 @@ import { type PinWidget } from '../../shared/types';
 import { useWindowDrag } from '../hooks/use-window-drag';
 import { PanelTopOpen, PanelTopClose, X } from 'lucide-react';
 import { RangeControl } from './RangeControl';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 export function TitleBar({ widget, onHide, onPin, onCollapse }: {
   widget: PinWidget;
@@ -12,49 +12,88 @@ export function TitleBar({ widget, onHide, onPin, onCollapse }: {
   onCollapse: () => void;
 }) {
   const drag = useWindowDrag();
+  const title = widget.title || widget.type.toUpperCase();
+  const [draft, setDraft] = useState<string | null>(null);
+  const editing = useRef(false);
+
+  const startRename = () => {
+    if (editing.current) return;
+    editing.current = true;
+    setDraft(title);
+  };
+
+  const finishRename = (save: boolean, value: string) => {
+    if (!editing.current) return;
+    editing.current = false;
+    setDraft(null);
+    const next = value.trim();
+    if (save && next && next !== title) void window.pinApi.renameCurrentWidget(next);
+  };
 
   return (
-    <header
-      className="titlebar"
-      {...drag}
-      onDoubleClick={onCollapse}
-    >
-      <span className="type-label">{widget.type.toUpperCase()}</span>
-      <button
-        aria-pressed={widget.pin}
-        className={widget.pin ? 'title-action title-action--pin title-action--active' : 'title-action title-action--pin'}
-        onClick={onPin}
-        onDoubleClick={(event) => event.stopPropagation()}
-        title={widget.pin ? '取消置顶' : '置顶'}
-        type="button"
+    <>
+      <header
+        className={widget.collapsed ? 'titlebar titlebar--collapsed' : 'titlebar'}
+        {...drag}
+        onDoubleClick={startRename}
       >
-        PIN
-      </button>
-      <button
-        aria-label={widget.collapsed ? '展开' : '折叠'}
-        className="title-action title-action--icon"
-        onClick={onCollapse}
-        onDoubleClick={(event) => event.stopPropagation()}
-        title={widget.collapsed ? '展开' : '折叠'}
-        type="button"
-      >
-        {widget.collapsed ? (
-          <PanelTopOpen aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        {draft === null ? (
+          <span className="type-label" title={`${title} · 双击重命名`}>{title}</span>
         ) : (
-          <PanelTopClose aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+          <input
+            aria-label="窗口名称"
+            autoFocus
+            className="type-label title-input"
+            onBlur={(event) => finishRename(true, event.currentTarget.value)}
+            onChange={(event) => setDraft(event.target.value)}
+            onFocus={(event) => event.currentTarget.select()}
+            onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) return;
+              if (event.key === 'Enter' || event.key === 'Escape') {
+                event.preventDefault();
+                finishRename(event.key === 'Enter', event.currentTarget.value);
+              }
+            }}
+            value={draft}
+          />
         )}
-      </button>
-      <button
-        aria-label="隐藏窗口"
-        className="title-action title-action--icon"
-        onClick={onHide}
-        onDoubleClick={(event) => event.stopPropagation()}
-        title="隐藏窗口"
-        type="button"
-      >
-        <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
-      </button>
-    </header>
+        <button
+          aria-pressed={widget.pin}
+          className={widget.pin ? 'title-action title-action--pin title-action--active' : 'title-action title-action--pin'}
+          onClick={onPin}
+          onDoubleClick={(event) => event.stopPropagation()}
+          title={widget.pin ? '取消置顶' : '置顶'}
+          type="button"
+        >
+          PIN
+        </button>
+        <button
+          aria-label={widget.collapsed ? '展开' : '折叠'}
+          className="title-action title-action--icon"
+          onClick={onCollapse}
+          onDoubleClick={(event) => event.stopPropagation()}
+          title={widget.collapsed ? '展开' : '折叠'}
+          type="button"
+        >
+          {widget.collapsed ? (
+            <PanelTopOpen aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+          ) : (
+            <PanelTopClose aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+          )}
+        </button>
+        <button
+          aria-label="隐藏窗口"
+          className="title-action title-action--icon"
+          onClick={onHide}
+          onDoubleClick={(event) => event.stopPropagation()}
+          title="隐藏窗口"
+          type="button"
+        >
+          <X aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
+        </button>
+      </header>
+      <ResizeHandle horizontalOnly={widget.collapsed} />
+    </>
   );
 }
 
@@ -75,7 +114,7 @@ export function OpacityBar({ widget, onChange }: { widget: PinWidget; onChange: 
   );
 }
 
-export function ResizeHandle() {
+function ResizeHandle({ horizontalOnly }: { horizontalOnly: boolean }) {
   const resizeState = useRef<{
     pointerId: number;
     startScreenX: number;
@@ -107,7 +146,7 @@ export function ResizeHandle() {
     }
     void window.pinApi.setSize(
       state.startWidth + event.screenX - state.startScreenX,
-      state.startHeight + event.screenY - state.startScreenY,
+      horizontalOnly ? state.startHeight : state.startHeight + event.screenY - state.startScreenY,
     );
   };
 
@@ -124,8 +163,8 @@ export function ResizeHandle() {
 
   return (
     <div
-      aria-label="调整窗口大小"
-      className="resize-handle"
+      aria-label={horizontalOnly ? '调整窗口宽度' : '调整窗口大小'}
+      className={horizontalOnly ? 'resize-handle resize-handle--horizontal' : 'resize-handle'}
       onPointerCancel={stopResizing}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

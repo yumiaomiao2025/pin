@@ -1,61 +1,77 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { createReadStream, existsSync } = require('node:fs');
+const { createHash } = require('node:crypto');
 
 const projectRoot = path.resolve(__dirname, '..');
 const { version, productName } = require('../package.json');
-const targets = { portable: 'zip', installer: 'squirrel', all: 'zip,squirrel' };
+const modes = new Set(['portable', 'installer', 'all']);
+
+function findCompiler() {
+  if (process.env.INNO_SETUP_PATH) return process.env.INNO_SETUP_PATH;
+  for (const root of [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], path.join(process.env.LOCALAPPDATA || '', 'Programs')]) {
+    if (!root) continue;
+    for (const version of [7, 6]) {
+      const candidate = path.join(root, `Inno Setup ${version}`, 'ISCC.exe');
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return 'ISCC.exe';
+}
+
+function run(file, args, options = {}) {
+  const result = spawnSync(file, args, { cwd: projectRoot, stdio: 'inherit', ...options });
+  if (result.error?.code === 'ENOENT' && path.basename(file).toLowerCase() === 'iscc.exe') {
+    throw new Error('Install Inno Setup or set INNO_SETUP_PATH to the full path to ISCC.exe.');
+  }
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`${path.basename(file)} failed (${result.signal || result.status}).`);
+  return result.stdout;
+}
 
 async function main() {
   const mode = process.argv[2];
-  if (!Object.hasOwn(targets, mode)) {
+  if (!modes.has(mode)) {
     throw new Error('Usage: node scripts/release-win.cjs <portable|installer|all>');
   }
   if (process.platform !== 'win32') {
     throw new Error('Run Windows release builds on Windows.');
   }
 
-  const result = spawnSync(process.execPath, [
-    require.resolve('@electron-forge/cli/dist/electron-forge.js'),
-    'make', '--platform', 'win32', '--arch', 'x64', '--targets', targets[mode],
-  ], { cwd: projectRoot, stdio: 'inherit' });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(`Electron Forge failed (${result.signal || result.status}).`);
-  }
-
+  const compiler = mode === 'portable' ? null : findCompiler();
   const outputDir = path.join(projectRoot, 'release', version);
-  const artifacts = [];
-  if (mode !== 'installer') {
-    artifacts.push({
-      source: path.join(projectRoot, 'out/make/zip/win32/x64', `${productName}-win32-x64-${version}.zip`),
-      name: `${productName}-${version}-win-x64-portable.zip`,
-    });
-  }
-  if (mode !== 'portable') {
-    const installerDir = path.join(projectRoot, 'out/make/squirrel.windows/x64');
-    const files = await fs.readdir(installerDir);
-    const setup = files.find((name) => name.endsWith('Setup.exe'));
-    const packages = files.filter((name) => name.endsWith('.nupkg'));
-    if (!setup || packages.length === 0 || !files.includes('RELEASES')) {
-      throw new Error('Squirrel installer artifacts are incomplete.');
-    }
-    artifacts.push({
-      source: path.join(installerDir, setup),
-      name: `${productName}-${version}-win-x64-setup.exe`,
-    });
-    // RELEASES refers to the original NuGet filenames.
-    for (const name of [...packages, 'RELEASES']) {
-      artifacts.push({ source: path.join(installerDir, name), name });
-    }
-  }
-
   await fs.mkdir(outputDir, { recursive: true });
-  for (const { source, name } of artifacts) {
-    const destination = path.join(outputDir, name);
-    await fs.copyFile(source, destination);
+  run(process.execPath, [
+    require.resolve('@electron-forge/cli/dist/electron-forge.js'),
+    mode === 'installer' ? 'package' : 'make', '--platform', 'win32', '--arch', 'x64',
+    ...(mode === 'installer' ? [] : ['--targets', 'zip']),
+  ]);
+
+  if (mode !== 'installer') {
+    const destination = path.join(outputDir, `${productName}-${version}-win-x64-portable.zip`);
+    await fs.copyFile(path.join(projectRoot, 'out/make/zip/win32/x64', `${productName}-win32-x64-${version}.zip`), destination);
     console.log(`Release artifact: ${destination}`);
   }
+  if (compiler) {
+    run(compiler, [`/DPinVersion=${version}`, `/O${outputDir}`, path.join(projectRoot, 'installer/windows.iss')]);
+    console.log(`Release artifact: ${path.join(outputDir, `${productName}-${version}-win-x64-setup.exe`)}`);
+  }
+  // Include only the two user-facing artifacts. Partial builds keep the other
+  // existing file in the same version's checksum list if it has been built.
+  const checksums = [];
+  for (const type of ['portable.zip', 'setup.exe']) {
+    const name = `${productName}-${version}-win-x64-${type}`;
+    const hash = createHash('sha256');
+    try {
+      for await (const chunk of createReadStream(path.join(outputDir, name))) hash.update(chunk);
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw error;
+    }
+    checksums.push(`${hash.digest('hex')}  ${name}`);
+  }
+  await fs.writeFile(path.join(outputDir, 'SHA256SUMS.txt'), `${checksums.join('\n')}\n`);
 }
 
 main().catch((error) => {

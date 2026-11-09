@@ -1,7 +1,13 @@
 allowBuilds:
   '@parcel/watcher': true
-  better-sqlite3: true
+  # v13 ships the Windows x64 Node-API binary. Avoid pnpm's implicit node-gyp build.
+  better-sqlite3: false
   electron: true
-  electron-winstaller: true
+  electron-winstaller: set this to true or false
   esbuild: true
+  # The locked Koffi release ships prebuilt binaries, including Windows x64.
+  koffi: false
 nodeLinker: hoisted
+# Install explicitly with --frozen-lockfile before checks/builds. pnpm 11.9
+# can otherwise trigger a second install after changing only the app version.
+verifyDepsBeforeRun: false

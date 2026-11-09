@@ -60,7 +60,7 @@ export function useWindowDrag() {
     onPointerDown: (event: React.PointerEvent<HTMLElement>) => {
       if (
         event.button !== 0 ||
-        (event.target instanceof Element && event.target.closest('button'))
+        (event.target instanceof Element && event.target.closest('button, input'))
       ) {
         return;
       }

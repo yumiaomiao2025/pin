@@ -1,5 +1,4 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
@@ -7,20 +6,25 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import AutoUnpackNativesPlugin from '@electron-forge/plugin-auto-unpack-natives';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import path from 'node:path';
+
+const pinIcon = path.join(__dirname, 'assets', 'pin.ico');
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    icon: pinIcon,
+    // Windows loads the multi-size ICO from a real file for its tray/windows.
+    extraResource: [pinIcon],
     prune: false,
     ignore: [
-      /^\/(?!\.vite(?:\/|$)|drizzle(?:\/|$)|node_modules(?:\/(?:better-sqlite3|drizzle-orm)(?:\/|$)|$)|package\.json$).*/,
+      /^\/(?!\.vite(?:\/|$)|drizzle(?:\/|$)|node_modules(?:\/(?:better-sqlite3|drizzle-orm|koffi|@koromix)(?:\/|$)|$)|package\.json$).*/,
     ],
   },
   rebuildConfig: {
-    ignoreModules: ['better-sqlite3'],
+    ignoreModules: ['better-sqlite3', 'koffi'],
   },
   makers: [
-    new MakerSquirrel({}),
     new MakerZIP({}, ['darwin', 'win32']),
     new MakerRpm({}),
     new MakerDeb({}),

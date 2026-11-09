@@ -26,6 +26,7 @@ export interface PinApi {
     onWidgetChanged: (listener: (widget: PinWidget) => void) => () => void;
     onWidgetDeleted: (listener: (widgetId: string) => void) => () => void;
     getWidget: () => Promise<PinWidget | null>;
+    renameCurrentWidget: (title: string) => Promise<PinWidget | null>;
     openManager: () => Promise<boolean>;
     hideManager: () => Promise<boolean>;
     openSettings: () => Promise<boolean>;

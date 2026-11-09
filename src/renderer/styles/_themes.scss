@@ -9,7 +9,6 @@
     color: var(--widget-ink);
     background: var(--widget-paper);
     border-color: var(--widget-ink);
-    box-shadow: var(--window-shadow-offset) var(--window-shadow-offset) 0 var(--widget-shadow);
   }
 
   button,
@@ -282,14 +281,12 @@
   color: var(--widget-ink);
   background: var(--widget-paper);
   border-color: var(--widget-ink);
-  box-shadow: 5px 5px 0 var(--widget-accent);
 }
 
 .widget-themed .window-context-menu {
   color: var(--widget-ink);
   background: var(--widget-paper);
   border-color: var(--widget-ink);
-  box-shadow: 5px 5px 0 var(--widget-shadow);
 }
 
 .widget-themed .window-context-menu-opacity {

@@ -12,7 +12,7 @@ import { useWidgetUpdates } from '../../hooks/use-widget-updates';
 import { useContextMenu, OpacityContextMenu } from '../../components/OpacityContextMenu';
 import { useWindowDisplaySettings } from '../../hooks/use-window-display-settings';
 import { useOpacityControl } from '../../hooks/use-opacity-control';
-import { TitleBar, OpacityBar, ResizeHandle } from '../../components/WidgetChrome';
+import { TitleBar, OpacityBar } from '../../components/WidgetChrome';
 
 const TODO_DRAG_MODIFIERS: Modifier[] = [
   ({ transform }) => ({ ...transform, x: 0 }),
@@ -533,7 +533,6 @@ export function TodoWidget({ initialWidget, embedded = false }: { initialWidget:
             />
           </footer>
           {!embedded && viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}
-          {!embedded && <ResizeHandle />}
         </>
       )}
       {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} onPin={togglePin} showOpacity={!viewSettings.opacityBar} widget={widget} />}

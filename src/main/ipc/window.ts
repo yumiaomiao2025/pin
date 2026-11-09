@@ -3,6 +3,10 @@ import type { WindowManager } from '../window-manager';
 
 export function registerWindowHandlers(getManager: () => WindowManager) {
   ipcMain.handle('widget:get', (event) => getManager().getWidgetForEvent(event) ?? null);
+  ipcMain.handle('widget:rename', (event, title: unknown) => {
+    if (typeof title !== 'string') throw new TypeError('title must be a string');
+    return getManager().renameCurrentWidget(event, title) ?? null;
+  });
   ipcMain.handle('window:hide', (event) => getManager().hide(event));
   ipcMain.handle('window:set-size', (event, size: unknown) => {
     if (

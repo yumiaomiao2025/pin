@@ -1,15 +1,25 @@
 .app {
+  // Keep the last two edges inside the drawable area at fractional Windows DPI.
+  --frame-edge-clearance: 2px;
   position: relative;
   display: flex;
-  width: calc(100% - var(--window-shadow-offset));
-  height: calc(100% - var(--window-shadow-offset));
-  min-width: calc(240px - var(--window-shadow-offset));
-  min-height: calc(160px - var(--window-shadow-offset));
+  width: calc(100% - var(--frame-edge-clearance));
+  height: calc(100% - var(--frame-edge-clearance));
   flex-direction: column;
   overflow: hidden;
   border: 1.5px solid #111111;
   background: #ffffff;
-  box-shadow: var(--window-shadow-offset) var(--window-shadow-offset) 0 #111111;
+}
+
+body:has(.titlebar--collapsed) {
+  min-width: 0;
+  min-height: 0;
+}
+
+.app:has(> .titlebar--collapsed) {
+  height: auto;
+  // The title bar supplies the bottom edge inside the native window.
+  border-bottom: 0;
 }
 
 .desk-panel,
@@ -86,6 +96,22 @@
   touch-action: none;
 }
 
+.resize-handle--horizontal {
+  top: 0;
+  width: 6px;
+  height: auto;
+  cursor: ew-resize;
+}
+
+.resize-handle--horizontal:hover::after {
+  position: absolute;
+  top: 25%;
+  right: 2px;
+  bottom: 25%;
+  border-right: 1px solid currentColor;
+  content: '';
+}
+
 .type-label {
   min-width: 0;
   flex: 1;
@@ -99,9 +125,20 @@
   white-space: nowrap;
 }
 
+.title-input {
+  padding: 2px;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  background: var(--widget-paper);
+  outline: none;
+  letter-spacing: normal;
+  text-overflow: clip;
+}
+
 .title-action {
   min-width: 22px;
   height: 20px;
+  flex-shrink: 0;
   padding: 1px 5px;
   border: 1px solid #111111;
   font-size: 0.769231rem;

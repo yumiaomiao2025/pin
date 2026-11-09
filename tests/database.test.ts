@@ -65,7 +65,7 @@ test('persists opacity from 5 to 100 and rejects values outside the range', () =
   }
 });
 
-for (const lastMigration of [1, 2, 3, 4, 5, 6]) {
+for (const lastMigration of [1, 2, 3, 4, 5, 6, 7]) {
   test('upgrades settings from migration ' + lastMigration + ' without losing content or colors', () => {
     const oldMigrations = path.join(temporaryDirectory, 'old-migrations');
     fs.mkdirSync(path.join(oldMigrations, 'meta'), { recursive: true });
@@ -102,7 +102,7 @@ for (const lastMigration of [1, 2, 3, 4, 5, 6]) {
     handle = openDatabase(databasePath, migrationsFolder);
     const upgraded = createRepositories(handle.db);
     assert.deepEqual(handle.sqlite.prepare('SELECT * FROM widgets').get(), {
-      ...widget, opacity: Math.max(5, previousOpacity), color_kit_id: null,
+      ...widget, opacity: Math.max(5, previousOpacity), color_kit_id: null, collapsed_width: null,
     });
     assert.deepEqual(upgraded.todos.getById(todo.id), todo);
     assert.deepEqual(upgraded.clipItems.getById(clip.id), clip);
@@ -120,6 +120,7 @@ for (const lastMigration of [1, 2, 3, 4, 5, 6]) {
     assert.equal(upgraded.settings.get()?.defaultOpacity, Math.max(5, previousOpacity));
     assert.equal(upgraded.settings.update({ defaultOpacity: 5 }).defaultOpacity, 5);
     assert.equal(upgraded.widgets.update(widget.id, { opacity: 5 })?.opacity, 5);
+    assert.equal(upgraded.widgets.update(widget.id, { collapsedWidth: 120 })?.collapsedWidth, 120);
     assert.equal(handle.sqlite.pragma('foreign_keys', { simple: true }), 1);
     assert.deepEqual(handle.sqlite.pragma('foreign_key_check'), []);
     handle.close();
@@ -128,6 +129,8 @@ for (const lastMigration of [1, 2, 3, 4, 5, 6]) {
     const reopened = createRepositories(handle.db);
     assert.equal(reopened.settings.get()?.defaultOpacity, 5);
     assert.equal(reopened.widgets.getById(widget.id)?.opacity, 5);
+    assert.equal(reopened.widgets.getById(widget.id)?.collapsedWidth, 120);
+    assert.equal(reopened.widgets.getById(widget.id)?.width, widget.width);
     reopened.widgets.delete(widget.id);
     assert.equal(reopened.todos.getById(todo.id), undefined);
     assert.equal(reopened.clipItems.getById(clip.id), undefined);

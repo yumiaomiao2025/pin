@@ -5,7 +5,7 @@ import { useContextMenu, OpacityContextMenu } from '../../components/OpacityCont
 import { useWindowDisplaySettings } from '../../hooks/use-window-display-settings';
 import { useOpacityControl } from '../../hooks/use-opacity-control';
 import { useWidgetColorStyle } from '../../colors/widget-colors';
-import { TitleBar, OpacityBar, ResizeHandle } from '../../components/WidgetChrome';
+import { TitleBar, OpacityBar } from '../../components/WidgetChrome';
 import { OverlayTextarea } from '../../components/OverlayScrollArea';
 
 export function NoteWidget({ initialWidget, embedded = false }: { initialWidget: PinWidget; embedded?: boolean }) {
@@ -89,7 +89,6 @@ export function NoteWidget({ initialWidget, embedded = false }: { initialWidget:
             value={draft}
           />
           {!embedded && viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}
-          {!embedded && <ResizeHandle />}
         </>
       )}
       {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} onPin={togglePin} showOpacity={!viewSettings.opacityBar} widget={widget} />}

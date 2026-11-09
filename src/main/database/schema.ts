@@ -68,6 +68,7 @@ export const widgets = sqliteTable(
     y: integer('y').notNull().default(0),
     width: integer('width').notNull().default(320),
     height: integer('height').notNull().default(320),
+    collapsedWidth: integer('collapsed_width'),
     displayId: integer('display_id'),
     zIndex: integer('z_index').notNull().default(0),
     pin: integer('pin', { mode: 'boolean' }).notNull().default(false),

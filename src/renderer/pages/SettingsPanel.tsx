@@ -6,6 +6,7 @@ import { DEFAULT_SETTINGS } from '../default-settings';
 import { COLOR_PRESETS, colorSetEquals } from '../../shared/colors';
 import { OverlayScrollArea } from '../components/OverlayScrollArea';
 import { ColorSwatches } from '../components/ColorSwatches';
+import { version } from '../../../package.json';
 import { RangeControl } from '../components/RangeControl';
 
 function SettingsTitleBar({ onBack }: { onBack: () => void }) {
@@ -232,7 +233,7 @@ export function SettingsPanel() {
         </SettingsSection>
       </OverlayScrollArea>
       <footer className="settings-footer">
-        <span>v0.3</span>
+        <span>v{version}</span>
         <button disabled={busy} onClick={() => void resetSettings()} type="button">RESET</button>
       </footer>
     </main>

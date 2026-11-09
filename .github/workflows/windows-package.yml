@@ -1,0 +1,38 @@
+name: Windows package
+
+# Generate reviewable packages on demand. Publish reviewed assets in Releases.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.18.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm db:check
+      - run: pnpm test:db
+      - run: pnpm test:window
+      - name: Install Inno Setup on the runner
+        run: choco install innosetup --no-progress -y
+      - run: pnpm release:win
+      - run: pnpm package:check
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pin-windows-x64
+          path: |
+            release/*/Pin-*-win-x64-setup.exe
+            release/*/Pin-*-win-x64-portable.zip
+            release/*/SHA256SUMS.txt
+          if-no-files-found: error

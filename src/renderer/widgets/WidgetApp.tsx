@@ -1,7 +1,8 @@
 import { type PinWidget } from '../../shared/types';
 import { useState, useEffect } from 'react';
 import { useWidgetColorStyle } from '../colors/widget-colors';
-import { TitleBar, ResizeHandle } from '../components/WidgetChrome';
+import { TitleBar } from '../components/WidgetChrome';
+import { useWidgetUpdates } from '../hooks/use-widget-updates';
 import { NoteWidget } from './note/NoteWidget';
 import { TodoWidget } from './todo/TodoWidget';
 import { ClipWidget } from './clip/ClipWidget';
@@ -9,6 +10,7 @@ import { DeskWidget } from './desk/DeskWidget';
 
 function UnsupportedWidget({ widget }: { widget: PinWidget }) {
   const [currentWidget, setCurrentWidget] = useState(widget);
+  useWidgetUpdates(setCurrentWidget);
 
   const togglePin = () => {
     void window.pinApi.setPin(!currentWidget.pin).then((updated) => {
@@ -35,10 +37,7 @@ function UnsupportedWidget({ widget }: { widget: PinWidget }) {
         widget={currentWidget}
       />
       {!currentWidget.collapsed && (
-        <>
-          <p className="placeholder">{currentWidget.type.toUpperCase()} 即将可用</p>
-          <ResizeHandle />
-        </>
+        <p className="placeholder">{currentWidget.type.toUpperCase()} 即将可用</p>
       )}
     </main>
   );

@@ -1,6 +1,7 @@
-import { app, Menu, nativeImage, Tray } from 'electron';
+import { app, Menu, Tray } from 'electron';
 import { type WidgetType, WIDGET_TYPES } from './database/schema';
 import type { WindowManager } from './window-manager';
+import { pinIconPath } from './icon';
 
 const WIDGET_OPTIONS_LABELS: Record<WidgetType, string> = {
   note: '新便签',
@@ -10,14 +11,7 @@ const WIDGET_OPTIONS_LABELS: Record<WidgetType, string> = {
 };
 
 export function createTray(getManager: () => WindowManager | undefined): Tray {
-  const bitmap = Buffer.alloc(16 * 16 * 4);
-  for (let index = 0; index < bitmap.length; index += 4) {
-    bitmap[index] = 17;
-    bitmap[index + 1] = 17;
-    bitmap[index + 2] = 17;
-    bitmap[index + 3] = 255;
-  }
-  const tray = new Tray(nativeImage.createFromBitmap(bitmap, { width: 16, height: 16, scaleFactor: 1 }));
+  const tray = new Tray(pinIconPath());
   tray.setToolTip('Pin');
   tray.setContextMenu(
     Menu.buildFromTemplate([

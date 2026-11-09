@@ -9,7 +9,7 @@ import { useContextMenu, OpacityContextMenu } from '../../components/OpacityCont
 import { useWindowDisplaySettings } from '../../hooks/use-window-display-settings';
 import { useOpacityControl } from '../../hooks/use-opacity-control';
 import { useWidgetColorStyle } from '../../colors/widget-colors';
-import { TitleBar, OpacityBar, ResizeHandle } from '../../components/WidgetChrome';
+import { TitleBar, OpacityBar } from '../../components/WidgetChrome';
 
 function compareClips(left: PinClipItem, right: PinClipItem) {
   return left.sortOrder - right.sortOrder || left.createdAt - right.createdAt || left.id.localeCompare(right.id);
@@ -385,7 +385,6 @@ export function ClipWidget({ initialWidget, embedded = false }: { initialWidget:
             />
           </footer>
           {!embedded && viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}
-          {!embedded && <ResizeHandle />}
         </>
       )}
       {!embedded && <OpacityContextMenu menu={contextMenu} onChange={setOpacity} onPin={togglePin} showOpacity={!viewSettings.opacityBar} widget={widget} />}

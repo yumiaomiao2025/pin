@@ -1,0 +1,1 @@
+ALTER TABLE `widgets` ADD `collapsed_width` integer;

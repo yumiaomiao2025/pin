@@ -45,6 +45,7 @@ const pinApi: PinApi = {
     return () => ipcRenderer.removeListener('widget:deleted', handler);
   },
   getWidget: () => ipcRenderer.invoke('widget:get'),
+  renameCurrentWidget: (title: string) => ipcRenderer.invoke('widget:rename', title),
   openManager: () => ipcRenderer.invoke('manager:open'),
   hideManager: () => ipcRenderer.invoke('manager:hide'),
   openSettings: () => ipcRenderer.invoke('settings:open'),

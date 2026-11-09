@@ -7,6 +7,7 @@ import { initializeAppDatabase, closeAppDatabase } from './main/database/app-dat
 import { createAppDatabaseService } from './main/database/app-service';
 import { registerIpcHandlers } from './main/ipc/register';
 import { createTray } from './main/tray';
+import { pinIconPath } from './main/icon';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -46,6 +47,13 @@ const installDevToolsShortcut = () => {
 
 installDevToolsShortcut();
 
+if (process.platform === 'win32') {
+  app.on('browser-window-created', (_event, window) => {
+    // The Windows shell can add a taskbar button when a hidden window is shown.
+    window.on('show', () => window.setSkipTaskbar(true));
+  });
+}
+
 const loadOnboarding = (window: BrowserWindow) => {
   const query = { role: 'onboarding', id: 'onboarding' };
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -67,6 +75,8 @@ const createOnboardingWindow = () => {
   }
 
   onboardingWindow = new BrowserWindow({
+    icon: pinIconPath(),
+    skipTaskbar: true,
     width: 420,
     height: 240,
     minWidth: 320,
@@ -126,11 +136,8 @@ app.on('will-quit', () => {
   closeAppDatabase();
 });
 
-// Quit when all windows are closed, except on macOS.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // Keep the tray alive until the user chooses Quit.
 });
 
 app.on('activate', () => {

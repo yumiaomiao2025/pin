@@ -57,6 +57,13 @@
       "when": 1791450461977,
       "tag": "0007_omniscient_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793985493393,
+      "tag": "0008_widget_collapsed_width",
+      "breakpoints": true
     }
   ]
 }

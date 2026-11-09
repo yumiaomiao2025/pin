@@ -15,6 +15,7 @@ export interface PinWidget {
   pin: boolean;
   hidden: boolean;
   collapsed: boolean;
+  collapsedWidth: number | null;
   width: number;
   height: number;
   activeTab: 'note' | 'todo' | 'clip';

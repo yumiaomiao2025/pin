@@ -23,8 +23,6 @@ export function colorSetStyle(colorSet: PinColorSet): React.CSSProperties {
     '--widget-ink': colors.ink,
     '--widget-title': colors.title,
     '--widget-accent': colors.accent,
-    '--widget-spine': colors.spine ?? 'transparent',
-    '--widget-shadow': colors.shadow,
     '--widget-sub': colors.sub,
     '--widget-soft': colors.soft,
   } as React.CSSProperties;
@@ -43,10 +41,5 @@ export function useWidgetColorStyle(widget: PinWidget): React.CSSProperties {
     spine: widget.spineColor,
     shadow: widget.shadowColor,
   };
-  return {
-    ...colorSetStyle(colors),
-    boxShadow: colors.spine
-      ? `inset 8px 0 0 ${colors.spine}, 8px 8px 0 ${colors.shadow}`
-      : `8px 8px 0 ${colors.shadow}`,
-  } as React.CSSProperties;
+  return colorSetStyle(colors);
 }

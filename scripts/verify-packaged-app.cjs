@@ -80,6 +80,8 @@ async function connect(url) {
   };
   const onboarding = await connect((await page('onboarding')).webSocketDebuggerUrl);
   await waitFor(() => evaluate(onboarding, '!!window.pinApi'));
+  await waitFor(() => evaluate(onboarding, '!!document.querySelector(".onboarding")'));
+  assert.equal(await evaluate(onboarding, 'getComputedStyle(document.querySelector(".onboarding")).boxShadow'), 'none');
   assert.equal(await evaluate(onboarding, '(await window.pinApi.ping()).version'), require('../package.json').version);
   await evaluate(onboarding, "void window.pinApi.createWidget('note')");
   const note = await connect((await page('widget')).webSocketDebuggerUrl);

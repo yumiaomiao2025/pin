@@ -1,11 +1,14 @@
 import { type WidgetType, type Widget } from '../database/schema';
-import { type Rectangle, screen } from 'electron';
+import { type Display, type Rectangle, screen } from 'electron';
 
 export const MIN_WIDTH = 240;
 
 export const MIN_HEIGHT = 160;
 
-export const COLLAPSED_HEIGHT = 40;
+export const COLLAPSED_MIN_WIDTH = 120;
+
+// Leave room below the painted title bar so Windows does not clip its border.
+export const COLLAPSED_HEIGHT = 38;
 
 const SNAP_DISTANCE = 12;
 
@@ -25,54 +28,26 @@ export function rectanglesMatch(left: Rectangle, right: Rectangle, tolerance = 4
   );
 }
 
-function intersectionArea(left: Rectangle, right: Rectangle) {
-  const width = Math.max(0, Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x));
-  const height = Math.max(0, Math.min(left.y + left.height, right.y + right.height) - Math.max(left.y, right.y));
-  return width * height;
-}
-
-export function displayForNativeMonitor(bounds: Rectangle) {
-  const displays = screen.getAllDisplays();
-  const exact = displays.find((display) => rectanglesMatch(display.bounds, bounds));
-  if (exact) {
-    return exact;
-  }
-  const monitorCenter = {
-    x: bounds.x + bounds.width / 2,
-    y: bounds.y + bounds.height / 2,
-  };
-  const containing = displays.find(
-    (display) =>
-      monitorCenter.x >= display.bounds.x &&
-      monitorCenter.x <= display.bounds.x + display.bounds.width &&
-      monitorCenter.y >= display.bounds.y &&
-      monitorCenter.y <= display.bounds.y + display.bounds.height,
-  );
-  if (containing) {
-    return containing;
-  }
-  return displays
-    .map((display) => ({ display, overlap: intersectionArea(display.bounds, bounds) }))
-    .sort((left, right) => right.overlap - left.overlap)[0]?.display;
-}
-
 export function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
 }
 
-function getDisplayForWidget(widget: Widget) {
-  const displays = screen.getAllDisplays();
-  const matchingDisplay = widget.displayId
-    ? displays.find((display) => display.id === widget.displayId)
-    : undefined;
-  return matchingDisplay ?? screen.getDisplayMatching(widget);
+export function displayForWidget<T extends Pick<Display, 'id'>>(
+  displayId: number | null,
+  displays: readonly T[],
+  fallback: T,
+): T {
+  return displays.find((display) => display.id === displayId) ?? fallback;
 }
 
-export function normalizeBounds(widget: Widget): Rectangle {
-  const display = getDisplayForWidget(widget);
-  const workArea = display.workArea;
+export type SavedGeometry = Pick<Widget, 'type' | 'collapsed' | 'collapsedWidth' | 'width' | 'height' | 'x' | 'y'>;
+
+export function fitWidgetBounds(widget: SavedGeometry, workArea: Rectangle): Rectangle {
   const defaults = DEFAULT_BOUNDS[widget.type];
-  const width = clamp(widget.width || defaults.width, MIN_WIDTH, workArea.width);
+  const expandedWidth = clamp(widget.width || defaults.width, MIN_WIDTH, workArea.width);
+  const width = widget.collapsed
+    ? clamp(widget.collapsedWidth ?? expandedWidth, COLLAPSED_MIN_WIDTH, workArea.width)
+    : expandedWidth;
   const expandedHeight = clamp(widget.height || defaults.height, MIN_HEIGHT, workArea.height);
   const height = widget.collapsed ? COLLAPSED_HEIGHT : expandedHeight;
 
@@ -82,6 +57,12 @@ export function normalizeBounds(widget: Widget): Rectangle {
     x: clamp(widget.x, workArea.x, workArea.x + workArea.width - width),
     y: clamp(widget.y, workArea.y, workArea.y + workArea.height - height),
   };
+}
+
+export function normalizeBounds(widget: Widget): Rectangle {
+  const fallback = widget.displayId === null ? screen.getDisplayMatching(widget) : screen.getPrimaryDisplay();
+  const display = displayForWidget(widget.displayId, screen.getAllDisplays(), fallback);
+  return fitWidgetBounds(widget, display.workArea);
 }
 
 export function snapBounds(bounds: Rectangle): Rectangle {

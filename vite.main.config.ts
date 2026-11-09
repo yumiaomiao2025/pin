@@ -9,6 +9,7 @@ export default defineConfig({
         'better-sqlite3',
         'drizzle-orm',
         'electron',
+        'koffi',
         ...builtinModules,
         ...builtinModules.map((moduleName) => `node:${moduleName}`),
       ],
