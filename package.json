@@ -1,7 +1,7 @@
 {
   "name": "pin",
   "productName": "Pin",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "packageManager": "pnpm@11.9.0",
   "description": "A local Windows desktop widget workspace",
   "main": ".vite/build/main.js",
