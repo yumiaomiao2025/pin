@@ -14,8 +14,12 @@ module.exports = async function verifyWorkflow({ evaluate, waitFor, page, connec
     await waitIn(rpc, `!!document.querySelector(${JSON.stringify(selector)})`);
     await evaluate(rpc, `(() => {
       const element = document.querySelector(${JSON.stringify(selector)});
-      const prototype = element.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-      Object.getOwnPropertyDescriptor(prototype, 'value').set.call(element, ${JSON.stringify(value)});
+      if (element.isContentEditable) {
+        element.textContent = ${JSON.stringify(value)};
+      } else {
+        const prototype = element.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(prototype, 'value').set.call(element, ${JSON.stringify(value)});
+      }
       element.dispatchEvent(new Event('input', {bubbles:true}));
     })()`);
   };
@@ -275,7 +279,7 @@ module.exports = async function verifyWorkflow({ evaluate, waitFor, page, connec
   await waitIn(clip, "!!document.querySelector('.clip-row')");
   await input(clip, '.clip-input', '剪贴回归');
   await enter(clip, '.clip-input');
-  await waitIn(clip, "document.querySelector('.clip-input').value === ''");
+  await waitIn(clip, "document.querySelector('.clip-input')?.textContent === ''");
   assert.equal((await evaluate(clip, 'window.pinApi.listClips()')).length, 1);
   await click(clip, '[aria-label="复制剪贴文本"]');
   await waitIn(clip, "!!document.querySelector('[aria-label=已复制]')");
@@ -323,6 +327,9 @@ module.exports = async function verifyWorkflow({ evaluate, waitFor, page, connec
   await click(note, '[aria-label="展开"]');
   await waitIn(note, "!!document.querySelector('.note-editor')");
   assert.equal(await evaluate(note, '(await window.pinApi.getWidget()).opacity'), 5);
+  await evaluate(note, 'window.pinApi.setOpacity(100)');
+  await require('./packaged-note.cjs').verifyNote({ evaluate, waitIn, note, profile });
   await require('./packaged-lifecycle.cjs')({ evaluate, waitIn, page, connect, input, note, todo, manager: colors });
+  await require('./packaged-note.cjs').verifyTodoAndClip({ evaluate, waitIn, todo, clip });
   console.log('PASS: shared utility navigation; named kits and theme dialogs; preview scope isolation; TODO and CLIP workflows; DESK isolation; settings and window controls');
 };

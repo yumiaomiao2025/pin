@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import {
+  blob,
   check,
   index,
   integer,
@@ -113,6 +114,33 @@ export const todos = sqliteTable(
   (table) => [index('todos_widget_sort_idx').on(table.widgetId, table.sortOrder)],
 );
 
+const imageContentColumns = () => ({
+  mime: text('mime', { enum: ['image/png', 'image/jpeg'] }).notNull(),
+  data: blob('data', { mode: 'buffer' }).notNull(),
+});
+
+export const noteImages = sqliteTable(
+  'note_images',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('widget_id').notNull().references(() => widgets.id, { onDelete: 'cascade' }),
+    offset: integer('offset').notNull(),
+    ...imageContentColumns(),
+  },
+  (table) => [index('note_images_widget_offset_idx').on(table.ownerId, table.offset)],
+);
+
+export const todoImages = sqliteTable(
+  'todo_images',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('todo_id').notNull().references(() => todos.id, { onDelete: 'cascade' }),
+    offset: integer('offset').notNull(),
+    ...imageContentColumns(),
+  },
+  (table) => [index('todo_images_todo_offset_idx').on(table.ownerId, table.offset)],
+);
+
 export const clipItems = sqliteTable(
   'clip_items',
   {
@@ -120,15 +148,29 @@ export const clipItems = sqliteTable(
     widgetId: text('widget_id')
       .notNull()
       .references(() => widgets.id, { onDelete: 'cascade' }),
+    // Image entries use a hash as their deduplication key.
     text: text('text').notNull(),
+    kind: text('kind', { enum: ['text', 'image'] }).notNull().default('text'),
+    documentText: text('document_text'),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },
   (table) => [
-    unique('clip_items_widget_text_unique').on(table.widgetId, table.text),
+    unique('clip_items_widget_kind_text_unique').on(table.widgetId, table.kind, table.text),
     index('clip_items_widget_sort_idx').on(table.widgetId, table.sortOrder),
   ],
+);
+
+export const clipImages = sqliteTable(
+  'clip_images',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('clip_id').notNull().references(() => clipItems.id, { onDelete: 'cascade' }),
+    offset: integer('offset').notNull(),
+    ...imageContentColumns(),
+  },
+  (table) => [index('clip_images_clip_offset_idx').on(table.ownerId, table.offset)],
 );
 
 export const customKits = sqliteTable(
@@ -172,6 +214,7 @@ export type NewSettings = typeof settings.$inferInsert;
 export type Widget = typeof widgets.$inferSelect;
 export type NewWidget = typeof widgets.$inferInsert;
 export type Todo = typeof todos.$inferSelect;
+export type DocumentImage = typeof noteImages.$inferSelect;
 export type NewTodo = typeof todos.$inferInsert;
 export type ClipItem = typeof clipItems.$inferSelect;
 export type NewClipItem = typeof clipItems.$inferInsert;
@@ -182,6 +225,9 @@ export const schema = {
   settings,
   widgets,
   todos,
+  noteImages,
+  todoImages,
+  clipImages,
   clipItems,
   customKits,
   widgetsRelations,

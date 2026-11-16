@@ -1,9 +1,10 @@
-import type * as React from 'react';
-import { type PinClipItem, type PinWidget } from '../../../shared/types';
-import { useState, useRef, useEffect } from 'react';
-import { OverlayTextarea, OverlayScrollArea } from '../../components/OverlayScrollArea';
+import { MAX_CLIP_ITEMS, type PinClipItem, type PinNote, type PinWidget } from '../../../shared/types';
+import { Fragment, useState, useRef, useEffect } from 'react';
+import { OverlayScrollArea } from '../../components/OverlayScrollArea';
+import { ImageDocumentEditor } from '../../components/ImageDocumentEditor';
 import { HoverText } from '../../components/HoverText';
 import { Check, Copy, GripVertical, Trash2 } from 'lucide-react';
+import { splitImageDocument } from '../../components/image-document';
 import { useWidgetUpdates } from '../../hooks/use-widget-updates';
 import { useContextMenu, OpacityContextMenu } from '../../components/OpacityContextMenu';
 import { useWindowDisplaySettings } from '../../hooks/use-window-display-settings';
@@ -14,6 +15,13 @@ import { TitleBar, OpacityBar } from '../../components/WidgetChrome';
 function compareClips(left: PinClipItem, right: PinClipItem) {
   return left.sortOrder - right.sortOrder || left.createdAt - right.createdAt || left.id.localeCompare(right.id);
 }
+
+function putClip(items: PinClipItem[], item: PinClipItem) {
+  const otherItems = items.filter(({ id }) => id !== item.id).sort(compareClips);
+  return [...otherItems.slice(-(MAX_CLIP_ITEMS - 1)), item].sort(compareClips);
+}
+
+const EMPTY_CLIP: PinNote = { text: '', images: [] };
 
 function ClipRow({
   item,
@@ -35,7 +43,7 @@ function ClipRow({
   copied: boolean;
   onCopy: () => void;
   onDelete: () => void;
-  onUpdate: (text: string) => void;
+  onUpdate: (document: PinNote) => Promise<boolean>;
   dragging: boolean;
   dragOver: boolean;
   onDragStart: () => void;
@@ -45,47 +53,35 @@ function ClipRow({
   hoverFull: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(item.text);
-  const composing = useRef(false);
-  const suppressBlur = useRef(false);
-
-  useEffect(() => {
-    if (!editing) {
-      setDraft(item.text);
-    }
-  }, [editing, item.text]);
+  const [busy, setBusy] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const saving = useRef(false);
+  const contentLabel = item.images.length ? (item.text.trim() ? '剪贴图文' : '剪贴图片') : '剪贴文本';
 
   const beginEditing = () => {
-    suppressBlur.current = false;
-    setDraft(item.text);
+    setSaveError(false);
     setEditing(true);
   };
 
-  const cancelEditing = () => {
-    suppressBlur.current = true;
-    setDraft(item.text);
-    setEditing(false);
-  };
-
-  const saveEditing = () => {
-    if (suppressBlur.current) {
-      suppressBlur.current = false;
+  const saveEditing = async (document: PinNote) => {
+    if (saving.current) return;
+    const sameImages = item.images.length === document.images.length
+      && item.images.every(({ id, offset }, index) => id === document.images[index].id && offset === document.images[index].offset);
+    if ((item.text === document.text && sameImages) || (!document.text.trim() && !document.images.length)) {
+      setEditing(false);
       return;
     }
-    setEditing(false);
-    if (draft !== item.text && draft.trim() !== '') {
-      onUpdate(draft);
-    }
-  };
-
-  const handleEditKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const isComposing = composing.current || event.nativeEvent.isComposing;
-    if (event.key === 'Escape' && !isComposing) {
-      event.preventDefault();
-      cancelEditing();
-    } else if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
-      event.preventDefault();
-      event.currentTarget.blur();
+    saving.current = true;
+    setBusy(true);
+    setSaveError(false);
+    try {
+      if (await onUpdate(document)) setEditing(false);
+      else setSaveError(true);
+    } catch {
+      setSaveError(true);
+    } finally {
+      saving.current = false;
+      setBusy(false);
     }
   };
 
@@ -105,23 +101,26 @@ function ClipRow({
     >
       <span className="clip-index">{String(index + 1).padStart(2, '0')}</span>
       {editing ? (
-        <OverlayTextarea
-          aria-label="编辑剪贴文本"
-          autoFocus
-          className="clip-text clip-text--editing"
-          onBlur={saveEditing}
-          onChange={(event) => setDraft(event.target.value)}
-          onClick={(event) => event.stopPropagation()}
-          onCompositionEnd={() => {
-            composing.current = false;
-          }}
-          onCompositionStart={() => {
-            composing.current = true;
-          }}
-          onKeyDown={handleEditKeyDown}
-          rows={1}
-          value={draft}
-        />
+        <div className="clip-edit-field" onClick={(event) => event.stopPropagation()}>
+          <ImageDocumentEditor
+            autoFocus
+            busy={busy}
+            footer={saveError && <span role="alert">保存失败，请重试</span>}
+            initial={item}
+            mode="clip-edit"
+            onCancel={() => { if (!saving.current) setEditing(false); }}
+            onCommit={(document) => { void saveEditing(document); }}
+          />
+        </div>
+      ) : item.images.length ? (
+        <div className="clip-text clip-document" onDoubleClick={beginEditing}>
+          {splitImageDocument(item).map(({ text, image }) => (
+            <Fragment key={image?.id ?? 'last'}>
+              {text}
+              {image && <img alt="剪贴图片" className="content-image-thumbnail inline-editor-image" draggable={false} src={image.src} />}
+            </Fragment>
+          ))}
+        </div>
       ) : (
         <HoverText
           className="clip-text"
@@ -133,13 +132,13 @@ function ClipRow({
         />
       )}
       <button
-        aria-label={copied ? '已复制' : '复制剪贴文本'}
+        aria-label={copied ? '已复制' : `复制${contentLabel}`}
         className={copied ? 'clip-copy-mark clip-copy-mark--copied' : 'clip-copy-mark'}
         onClick={(event) => {
           event.stopPropagation();
           onCopy();
         }}
-        title={copied ? '已复制' : '复制剪贴文本'}
+        title={copied ? '已复制' : `复制${contentLabel}`}
         type="button"
       >
         {copied ? (
@@ -160,13 +159,13 @@ function ClipRow({
         <GripVertical aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
       </span>
       <button
-        aria-label="删除剪贴文本"
+        aria-label={`删除${contentLabel}`}
         className="clip-delete"
         onClick={(event) => {
           event.stopPropagation();
           onDelete();
         }}
-        title="删除剪贴文本"
+        title={`删除${contentLabel}`}
         type="button"
       >
         <Trash2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} />
@@ -180,14 +179,16 @@ export function ClipWidget({ initialWidget, embedded = false }: { initialWidget:
   useWidgetUpdates(setWidget);
   const [items, setItems] = useState<PinClipItem[]>([]);
   const contextMenu = useContextMenu(!embedded);
-  const [draft, setDraft] = useState('');
+  const [composerVersion, setComposerVersion] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletedClip, setDeletedClip] = useState<PinClipItem | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const viewSettings = useWindowDisplaySettings();
   const [loaded, setLoaded] = useState(false);
-  const composing = useRef(false);
+  const creatingClip = useRef(false);
 
   useEffect(() => {
     if (!copiedId) {
@@ -243,24 +244,24 @@ export function ClipWidget({ initialWidget, embedded = false }: { initialWidget:
 
   const setOpacity = useOpacityControl(setWidget);
 
-  const addClip = () => {
-    if (draft.trim() === '') {
-      return;
-    }
-    const text = draft;
-    setDraft('');
-    void window.pinApi.createClip(text).then((created) => {
+  const addClip = async (document: PinNote) => {
+    if (creatingClip.current || (!document.text.trim() && !document.images.length)) return;
+    creatingClip.current = true;
+    setCreating(true);
+    setCreateError(false);
+    try {
+      const created = await window.pinApi.createClip(document);
       if (created) {
-        setItems((current) => [...current, created]);
+        setItems((current) => putClip(current, created));
+        setComposerVersion((version) => version + 1);
+      } else {
+        setCreateError(true);
       }
-    });
-  };
-
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const isComposing = composing.current || event.nativeEvent.isComposing;
-    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
-      event.preventDefault();
-      addClip();
+    } catch {
+      setCreateError(true);
+    } finally {
+      creatingClip.current = false;
+      setCreating(false);
     }
   };
 
@@ -272,12 +273,11 @@ export function ClipWidget({ initialWidget, embedded = false }: { initialWidget:
     });
   };
 
-  const updateClip = (clipId: string, text: string) => {
-    void window.pinApi.updateClip(clipId, text).then((updated) => {
-      if (updated) {
-        setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-      }
-    });
+  const updateClip = async (clipId: string, document: PinNote) => {
+    const updated = await window.pinApi.updateClip(clipId, document);
+    if (!updated) return false;
+    setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    return true;
   };
 
   const deleteClip = (clipId: string) => {
@@ -292,7 +292,7 @@ export function ClipWidget({ initialWidget, embedded = false }: { initialWidget:
   const restoreClip = () => {
     void window.pinApi.restoreClip().then((restored) => {
       if (restored) {
-        setItems((current) => [...current, restored].sort(compareClips));
+        setItems((current) => putClip(current, restored));
       }
       setDeletedClip(null);
     });
@@ -337,7 +337,7 @@ export function ClipWidget({ initialWidget, embedded = false }: { initialWidget:
       {!embedded && <TitleBar onCollapse={toggleCollapsed} onHide={hide} onPin={togglePin} widget={widget} />}
       {!widget.collapsed && (
         <>
-          <OverlayScrollArea aria-label="剪贴文本列表" className="clip-list">
+          <OverlayScrollArea aria-label="剪贴内容列表" className="clip-list">
             {!loaded && <p className="app--loading">加载中…</p>}
             {loaded && items.map((item, index) => (
               <ClipRow
@@ -354,12 +354,12 @@ export function ClipWidget({ initialWidget, embedded = false }: { initialWidget:
                 onDragOver={() => setDragOverId(item.id)}
                 onDragStart={() => setDragId(item.id)}
                 onDrop={() => reorderClips(item.id)}
-                onUpdate={(text) => updateClip(item.id, text)}
+                onUpdate={(document) => updateClip(item.id, document)}
               />
             ))}
             {deletedClip && (
               <div className="clip-undo-row">
-                <span className="clip-undo-text">已删除「{deletedClip.text}」</span>
+                <span className="clip-undo-text">已删除「{deletedClip.text.trim() ? splitImageDocument(deletedClip).map(({ text }) => text).join('') : '剪贴图片'}」</span>
                 <button className="clip-undo-button" onClick={restoreClip} type="button">
                   撤销
                 </button>
@@ -368,20 +368,14 @@ export function ClipWidget({ initialWidget, embedded = false }: { initialWidget:
           </OverlayScrollArea>
           <footer className="clip-input-row">
             <span aria-hidden="true" className="clip-input-symbol">[+]</span>
-            <OverlayTextarea
-              aria-label="新增剪贴文本"
-              className="clip-input"
-              onChange={(event) => setDraft(event.target.value)}
-              onCompositionEnd={() => {
-                composing.current = false;
-              }}
-              onCompositionStart={() => {
-                composing.current = true;
-              }}
-              onKeyDown={handleInputKeyDown}
-              placeholder="写点什么…"
-              rows={1}
-              value={draft}
+            <ImageDocumentEditor
+              autoFocus={composerVersion > 0}
+              busy={creating || !loaded}
+              footer={createError && <span role="alert">保存失败，请重试</span>}
+              initial={EMPTY_CLIP}
+              key={composerVersion}
+              mode="clip-create"
+              onCommit={(document) => { void addClip(document); }}
             />
           </footer>
           {!embedded && viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}

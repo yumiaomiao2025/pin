@@ -65,7 +65,7 @@ test('persists opacity from 5 to 100 and rejects values outside the range', () =
   }
 });
 
-for (const lastMigration of [1, 2, 3, 4, 5, 6, 7]) {
+for (const lastMigration of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
   test('upgrades settings from migration ' + lastMigration + ' without losing content or colors', () => {
     const oldMigrations = path.join(temporaryDirectory, 'old-migrations');
     fs.mkdirSync(path.join(oldMigrations, 'meta'), { recursive: true });
@@ -90,12 +90,26 @@ for (const lastMigration of [1, 2, 3, 4, 5, 6, 7]) {
       name: 'Keep dark kit', paper: '#0D0D0D', ink: '#F2F2F2',
       title: '#FFE566', accent: '#FFE566', spine: null, shadow: '#F2F2F2',
     });
+    const noteText = lastMigration === 9 ? 'keep note\n' : 'keep note';
     handle.sqlite.prepare(`INSERT INTO widgets
       (id, type, note_text, opacity, paper_color, ink_color, follows_default)
-      VALUES ('legacy-widget', 'desk', 'keep note', ?, ?, ?, 0)`).run(previousOpacity, kit.paper, kit.ink);
+      VALUES ('legacy-widget', 'desk', ?, ?, ?, ?, 0)`).run(noteText, previousOpacity, kit.paper, kit.ink);
     const widget = handle.sqlite.prepare('SELECT * FROM widgets').get() as Record<string, unknown> & { id: string };
     const todo = old.todos.create({ widgetId: widget.id, text: 'keep todo', done: true });
-    const clip = old.clipItems.create({ widgetId: widget.id, text: 'keep clip' });
+    const clip = { id: 'legacy-clip', widgetId: widget.id, text: 'keep clip', sortOrder: 0, createdAt: 1, updatedAt: 1, kind: 'text' };
+    handle.sqlite.prepare(
+      'INSERT INTO clip_items (id, widget_id, text, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+    ).run(clip.id, clip.widgetId, clip.text, clip.sortOrder, clip.createdAt, clip.updatedAt);
+    const legacyImage = Buffer.from([9, 8, 7]);
+    if (lastMigration === 10) {
+      handle.sqlite.prepare("INSERT INTO clip_items (id, widget_id, text, sort_order, created_at, updated_at, kind) VALUES ('legacy-picture', ?, 'picture digest', 1, 2, 2, 'image')").run(widget.id);
+      handle.sqlite.prepare("INSERT INTO clip_images (clip_id, mime, data) VALUES ('legacy-picture', 'image/png', ?)").run(legacyImage);
+    }
+    const noteImage = {
+      id: 'legacy-image', ownerId: widget.id, offset: noteText.length - 1,
+      mime: 'image/png' as const, data: Buffer.from([1, 2, 3]),
+    };
+    if (lastMigration === 9) old.noteImages.create(noteImage);
     assert.throws(() => handle.sqlite.prepare('UPDATE widgets SET opacity = 0 WHERE id = ?').run(widget.id), /widgets_opacity_check/);
     handle.close();
 
@@ -105,7 +119,14 @@ for (const lastMigration of [1, 2, 3, 4, 5, 6, 7]) {
       ...widget, opacity: Math.max(5, previousOpacity), color_kit_id: null, collapsed_width: null,
     });
     assert.deepEqual(upgraded.todos.getById(todo.id), todo);
-    assert.deepEqual(upgraded.clipItems.getById(clip.id), clip);
+    assert.deepEqual(upgraded.clipItems.getById(clip.id), { ...clip, documentText: null });
+    if (lastMigration === 10) {
+      assert.equal(upgraded.clipItems.getById('legacy-picture')?.documentText, '\n');
+      assert.deepEqual(upgraded.clipImages.list('legacy-picture'), [
+        { id: 'legacy-picture', ownerId: 'legacy-picture', offset: 0, mime: 'image/png', data: legacyImage },
+      ]);
+    }
+    if (lastMigration === 9) assert.deepEqual(upgraded.noteImages.list(widget.id), [noteImage]);
     assert.deepEqual(upgraded.customKits.getById(kit.id), kit);
     const settingsWithoutRemovedFields = { ...previousSettings };
     delete settingsWithoutRemovedFields.theme;

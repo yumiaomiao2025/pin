@@ -64,6 +64,27 @@
       "when": 1793985493393,
       "tag": "0008_widget_collapsed_width",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794799800161,
+      "tag": "0009_note_images",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1794807371902,
+      "tag": "0010_todo_clip_images",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1794816987643,
+      "tag": "0011_clip_documents",
+      "breakpoints": true
     }
   ]
 }

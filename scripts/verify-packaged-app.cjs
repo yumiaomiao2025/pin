@@ -85,10 +85,10 @@ async function connect(url) {
   assert.equal(await evaluate(onboarding, '(await window.pinApi.ping()).version'), require('../package.json').version);
   await evaluate(onboarding, "void window.pinApi.createWidget('note')");
   const note = await connect((await page('widget')).webSocketDebuggerUrl);
-  await waitFor(() => evaluate(note, "!!document.querySelector('.titlebar')"));
+  await waitFor(() => evaluate(note, "!!document.querySelector('.note-editor')"));
   await evaluate(note, `(() => {
     const input = document.querySelector('.note-editor');
-    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'packaged cleanup check');
+    input.textContent = 'packaged cleanup check';
     input.dispatchEvent(new Event('input', {bubbles:true}));
   })()`);
   await waitFor(() => evaluate(note, "window.pinApi.getWidget().then(widget => widget.noteText === 'packaged cleanup check')"));

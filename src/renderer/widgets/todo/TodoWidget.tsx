@@ -1,11 +1,13 @@
-import type * as React from 'react';
 import { type Modifier, useSensors, useSensor, PointerSensor, KeyboardSensor, type DragEndEvent, DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
-import { type PinTodo, type PinWidget } from '../../../shared/types';
-import { useState, useRef, useEffect } from 'react';
+import { type PinNote, type PinTodo, type PinTodoUpdate, type PinWidget } from '../../../shared/types';
+import { Fragment, useState, useRef, useEffect } from 'react';
 import { useSortable, sortableKeyboardCoordinates, arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Check, GripVertical, Trash2 } from 'lucide-react';
-import { OverlayTextarea, OverlayScrollArea } from '../../components/OverlayScrollArea';
+import { OverlayScrollArea } from '../../components/OverlayScrollArea';
+import { ImageDocumentEditor } from '../../components/ImageDocumentEditor';
+import { ImagePreview } from '../../components/ImagePreview';
+import { splitImageDocument } from '../../components/image-document';
 import { HoverText } from '../../components/HoverText';
 import { useWidgetColorStyle } from '../../colors/widget-colors';
 import { useWidgetUpdates } from '../../hooks/use-widget-updates';
@@ -23,6 +25,8 @@ const TODO_SORT_TRANSITION = {
   easing: 'linear',
 };
 
+const EMPTY_TODO: PinNote = { text: '', images: [] };
+
 function compareTodos(left: PinTodo, right: PinTodo) {
   return left.sortOrder - right.sortOrder || left.createdAt - right.createdAt || left.id.localeCompare(right.id);
 }
@@ -39,15 +43,16 @@ function TodoRow({
   todo: PinTodo;
   onToggle: () => void;
   onDelete: () => void;
-  onUpdate: (text: string) => void;
+  onUpdate: (document: PinNote) => Promise<boolean>;
   maxLines: number;
   hoverFull: boolean;
   completing: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(todo.text);
-  const composing = useRef(false);
-  const suppressBlur = useRef(false);
+  const [saveError, setSaveError] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
+  const document = { text: todo.text, images: todo.images ?? [] };
   const {
     attributes,
     isDragging,
@@ -62,45 +67,36 @@ function TodoRow({
     transition: TODO_SORT_TRANSITION,
   });
 
-  useEffect(() => {
-    if (!editing) {
-      setDraft(todo.text);
-    }
-  }, [editing, todo.text]);
-
   const beginEditing = () => {
-    suppressBlur.current = false;
-    setDraft(todo.text);
+    setSaveError(false);
     setEditing(true);
   };
 
-  const cancelEditing = () => {
-    suppressBlur.current = true;
-    setDraft(todo.text);
-    setEditing(false);
-  };
-
-  const saveEditing = () => {
-    if (suppressBlur.current) {
-      suppressBlur.current = false;
+  const saveEditing = async (next: PinNote) => {
+    if (saving.current) return;
+    const sameImages = document.images.length === next.images.length
+      && document.images.every((image, index) => image.id === next.images[index].id && image.offset === next.images[index].offset);
+    if ((next.text === todo.text && sameImages) || (!next.text.trim() && next.images.length === 0)) {
+      setEditing(false);
       return;
     }
-    setEditing(false);
-    if (draft !== todo.text && draft.trim() !== '') {
-      onUpdate(draft);
+    const savedIds = new Set(document.images.map(({ id }) => id));
+    const images = next.images.map(({ id, offset, src }) => ({ id, offset, src: savedIds.has(id) ? undefined : src }));
+    saving.current = true;
+    setBusy(true);
+    setSaveError(false);
+    try {
+      if (await onUpdate({ text: next.text, images })) setEditing(false);
+      else setSaveError(true);
+    } catch {
+      setSaveError(true);
+    } finally {
+      saving.current = false;
+      setBusy(false);
     }
   };
 
-  const handleEditKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const isComposing = composing.current || event.nativeEvent.isComposing;
-    if (event.key === 'Escape' && !isComposing) {
-      event.preventDefault();
-      cancelEditing();
-    } else if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
-      event.preventDefault();
-      event.currentTarget.blur();
-    }
-  };
+  const textClass = todo.done ? 'todo-text todo-text--done' : 'todo-text';
 
   return (
     <div
@@ -124,25 +120,37 @@ function TodoRow({
         {(todo.done || completing) && <Check aria-hidden="true" className="todo-check-mark ui-icon" size={12} strokeWidth={2} />}
       </button>
       {editing ? (
-        <OverlayTextarea
-          aria-label="编辑待办"
+        <ImageDocumentEditor
           autoFocus
-          className="todo-text todo-text--editing"
-          onBlur={saveEditing}
-          onChange={(event) => setDraft(event.target.value)}
-          onCompositionEnd={() => {
-            composing.current = false;
-          }}
-          onCompositionStart={() => {
-            composing.current = true;
-          }}
-          onKeyDown={handleEditKeyDown}
-          rows={1}
-          value={draft}
+          busy={busy}
+          footer={saveError && <span role="alert">保存失败，请重试</span>}
+          initial={document}
+          mode="todo-edit"
+          onCancel={() => { if (!saving.current) setEditing(false); }}
+          onCommit={(next) => { void saveEditing(next); }}
         />
+      ) : document.images.length > 0 ? (
+        <div
+          className={`${textClass} todo-document${maxLines > 0 ? ' todo-text--clamp' : ''}`}
+          onDoubleClick={(event) => {
+            if (!(event.target instanceof Element) || !event.target.closest('.note-image-preview, .note-image-dialog')) beginEditing();
+          }}
+          onKeyDown={(event) => {
+            if (event.target === event.currentTarget && event.key === 'Enter') beginEditing();
+          }}
+          style={maxLines > 0 ? { WebkitLineClamp: maxLines } : undefined}
+          tabIndex={0}
+        >
+          {splitImageDocument(document).map(({ text, image }) => (
+            <Fragment key={image?.id ?? 'last'}>
+              {text}
+              {image && <ImagePreview label="待办图片" src={image.src} />}
+            </Fragment>
+          ))}
+        </div>
       ) : (
         <HoverText
-          className={todo.done ? 'todo-text todo-text--done' : 'todo-text'}
+          className={textClass}
           completing={completing}
           hoverFull={hoverFull}
           maxLines={maxLines}
@@ -205,7 +213,7 @@ function TodoDragPreview({
         className={textClass}
         style={maxLines > 0 ? { WebkitLineClamp: maxLines } : undefined}
       >
-        {todo.text}
+        {todo.text.trim() ? todo.text : '图片待办'}
       </span>
       <span className="todo-drag-handle"><GripVertical aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} /></span>
       <span className="todo-delete"><Trash2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2} /></span>
@@ -218,13 +226,15 @@ export function TodoWidget({ initialWidget, embedded = false }: { initialWidget:
   useWidgetUpdates(setWidget);
   const [todos, setTodos] = useState<PinTodo[]>([]);
   const contextMenu = useContextMenu(!embedded);
-  const [draft, setDraft] = useState('');
+  const [composerVersion, setComposerVersion] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState(false);
   const [deletedTodo, setDeletedTodo] = useState<PinTodo | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(() => new Set());
   const viewSettings = useWindowDisplaySettings();
   const [loaded, setLoaded] = useState(false);
   const [activeTodoId, setActiveTodoId] = useState<string | null>(null);
-  const composing = useRef(false);
+  const creatingTodo = useRef(false);
   const todosRef = useRef(todos);
   const completionQueue = useRef<string[]>([]);
   const completingTodoIds = useRef(new Set<string>());
@@ -284,33 +294,32 @@ export function TodoWidget({ initialWidget, embedded = false }: { initialWidget:
 
   const setOpacity = useOpacityControl(setWidget);
 
-  const addTodo = () => {
-    if (draft.trim() === '') {
-      return;
-    }
-    const text = draft;
-    setDraft('');
-    void window.pinApi.createTodo(text).then((created) => {
+  const addTodo = async (document: PinNote) => {
+    if (creatingTodo.current || (!document.text.trim() && document.images.length === 0)) return;
+    creatingTodo.current = true;
+    setCreating(true);
+    setCreateError(false);
+    try {
+      const created = await window.pinApi.createTodo(document);
       if (created) {
         setTodos((current) => [...current, created]);
+        setComposerVersion((version) => version + 1);
+      } else {
+        setCreateError(true);
       }
-    });
-  };
-
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const isComposing = composing.current || event.nativeEvent.isComposing;
-    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
-      event.preventDefault();
-      addTodo();
+    } catch {
+      setCreateError(true);
+    } finally {
+      creatingTodo.current = false;
+      setCreating(false);
     }
   };
 
-  const updateTodo = (todoId: string, patch: { text?: string; done?: boolean }) => {
-    void window.pinApi.updateTodo(todoId, patch).then((updated) => {
-      if (updated) {
-        setTodos((current) => current.map((todo) => (todo.id === updated.id ? updated : todo)));
-      }
-    });
+  const updateTodo = async (todoId: string, patch: PinTodoUpdate) => {
+    const updated = await window.pinApi.updateTodo(todoId, patch);
+    if (!updated) return false;
+    setTodos((current) => current.map((todo) => (todo.id === updated.id ? updated : todo)));
+    return true;
   };
 
   const processCompletionQueue = () => {
@@ -364,7 +373,7 @@ export function TodoWidget({ initialWidget, embedded = false }: { initialWidget:
       return;
     }
     if (todo.done) {
-      updateTodo(todo.id, { done: false });
+      void updateTodo(todo.id, { done: false });
       return;
     }
     if (!completionQueue.current.includes(todo.id)) {
@@ -456,7 +465,7 @@ export function TodoWidget({ initialWidget, embedded = false }: { initialWidget:
                       maxLines={viewSettings.maxLines}
                       onDelete={() => deleteTodo(todo.id)}
                       onToggle={() => toggleTodo(todo)}
-                      onUpdate={(text) => updateTodo(todo.id, { text })}
+                      onUpdate={(document) => updateTodo(todo.id, document)}
                       todo={todo}
                     />
                   ))}
@@ -492,7 +501,7 @@ export function TodoWidget({ initialWidget, embedded = false }: { initialWidget:
                         maxLines={viewSettings.maxLines}
                         onDelete={() => deleteTodo(todo.id)}
                         onToggle={() => toggleTodo(todo)}
-                        onUpdate={(text) => updateTodo(todo.id, { text })}
+                        onUpdate={(document) => updateTodo(todo.id, document)}
                         todo={todo}
                       />
                     ))}
@@ -507,7 +516,7 @@ export function TodoWidget({ initialWidget, embedded = false }: { initialWidget:
             )}
             {deletedTodo && (
               <div className="todo-undo-row">
-                <span className="todo-undo-text">已删除「{deletedTodo.text}」</span>
+                <span className="todo-undo-text">已删除「{deletedTodo.text.trim() || '图片待办'}」</span>
                 <button className="todo-undo-button" onClick={restoreTodo} type="button">
                   撤销
                 </button>
@@ -516,20 +525,14 @@ export function TodoWidget({ initialWidget, embedded = false }: { initialWidget:
           </OverlayScrollArea>
           <footer className="todo-input-row">
             <span aria-hidden="true" className="todo-input-symbol">[+]</span>
-            <OverlayTextarea
-              aria-label="新增待办"
-              className="todo-input"
-              onChange={(event) => setDraft(event.target.value)}
-              onCompositionEnd={() => {
-                composing.current = false;
-              }}
-              onCompositionStart={() => {
-                composing.current = true;
-              }}
-              onKeyDown={handleInputKeyDown}
-              placeholder="写点什么…"
-              rows={1}
-              value={draft}
+            <ImageDocumentEditor
+              autoFocus={composerVersion > 0}
+              busy={creating || !loaded}
+              footer={createError && <span role="alert">新增失败，请重试</span>}
+              initial={EMPTY_TODO}
+              key={composerVersion}
+              mode="todo-create"
+              onCommit={(document) => { void addTodo(document); }}
             />
           </footer>
           {!embedded && viewSettings.opacityBar && <OpacityBar onChange={setOpacity} widget={widget} />}

@@ -1,5 +1,5 @@
 import type { ColorPreview } from './colors';
-import type { PinPingResult, PinWidget, PinTodo, PinClipItem, PinSettings, PinSettingsUpdate, PinColorContext, PinColorSet, PinCustomKit } from './types';
+import type { PinPingResult, PinWidget, PinTodo, PinTodoUpdate, PinClipItem, PinSettings, PinSettingsUpdate, PinColorContext, PinColorSet, PinCustomKit, PinNote } from './types';
 
 export interface PinApi {
     ping: () => Promise<PinPingResult>;
@@ -41,19 +41,20 @@ export interface PinApi {
     restoreManagedWidget: () => Promise<PinWidget | null>;
     setActiveTab: (activeTab: PinWidget['activeTab']) => Promise<PinWidget | null>;
     listTodos: () => Promise<PinTodo[] | null>;
-    createTodo: (text: string) => Promise<PinTodo | null>;
-    updateTodo: (id: string, patch: { text?: string; done?: boolean }) => Promise<PinTodo | null>;
+    createTodo: (input: string | PinNote) => Promise<PinTodo | null>;
+    updateTodo: (id: string, patch: PinTodoUpdate) => Promise<PinTodo | null>;
     deleteTodo: (id: string) => Promise<PinTodo | null>;
     restoreTodo: () => Promise<PinTodo | null>;
     reorderTodos: (orderedIds: string[]) => Promise<PinTodo[] | null>;
     listClips: () => Promise<PinClipItem[] | null>;
-    createClip: (text: string) => Promise<PinClipItem | null>;
-    updateClip: (id: string, text: string) => Promise<PinClipItem | null>;
+    createClip: (content: string | PinNote) => Promise<PinClipItem | null>;
+    updateClip: (id: string, content: string | PinNote) => Promise<PinClipItem | null>;
     deleteClip: (id: string) => Promise<PinClipItem | null>;
     restoreClip: () => Promise<PinClipItem | null>;
     reorderClips: (orderedIds: string[]) => Promise<PinClipItem[] | null>;
     copyClip: (id: string) => Promise<PinClipItem | null>;
-    saveNote: (noteText: string) => Promise<PinWidget | null>;
+    getNote: () => Promise<PinNote | null>;
+    saveNote: (note: PinNote) => Promise<boolean>;
     hideWindow: () => Promise<boolean>;
     getWindowBounds: () => Promise<{ x: number; y: number; width: number; height: number } | null>;
     setPosition: (x: number, y: number) => Promise<PinWidget | null>;

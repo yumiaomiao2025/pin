@@ -1,24 +1,29 @@
 import { ipcMain } from 'electron';
 import type { WindowManager } from '../window-manager';
+import type { PinTodoUpdate } from '../../shared/types';
+import { isImageDocument } from './note';
 
 export function registerTodoHandlers(getManager: () => WindowManager) {
   ipcMain.handle('todo:list', (event) => getManager().getTodosForEvent(event) ?? null);
-  ipcMain.handle('todo:create', (event, text: unknown) => {
-    if (typeof text !== 'string') {
-      throw new TypeError('todo text must be a string');
+  ipcMain.handle('todo:create', (event, input: unknown) => {
+    const document = typeof input === 'string' ? { text: input, images: [] } : input;
+    if (!isImageDocument(document)) {
+      throw new TypeError('Invalid todo document');
     }
-    return getManager().createTodo(event, text) ?? null;
+    return getManager().createTodo(event, document) ?? null;
   });
   ipcMain.handle('todo:update', (event, input: unknown) => {
     if (!input || typeof input !== 'object' || !('id' in input) || typeof input.id !== 'string') {
       throw new TypeError('todo update must contain an id');
     }
-    const patch: { text?: string; done?: boolean } = {};
-    if ('text' in input && input.text !== undefined) {
-      if (typeof input.text !== 'string') {
-        throw new TypeError('todo text must be a string');
+    const patch: PinTodoUpdate = {};
+    if ('text' in input || 'images' in input) {
+      const document = { text: 'text' in input ? input.text : undefined, images: 'images' in input ? input.images : [] };
+      if (!isImageDocument(document)) {
+        throw new TypeError('Invalid todo document');
       }
-      patch.text = input.text;
+      patch.text = document.text;
+      patch.images = document.images;
     }
     if ('done' in input && input.done !== undefined) {
       if (typeof input.done !== 'boolean') {

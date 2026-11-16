@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { insertExample, hasExample } = require('./packaged-note.cjs');
 
 module.exports = async function verifyLifecycle({ evaluate, waitIn, page, connect, input, note, todo, manager }) {
   const widget = await evaluate(manager, "window.pinApi.createManagedWidget('desk')");
@@ -20,6 +21,15 @@ module.exports = async function verifyLifecycle({ evaluate, waitIn, page, connec
   assert.equal(await evaluate(desk, 'window.pinApi.restoreTodo()'), null);
   assert.equal((await evaluate(desk, 'window.pinApi.restoreClip()')).id, clip.id);
   const preservedTodo = await evaluate(desk, "window.pinApi.createTodo('Preserved task')");
+  await insertExample(evaluate, desk);
+  await waitIn(desk, hasExample);
+  await waitIn(desk, "window.pinApi.getNote().then(note => note?.images.length === 1)");
+  const { imageTask, imageClip } = await evaluate(desk, `(async () => {
+    const { src } = (await window.pinApi.getNote()).images[0];
+    const imageTask = await window.pinApi.createTodo({ text: 'Image task\\n', images: [{ id: crypto.randomUUID(), offset: 10, src }] });
+    const imageClip = await window.pinApi.createClip({ text: '\\n', images: [{ id: crypto.randomUUID(), offset: 0, src }] });
+    return { imageTask: imageTask.id, imageClip: imageClip.id };
+  })()`);
   await evaluate(desk, "window.pinApi.setActiveTab('clip')");
   const before = await evaluate(desk, 'window.pinApi.getWidget()');
   assert.equal((await evaluate(manager, `window.pinApi.deleteManagedWidget(${JSON.stringify(widget.id)})`)).id, widget.id);
@@ -30,6 +40,11 @@ module.exports = async function verifyLifecycle({ evaluate, waitIn, page, connec
   const reopened = await connect((await page('widget', widget.id)).webSocketDebuggerUrl);
   assert.equal((await evaluate(reopened, 'window.pinApi.listTodos()'))[0].id, preservedTodo.id);
   assert.equal((await evaluate(reopened, 'window.pinApi.listClips()'))[0].id, clip.id);
+  assert.ok(await evaluate(reopened, `window.pinApi.listTodos().then(items => items.find(item => item.id === ${JSON.stringify(imageTask)})?.images[0].src.startsWith('data:image/png'))`));
+  assert.ok(await evaluate(reopened, `window.pinApi.listClips().then(items => items.find(item => item.id === ${JSON.stringify(imageClip)})?.images[0].src.startsWith('data:image/png'))`));
+  await waitIn(reopened, "document.querySelector('.desk-tabs [aria-selected=true]')?.textContent === 'CLIP'");
+  await evaluate(reopened, "document.querySelector('.desk-tab').click()");
+  await waitIn(reopened, hasExample);
 
   await evaluate(note, 'window.pinApi.openDefaultColors()');
   await waitIn(manager, "window.pinApi.getColorContext().then(context => context?.scope === 'default')");

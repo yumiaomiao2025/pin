@@ -1,11 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import { MAX_CLIP_ITEMS } from '../../shared/types';
 
 import type { AppDatabase } from './database';
 import {
   clipItems,
+  clipImages,
   customKits,
+  noteImages,
+  todoImages,
   settings,
   todos,
   widgets,
@@ -16,13 +20,13 @@ import {
   type NewSettings,
   type NewTodo,
   type NewWidget,
+  type DocumentImage,
   type Settings,
   type Todo,
   type Widget,
 } from './schema';
 
 export const SETTINGS_SINGLETON_ID = 1;
-export const MAX_CLIP_ITEMS = 20;
 
 export type DatabaseExecutor = Pick<AppDatabase, 'select' | 'insert' | 'update' | 'delete'>;
 
@@ -48,7 +52,7 @@ export type CreateClipItemInput = Omit<NewClipItem, 'id' | 'createdAt' | 'update
   createdAt?: number;
   updatedAt?: number;
 };
-export type UpdateClipItemInput = Partial<Pick<NewClipItem, 'text' | 'sortOrder'>>;
+export type UpdateClipItemInput = Partial<Pick<NewClipItem, 'text' | 'kind' | 'documentText' | 'sortOrder'>>;
 
 export type CreateCustomKitInput = Omit<NewCustomKit, 'id' | 'createdAt' | 'updatedAt'> & {
   id?: string;
@@ -102,10 +106,37 @@ export interface SettingsRepository {
 
 export interface AppRepositories {
   widgets: WidgetRepository;
+  noteImages: DocumentImageRepository;
+  todoImages: DocumentImageRepository;
+  clipImages: DocumentImageRepository;
   todos: TodoRepository;
   clipItems: ClipItemRepository;
   customKits: CustomKitRepository;
   settings: SettingsRepository;
+}
+
+export interface DocumentImageRepository {
+  list(ownerId: string): DocumentImage[];
+  listForOwners(ownerIds: string[]): DocumentImage[];
+  listPositions(ownerId: string): Pick<DocumentImage, 'id' | 'offset'>[];
+  create(image: DocumentImage): void;
+  move(ownerId: string, id: string, offset: number): void;
+  delete(ownerId: string, id: string): void;
+}
+
+function createDocumentImageRepository(db: DatabaseExecutor, table: typeof noteImages | typeof todoImages | typeof clipImages): DocumentImageRepository {
+  return {
+    list: (ownerId) => db.select().from(table).where(eq(table.ownerId, ownerId)).orderBy(asc(table.offset)).all(),
+    listForOwners: (ownerIds) => db.select().from(table).where(inArray(table.ownerId, ownerIds)).orderBy(asc(table.offset)).all(),
+    listPositions: (ownerId) => db.select({ id: table.id, offset: table.offset }).from(table).where(eq(table.ownerId, ownerId)).all(),
+    create: (image) => { db.insert(table).values(image).run(); },
+    move: (ownerId, id, offset) => {
+      db.update(table).set({ offset }).where(and(eq(table.ownerId, ownerId), eq(table.id, id))).run();
+    },
+    delete: (ownerId, id) => {
+      db.delete(table).where(and(eq(table.ownerId, ownerId), eq(table.id, id))).run();
+    },
+  };
 }
 
 function getRuntime(options: RepositoryOptions = {}): RepositoryRuntime {
@@ -219,6 +250,8 @@ export function createClipItemRepository(
   options: RepositoryOptions = {},
 ): ClipItemRepository {
   const runtime = getRuntime(options);
+  const getByContent = (widgetId: string, kind: ClipItem['kind'], text: string) =>
+    db.select().from(clipItems).where(and(eq(clipItems.widgetId, widgetId), eq(clipItems.kind, kind), eq(clipItems.text, text))).get();
 
   const listByWidget = (widgetId: string) =>
     db
@@ -233,19 +266,10 @@ export function createClipItemRepository(
 
     getById: (id) => db.select().from(clipItems).where(eq(clipItems.id, id)).get(),
 
-    getByWidgetAndText: (widgetId, text) =>
-      db
-        .select()
-        .from(clipItems)
-        .where(and(eq(clipItems.widgetId, widgetId), eq(clipItems.text, text)))
-        .get(),
+    getByWidgetAndText: (widgetId, text) => getByContent(widgetId, 'text', text),
 
     create: (input) => {
-      const duplicate = db
-        .select()
-        .from(clipItems)
-        .where(and(eq(clipItems.widgetId, input.widgetId), eq(clipItems.text, input.text)))
-        .get();
+      const duplicate = getByContent(input.widgetId, input.kind ?? 'text', input.text);
       if (duplicate) {
         return duplicate;
       }
@@ -258,7 +282,7 @@ export function createClipItemRepository(
       db.insert(clipItems).values({ id, ...values, sortOrder, createdAt, updatedAt }).run();
 
       const rows = listByWidget(values.widgetId);
-      rows.slice(0, Math.max(0, rows.length - MAX_CLIP_ITEMS)).forEach((row) => {
+      rows.filter((row) => row.id !== id).slice(0, Math.max(0, rows.length - MAX_CLIP_ITEMS)).forEach((row) => {
         db.delete(clipItems).where(eq(clipItems.id, row.id)).run();
       });
 
@@ -271,11 +295,7 @@ export function createClipItemRepository(
         if (!current) {
           return undefined;
         }
-        const duplicate = db
-          .select()
-          .from(clipItems)
-          .where(and(eq(clipItems.widgetId, current.widgetId), eq(clipItems.text, patch.text)))
-          .get();
+        const duplicate = getByContent(current.widgetId, patch.kind ?? current.kind, patch.text);
         if (duplicate && duplicate.id !== id) {
           throw new Error('Clip text already exists in this widget');
         }
@@ -364,6 +384,9 @@ export function createRepositories(
 ): AppRepositories {
   return {
     widgets: createWidgetRepository(db, options),
+    noteImages: createDocumentImageRepository(db, noteImages),
+    todoImages: createDocumentImageRepository(db, todoImages),
+    clipImages: createDocumentImageRepository(db, clipImages),
     todos: createTodoRepository(db, options),
     clipItems: createClipItemRepository(db, options),
     customKits: createCustomKitRepository(db, options),

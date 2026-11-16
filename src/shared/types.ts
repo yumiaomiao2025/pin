@@ -36,6 +36,29 @@ export interface PinTodo {
   sortOrder: number;
   createdAt: number;
   updatedAt: number;
+  images?: PinNoteImage[];
+}
+
+export const MAX_NOTE_IMAGES = 12;
+export const MAX_NOTE_IMAGE_BYTES = 8 * 1024 * 1024;
+export const MAX_CLIP_ITEMS = 20;
+export const CLIP_FRAGMENT_ATTRIBUTE = 'data-pin-clip';
+
+export interface PinNoteImage {
+  id: string;
+  offset: number;
+  src?: string;
+}
+
+export interface PinNote {
+  text: string;
+  images: PinNoteImage[];
+}
+
+export interface PinTodoUpdate {
+  text?: string;
+  images?: PinNoteImage[];
+  done?: boolean;
 }
 
 export interface PinClipItem {
@@ -45,6 +68,7 @@ export interface PinClipItem {
   sortOrder: number;
   createdAt: number;
   updatedAt: number;
+  images: PinNoteImage[];
 }
 
 export interface PinSettings {

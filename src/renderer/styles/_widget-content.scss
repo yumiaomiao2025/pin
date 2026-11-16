@@ -1,19 +1,125 @@
-.note-editor {
-  width: 100%;
+.document-editor--note {
+  --image-text-line-height: 1.85rem;
+  display: flex;
   min-height: 0;
   flex: 1;
-  resize: none;
+  flex-direction: column;
+}
+
+.note-content .overlay-scroll-content {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
   padding: 14px;
+}
+
+.note-editor {
+  width: 100%;
+  min-height: var(--image-text-line-height);
+  flex: none;
+  padding: 0;
   border: 0;
   outline: 0;
   color: #111111;
   background: transparent;
   font-size: 1rem;
-  line-height: 1.85;
+  line-height: var(--image-text-line-height);
 }
 
-.note-editor::placeholder {
-  color: #8a8a8a;
+.note-editor:last-child {
+  flex: 1 0 auto;
+}
+
+.inline-image-editor {
+  position: relative;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.inline-image-editor:empty::before,
+.inline-image-editor[data-empty]::before,
+.inline-image-editor:has(> br:only-child)::before {
+  position: absolute;
+  color: var(--widget-sub);
+  pointer-events: none;
+  content: attr(data-placeholder);
+}
+
+.note-image-preview {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  vertical-align: middle;
+}
+
+.content-image-thumbnail {
+  display: block;
+  max-width: 100%;
+  max-height: calc(2 * var(--image-text-line-height));
+  height: auto;
+  border: 1px solid var(--widget-ink);
+}
+
+.inline-editor-image {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.inline-editor-image,
+.todo-document .note-image-preview {
+  margin-inline: 2px;
+}
+
+.note-image-dialog {
+  width: max-content;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  padding: 8px;
+  border: 1.5px solid var(--widget-ink);
+  background: var(--widget-paper);
+}
+
+.note-image-dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+
+.note-image-dialog form {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 6px;
+}
+
+.note-image-dialog img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 72px);
+  object-fit: contain;
+}
+
+.document-status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 10px;
+  font-size: 0.85rem;
+}
+
+.document-status button {
+  min-height: 24px;
+  padding: 3px 5px;
+  background: var(--widget-paper);
+}
+
+.document-status button:hover {
+  background: var(--widget-accent);
+}
+
+.note-load-error {
+  padding: 0 14px;
 }
 
 .todo-list,
@@ -28,12 +134,24 @@
 }
 
 .clip-row {
+  --image-text-line-height: 1.384615rem;
   display: flex;
   min-height: 40px;
   align-items: center;
   gap: 8px;
   padding: 11px 12px;
   border-bottom: 1px solid #d8d8d8;
+  cursor: pointer;
+}
+
+.clip-edit-field {
+  min-width: 0;
+  flex: 1;
+}
+
+.clip-document {
+  display: block;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
@@ -118,6 +236,7 @@
 }
 
 .clip-input-row {
+  --image-text-line-height: 1.5rem;
   display: flex;
   min-height: 52px;
   align-items: flex-start;
@@ -147,10 +266,6 @@
   background: transparent;
   font-size: 1rem;
   line-height: 1.5;
-}
-
-.clip-input::placeholder {
-  color: #8a8a8a;
 }
 
 .clip-undo-row {
@@ -336,11 +451,49 @@
   text-decoration: line-through;
 }
 
-.todo-text--editing {
-  min-height: 20px;
-  resize: none;
-  outline: 1.5px solid #111111;
-  outline-offset: 2px;
+.todo-document,
+.document-editor--todo {
+  --image-text-line-height: 1.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.todo-document {
+  overflow-wrap: anywhere;
+}
+
+.document-editor--todo,
+.document-editor--clip {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.document-fields {
+  min-width: 0;
+  max-height: min(150px, 32vh);
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.todo-document-text {
+  display: block;
+  width: 100%;
+  min-height: var(--image-text-line-height);
+  line-height: var(--image-text-line-height);
+  overflow-wrap: anywhere;
+}
+
+.todo-row .todo-document-text:focus {
+  outline: 1px solid var(--widget-ink);
+  outline-offset: -1px;
+}
+
+.document-editor--todo .document-status,
+.document-editor--clip .document-status {
+  padding: 0;
 }
 
 .todo-drag-handle,
